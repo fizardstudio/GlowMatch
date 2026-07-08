@@ -23,6 +23,19 @@ class _ScannerPageState extends State<ScannerPage> {
     context.read<ScannerBloc>().add(InitializeCamera());
   }
 
+  Color _getLightingColor(String status) {
+    switch (status) {
+      case 'Optimal':
+        return const Color(0xFF4CAF50); // Hijau
+      case 'Cahaya Terlalu Redup':
+      case 'Cahaya Terlalu Terang':
+        return const Color(0xFFFF9800); // Amber/Oranye
+      case 'Cahaya Tidak Netral (Gunakan Cahaya Alami)':
+      default:
+        return const Color(0xFFE53935); // Merah
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,36 +170,86 @@ class _ScannerPageState extends State<ScannerPage> {
                       faces: state.detectedFaces,
                       imageWidth: state.imageWidth ?? 0,
                       imageHeight: state.imageHeight ?? 0,
+                      lensDirection: state.lensDirection,
                     ),
                   ),
                 ),
 
-
-
-              // 3. UI Keterangan Atas
+              // 3. UI Keterangan Atas & Real-time Lighting Indicator
               Positioned(
                 top: 24,
                 left: 16,
                 right: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16162A).withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.3)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Color(0xFFE5A93B)),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Posisikan wajah Anda di dalam lingkaran panduan di bawah cahaya terang yang merata.',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16162A).withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, color: Color(0xFFE5C185)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              state is ScannerCameraReady && state.detectedFaces.isEmpty
+                                  ? 'Arahkan kamera ke wajah Anda'
+                                  : 'Posisikan wajah Anda secara tegak di bawah cahaya terang yang merata. Sensor akan melacak dahi dan pipi Anda secara otomatis.',
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Lencana status pencahayaan dinamis
+                    if (state is ScannerCameraReady)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _getLightingColor(state.lightingStatus).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _getLightingColor(state.lightingStatus).withOpacity(0.7),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _getLightingColor(state.lightingStatus),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _getLightingColor(state.lightingStatus).withOpacity(0.6),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  )
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Pencahayaan: ${state.lightingStatus}',
+                              style: TextStyle(
+                                color: _getLightingColor(state.lightingStatus),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
 
@@ -202,7 +265,7 @@ class _ScannerPageState extends State<ScannerPage> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF16162A).withOpacity(0.9),
                             borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: const Color(0xFFE5A93B)),
+                            border: Border.all(color: const Color(0xFFE5C185)),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
@@ -212,7 +275,7 @@ class _ScannerPageState extends State<ScannerPage> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A93B)),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
                                 ),
                               ),
                               SizedBox(width: 12),
@@ -242,7 +305,7 @@ class _ScannerPageState extends State<ScannerPage> {
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFFE5A93B), Color(0xFFC78F26)],
+                                  colors: [Color(0xFFE5C185), Color(0xFFC78F26)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -257,6 +320,32 @@ class _ScannerPageState extends State<ScannerPage> {
                         ),
                 ),
               ),
+
+              // 5. Tombol Switch Camera di Pojok Kanan Bawah
+              if (state is ScannerCameraReady && state is! ScannerProcessing)
+                Positioned(
+                  bottom: 56,
+                  right: 36,
+                  child: FloatingActionButton(
+                    heroTag: 'switch_camera_fab',
+                    onPressed: () {
+                      context.read<ScannerBloc>().add(SwitchCamera());
+                    },
+                    backgroundColor: const Color(0xFF16162A).withOpacity(0.85),
+                    mini: true,
+                    shape: CircleBorder(
+                      side: BorderSide(
+                        color: const Color(0xFFE5C185).withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.flip_camera_ios,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
             ],
           );
         },
@@ -267,16 +356,18 @@ class _ScannerPageState extends State<ScannerPage> {
 
 
 
-/// CustomPainter untuk menggambar kotak pelacakan wajah dinamis
+/// CustomPainter untuk menggambar kotak pelacakan wajah dinamis premium
 class FaceTrackerPainter extends CustomPainter {
   final List<Face> faces;
   final int imageWidth;
   final int imageHeight;
+  final CameraLensDirection lensDirection;
 
   FaceTrackerPainter({
     required this.faces,
     required this.imageWidth,
     required this.imageHeight,
+    required this.lensDirection,
   });
 
   @override
@@ -288,21 +379,14 @@ class FaceTrackerPainter extends CustomPainter {
     final double scaleX = size.width / imageHeight;
     final double scaleY = size.height / imageWidth;
 
-    final paint = Paint()
-      ..color = const Color(0xFFE5A93B) // Gold border
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke;
-
-    final glowPaint = Paint()
-      ..color = const Color(0xFFE5A93B).withOpacity(0.25)
-      ..strokeWidth = 8.0
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
     final guideBoxPaint = Paint()
-      ..color = const Color(0xFFE5A93B).withOpacity(0.8)
-      ..strokeWidth = 2.0
+      ..color = const Color(0xFFE5C185).withOpacity(0.6)
+      ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
+
+    final fillPaint = Paint()
+      ..color = const Color(0xFFE5C185).withOpacity(0.04)
+      ..style = PaintingStyle.fill;
 
     final textPainter = TextPainter(
       textDirection: TextDirection.ltr,
@@ -311,23 +395,17 @@ class FaceTrackerPainter extends CustomPainter {
     for (final Face face in faces) {
       final rect = face.boundingBox;
 
-      // Cerminkan koordinat X karena pemindaian menggunakan kamera depan (selfie)
-      final double left = size.width - (rect.right * scaleX);
-      final double right = size.width - (rect.left * scaleX);
+      // Cerminkan koordinat X jika kamera depan (selfie), jangan jika kamera belakang
+      final double left = lensDirection == CameraLensDirection.front
+          ? size.width - (rect.right * scaleX)
+          : rect.left * scaleX;
+      final double right = lensDirection == CameraLensDirection.front
+          ? size.width - (rect.left * scaleX)
+          : rect.right * scaleX;
       final double top = rect.top * scaleY;
       final double bottom = rect.bottom * scaleY;
 
       final mappedRect = Rect.fromLTRB(left, top, right, bottom);
-      final rrect = RRect.fromRectAndRadius(mappedRect, const Radius.circular(20));
-
-      // Gambar efek glow
-      canvas.drawRRect(rrect, glowPaint);
-
-      // Gambar garis utama kotak pelacak
-      canvas.drawRRect(rrect, paint);
-
-      // Gambar siku bidik (corner brackets) putih di ujung sudut
-      _drawCornerBrackets(canvas, mappedRect);
 
       // Dapatkan landmark dinamis dari wajah
       final leftCheek = face.landmarks[FaceLandmarkType.leftCheek]?.position;
@@ -337,40 +415,37 @@ class FaceTrackerPainter extends CustomPainter {
 
       final double width = mappedRect.width;
       final double height = mappedRect.height;
-      final double boxW = width * 0.14;
-      final double boxH = height * 0.12;
+      final double radius = width * 0.07; // Jari-jari lingkaran bidik dinamis yang presisi
 
       // Helper untuk memetakan koordinat landmark dari resolusi kamera ke ukuran layar
       Offset mapLandmark(Point<int> point) {
-        final double mappedX = size.width - (point.x * scaleX);
+        final double mappedX = lensDirection == CameraLensDirection.front
+            ? size.width - (point.x * scaleX)
+            : point.x * scaleX;
         final double mappedY = point.y * scaleY;
         return Offset(mappedX, mappedY);
       }
 
-      // 1. Kotak Pipi Kiri (Secara visual berada di sebelah kanan layar karena cermin)
-      Rect cheekLeftRect;
+      // 1. Lingkaran Bidik Pipi Kiri
+      Offset centerLeft;
       if (leftCheek != null) {
-        final pos = mapLandmark(leftCheek);
-        cheekLeftRect = Rect.fromLTWH(pos.dx - boxW / 2, pos.dy - boxW / 2, boxW, boxW);
+        centerLeft = mapLandmark(leftCheek);
       } else {
-        cheekLeftRect = Rect.fromLTWH(mappedRect.left + width * 0.22, mappedRect.top + height * 0.55, boxW, boxW);
+        centerLeft = Offset(mappedRect.left + width * 0.30, mappedRect.top + height * 0.62);
       }
-      canvas.drawRect(cheekLeftRect, guideBoxPaint);
-      _drawLabel(canvas, textPainter, 'Pipi Kiri', Offset(cheekLeftRect.left + 2, cheekLeftRect.top - 12));
+      _drawReticle(canvas, centerLeft, radius, guideBoxPaint, fillPaint, textPainter, 'Pipi Kiri');
 
-      // 2. Kotak Pipi Kanan (Secara visual berada di sebelah kiri layar karena cermin)
-      Rect cheekRightRect;
+      // 2. Lingkaran Bidik Pipi Kanan
+      Offset centerRight;
       if (rightCheek != null) {
-        final pos = mapLandmark(rightCheek);
-        cheekRightRect = Rect.fromLTWH(pos.dx - boxW / 2, pos.dy - boxW / 2, boxW, boxW);
+        centerRight = mapLandmark(rightCheek);
       } else {
-        cheekRightRect = Rect.fromLTWH(mappedRect.left + width * 0.62, mappedRect.top + height * 0.55, boxW, boxW);
+        centerRight = Offset(mappedRect.left + width * 0.70, mappedRect.top + height * 0.62);
       }
-      canvas.drawRect(cheekRightRect, guideBoxPaint);
-      _drawLabel(canvas, textPainter, 'Pipi Kanan', Offset(cheekRightRect.left + 2, cheekRightRect.top - 12));
+      _drawReticle(canvas, centerRight, radius, guideBoxPaint, fillPaint, textPainter, 'Pipi Kanan');
 
-      // 3. Kotak Dahi
-      Rect foreheadRect;
+      // 3. Lingkaran Bidik Dahi
+      Offset centerForehead;
       if (leftEye != null && rightEye != null) {
         final posLeftEye = mapLandmark(leftEye);
         final posRightEye = mapLandmark(rightEye);
@@ -379,73 +454,51 @@ class FaceTrackerPainter extends CustomPainter {
           (posLeftEye.dy + posRightEye.dy) / 2,
         );
         final double eyeDistance = (posLeftEye.dx - posRightEye.dx).abs();
-        foreheadRect = Rect.fromLTWH(
-          midpoint.dx - boxW / 2,
-          midpoint.dy - eyeDistance * 0.85 - boxH / 2,
-          boxW,
-          boxH,
-        );
+        centerForehead = Offset(midpoint.dx, midpoint.dy - eyeDistance * 0.85);
       } else {
-        foreheadRect = Rect.fromLTWH(mappedRect.left + width * 0.42, mappedRect.top + height * 0.20, boxW, boxH);
+        centerForehead = Offset(mappedRect.left + width * 0.50, mappedRect.top + height * 0.26);
       }
-      canvas.drawRect(foreheadRect, guideBoxPaint);
-      _drawLabel(canvas, textPainter, 'Dahi', Offset(foreheadRect.left + 2, foreheadRect.top - 12));
+      _drawReticle(canvas, centerForehead, radius, guideBoxPaint, fillPaint, textPainter, 'Dahi');
     }
+  }
+
+  void _drawReticle(Canvas canvas, Offset center, double radius, Paint linePaint, Paint fillPaint, TextPainter textPainter, String label) {
+    // Gambar latar belakang transparan bulat (glassmorphic)
+    canvas.drawCircle(center, radius, fillPaint);
+    
+    // Gambar lingkaran bidik tipis
+    canvas.drawCircle(center, radius, linePaint);
+    
+    // Gambar tanda plus (+) kecil di pusat bidikan
+    final plusPaint = Paint()
+      ..color = Colors.white.withOpacity(0.7)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    
+    const double size = 3.0;
+    canvas.drawLine(Offset(center.dx - size, center.dy), Offset(center.dx + size, center.dy), plusPaint);
+    canvas.drawLine(Offset(center.dx, center.dy - size), Offset(center.dx, center.dy + size), plusPaint);
+    
+    // Gambar label kecil dengan peluru
+    final offset = Offset(center.dx - 22, center.dy - radius - 12);
+    _drawLabel(canvas, textPainter, '• $label', offset);
   }
 
   void _drawLabel(Canvas canvas, TextPainter painter, String text, Offset offset) {
     painter.text = TextSpan(
       text: text,
-      style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        color: Colors.white70,
+        fontSize: 8.5,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+      ),
     );
     painter.layout();
     painter.paint(canvas, offset);
   }
 
-  void _drawCornerBrackets(Canvas canvas, Rect rect) {
-    final bracketPaint = Paint()
-      ..color = Colors.white.withOpacity(0.9)
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke;
 
-    final double length = 16.0;
-
-    // Atas Kiri
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.left + length, rect.top)
-        ..lineTo(rect.left, rect.top)
-        ..lineTo(rect.left, rect.top + length),
-      bracketPaint,
-    );
-
-    // Atas Kanan
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.right - length, rect.top)
-        ..lineTo(rect.right, rect.top)
-        ..lineTo(rect.right, rect.top + length),
-      bracketPaint,
-    );
-
-    // Bawah Kiri
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.left + length, rect.bottom)
-        ..lineTo(rect.left, rect.bottom)
-        ..lineTo(rect.left, rect.bottom - length),
-      bracketPaint,
-    );
-
-    // Bawah Kanan
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.right - length, rect.bottom)
-        ..lineTo(rect.right, rect.bottom)
-        ..lineTo(rect.right, rect.bottom - length),
-      bracketPaint,
-    );
-  }
 
   @override
   bool shouldRepaint(covariant FaceTrackerPainter oldDelegate) {

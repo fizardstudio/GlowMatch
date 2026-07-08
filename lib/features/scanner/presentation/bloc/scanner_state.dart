@@ -19,12 +19,16 @@ class ScannerCameraReady extends ScannerState {
   final List<Face> detectedFaces;
   final int? imageWidth;
   final int? imageHeight;
+  final String lightingStatus;
+  final CameraLensDirection lensDirection;
 
   const ScannerCameraReady({
     required this.controller,
     this.detectedFaces = const [],
     this.imageWidth,
     this.imageHeight,
+    this.lightingStatus = 'Optimal',
+    this.lensDirection = CameraLensDirection.front,
   });
 
   ScannerCameraReady copyWith({
@@ -32,17 +36,28 @@ class ScannerCameraReady extends ScannerState {
     List<Face>? detectedFaces,
     int? imageWidth,
     int? imageHeight,
+    String? lightingStatus,
+    CameraLensDirection? lensDirection,
   }) {
     return ScannerCameraReady(
       controller: controller ?? this.controller,
       detectedFaces: detectedFaces ?? this.detectedFaces,
       imageWidth: imageWidth ?? this.imageWidth,
       imageHeight: imageHeight ?? this.imageHeight,
+      lightingStatus: lightingStatus ?? this.lightingStatus,
+      lensDirection: lensDirection ?? this.lensDirection,
     );
   }
 
   @override
-  List<Object?> get props => [controller, detectedFaces, imageWidth, imageHeight];
+  List<Object?> get props => [
+        controller,
+        detectedFaces,
+        imageWidth,
+        imageHeight,
+        lightingStatus,
+        lensDirection,
+      ];
 }
 
 class ScannerProcessing extends ScannerState {

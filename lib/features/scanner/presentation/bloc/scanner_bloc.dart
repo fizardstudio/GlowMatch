@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart' show Size;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -22,6 +23,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   );
 
   bool _isDetecting = false;
+  CameraLensDirection _currentLensDirection = CameraLensDirection.front;
 
   ScannerBloc({
     required ShadeMatcherRepository shadeMatcherRepository,
@@ -30,6 +32,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     on<InitializeCamera>(_onInitializeCamera);
     on<StartScanning>(_onStartScanning);
     on<FaceDetected>(_onFaceDetected);
+    on<SwitchCamera>(_onSwitchCamera);
     on<CaptureImage>(_onCaptureImage);
     on<ResetScanner>(_onResetScanner);
   }
@@ -42,14 +45,13 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     try {
       final cameras = await availableCameras();
       
-      // Gunakan kamera depan untuk pemindaian mandiri (selfie)
-      final frontCamera = cameras.firstWhere(
-        (cam) => cam.lensDirection == CameraLensDirection.front,
+      final targetCamera = cameras.firstWhere(
+        (cam) => cam.lensDirection == _currentLensDirection,
         orElse: () => cameras.first,
       );
 
       _cameraController = CameraController(
-        frontCamera,
+        targetCamera,
         ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
@@ -59,7 +61,10 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
       await _cameraController!.initialize();
 
-      emit(ScannerCameraReady(controller: _cameraController!));
+      emit(ScannerCameraReady(
+        controller: _cameraController!,
+        lensDirection: _currentLensDirection,
+      ));
     } catch (e) {
       emit(ScannerFailure('Gagal menginisialisasi kamera: ${e.toString()}'));
     }
@@ -75,12 +80,15 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         if (_isDetecting) return;
         _isDetecting = true;
 
+        final lightingStatus = _analyzeLighting(image);
+
         _processCameraImage(image).then((faces) {
           if (faces != null && !isClosed) {
             add(FaceDetected(
               faces: faces,
               imageWidth: image.width,
               imageHeight: image.height,
+              lightingStatus: lightingStatus,
             ));
           }
           _isDetecting = false;
@@ -100,8 +108,167 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         detectedFaces: event.faces,
         imageWidth: event.imageWidth,
         imageHeight: event.imageHeight,
+        lightingStatus: event.lightingStatus,
       ));
     }
+  }
+
+  Future<void> _onSwitchCamera(
+    SwitchCamera event,
+    Emitter<ScannerState> emit,
+  ) async {
+    if (_cameraController == null) return;
+
+    // Pancarkan loading terlebih dahulu agar UI melepaskan widget CameraPreview
+    // dan menghindari kedipan layar merah (red error blink)
+    emit(ScannerCameraLoading());
+
+    try {
+      await _cameraController!.stopImageStream();
+    } catch (_) {}
+
+    try {
+      await _cameraController!.dispose();
+    } catch (_) {}
+    _cameraController = null;
+
+    _currentLensDirection = _currentLensDirection == CameraLensDirection.front
+        ? CameraLensDirection.back
+        : CameraLensDirection.front;
+
+    add(InitializeCamera());
+  }
+
+  String _analyzeLighting(CameraImage image) {
+    if (image.planes.isEmpty) return 'Optimal';
+
+    try {
+      final isBgra = image.format.group == ImageFormatGroup.bgra8888;
+      final bytes = image.planes[0].bytes;
+      if (bytes.isEmpty) return 'Optimal';
+
+      double avgY = 127;
+      double colorBias = 0;
+
+      if (isBgra) {
+        // Format BGRA (biasanya di iOS atau emulator/fallback Android)
+        int bSum = 0;
+        int gSum = 0;
+        int rSum = 0;
+        int sampleCount = 0;
+        
+        // Sampling kelipatan 4 bytes (Blue, Green, Red, Alpha)
+        final int step = (bytes.length / 1000).round().clamp(4, 400);
+        final int alignedStep = step - (step % 4);
+
+        for (int i = 0; i < bytes.length - 4; i += alignedStep > 0 ? alignedStep : 4) {
+          bSum += bytes[i];
+          gSum += bytes[i + 1];
+          rSum += bytes[i + 2];
+          sampleCount++;
+        }
+
+        if (sampleCount > 0) {
+          final double avgB = bSum / sampleCount;
+          final double avgG = gSum / sampleCount;
+          final double avgR = rSum / sampleCount;
+          
+          // Hitung Luminance Y standard
+          avgY = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+
+          // Hitung bias warna (selisih R, G, B ekstrim)
+          final double maxVal = [avgR, avgG, avgB].reduce((curr, next) => curr > next ? curr : next);
+          final double minVal = [avgR, avgG, avgB].reduce((curr, next) => curr < next ? curr : next);
+          colorBias = maxVal - minVal;
+        }
+      } else {
+        // Format YUV / NV21
+        // Bagian awal buffer (2/3 dari total panjang) adalah plane Y (Luminance)
+        final int yLength = (bytes.length * 2 / 3).round();
+        if (yLength > 0) {
+          int ySum = 0;
+          final int step = (yLength / 500).round().clamp(1, 100);
+          int sampleCount = 0;
+          for (int i = 0; i < yLength; i += step) {
+            ySum += bytes[i];
+            sampleCount++;
+          }
+          avgY = ySum / sampleCount;
+        }
+
+        double avgU = 128;
+        double avgV = 128;
+
+        // Ambil data U & V (Chrominance)
+        if (image.planes.length >= 3) {
+          final uBytes = image.planes[1].bytes;
+          final vBytes = image.planes[2].bytes;
+
+          if (uBytes.isNotEmpty && vBytes.isNotEmpty) {
+            int uSum = 0;
+            int vSum = 0;
+            int uvSampleCount = 0;
+            final int uvStep = (uBytes.length / 300).round().clamp(1, 50);
+            for (int j = 0; j < uBytes.length; j += uvStep) {
+              if (j < uBytes.length && j < vBytes.length) {
+                uSum += uBytes[j];
+                vSum += vBytes[j];
+                uvSampleCount++;
+              }
+            }
+            if (uvSampleCount > 0) {
+              avgU = uSum / uvSampleCount;
+              avgV = vSum / uvSampleCount;
+            }
+          }
+          colorBias = ((avgU - 128).abs() + (avgV - 128).abs());
+        } else if (image.planes.length == 1) {
+          // Format Semi-Planar NV21 (Y dan VU digabung dalam satu plane)
+          // Saluran VU dimulai setelah data Y. Gunakan pembagian rasio 1.5 untuk Y size
+          final int ySize = (bytes.length / 1.5).round();
+          if (bytes.length > ySize) {
+            int uSum = 0;
+            int vSum = 0;
+            int uvSampleCount = 0;
+            final int uvStep = ((bytes.length - ySize) / 300).round().clamp(2, 50);
+            final int alignedUvStep = uvStep - (uvStep % 2);
+            
+            // Loop data VU yang saling selang-seling (V, U, V, U)
+            for (int k = ySize; k < bytes.length - 1; k += alignedUvStep > 0 ? alignedUvStep : 2) {
+              vSum += bytes[k];
+              uSum += bytes[k + 1];
+              uvSampleCount++;
+            }
+            if (uvSampleCount > 0) {
+              avgU = uSum / uvSampleCount;
+              avgV = vSum / uvSampleCount;
+            }
+          }
+          colorBias = ((avgU - 128).abs() + (avgV - 128).abs());
+        }
+      }
+
+      // Cetak log untuk analisis manual tingkat kecerahan saat pengembangan
+      // debugPrint('LIGHTING LOG - avgY: $avgY, colorBias: $colorBias');
+
+      // Ambang batas yang lebih peka terhadap Auto Exposure:
+      // Y < 65: Terlalu redup
+      // Y > 200: Terlalu terang
+      // Bias warna: YUV colorBias > 48, RGB colorBias > 70
+      if (avgY < 65) {
+        return 'Cahaya Terlalu Redup';
+      } else if (avgY > 200) {
+        return 'Cahaya Terlalu Terang';
+      } else if (isBgra && colorBias > 70) {
+        return 'Cahaya Tidak Netral (Gunakan Cahaya Alami)';
+      } else if (!isBgra && colorBias > 48) {
+        return 'Cahaya Tidak Netral (Gunakan Cahaya Alami)';
+      }
+    } catch (e, stack) {
+      debugPrint('Error in _analyzeLighting: $e\n$stack');
+    }
+
+    return 'Optimal';
   }
 
   Future<void> _onCaptureImage(
