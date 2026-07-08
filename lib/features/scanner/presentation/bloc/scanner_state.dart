@@ -45,7 +45,14 @@ class ScannerCameraReady extends ScannerState {
   List<Object?> get props => [controller, detectedFaces, imageWidth, imageHeight];
 }
 
-class ScannerProcessing extends ScannerState {}
+class ScannerProcessing extends ScannerState {
+  final CameraController controller;
+
+  const ScannerProcessing({required this.controller});
+
+  @override
+  List<Object?> get props => [controller];
+}
 
 class ScannerSuccess extends ScannerState {
   final List<int> extractedRgb;

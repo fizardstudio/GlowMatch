@@ -22,3 +22,33 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+subprojects {
+    if (project.state.executed) {
+        if (project.name == "isar_flutter_libs") {
+            val android = extensions.findByName("android")
+            if (android != null) {
+                try {
+                    val setNamespaceMethod = android.javaClass.getMethod("setNamespace", String::class.java)
+                    setNamespaceMethod.invoke(android, "dev.isar.isar_flutter_libs")
+                } catch (e: Exception) {
+                    println("Gagal menyetel namespace langsung: \${e.message}")
+                }
+            }
+        }
+    } else {
+        project.afterEvaluate {
+            if (project.name == "isar_flutter_libs") {
+                val android = extensions.findByName("android")
+                if (android != null) {
+                    try {
+                        val setNamespaceMethod = android.javaClass.getMethod("setNamespace", String::class.java)
+                        setNamespaceMethod.invoke(android, "dev.isar.isar_flutter_libs")
+                    } catch (e: Exception) {
+                        println("Gagal menyetel namespace di afterEvaluate: \${e.message}")
+                    }
+                }
+            }
+        }
+    }
+}
