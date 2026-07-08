@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../data/models/standard_shade.dart';
 import '../data/models/product_shade.dart';
+import '../../features/pouch/data/models/pouch_item.dart';
 import '../utils/color_calculator.dart';
 
 class DatabaseService {
@@ -31,6 +32,7 @@ class DatabaseService {
       [
         StandardShadeSchema,
         ProductShadeSchema,
+        PouchItemSchema,
       ],
       directory: path,
     );

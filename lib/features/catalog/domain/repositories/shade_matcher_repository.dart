@@ -1,3 +1,4 @@
+import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/data/models/standard_shade.dart';
 import '../../../../core/utils/color_calculator.dart';
 
@@ -11,4 +12,7 @@ abstract class ShadeMatcherRepository {
 
   /// Mencocokkan warna kulit target (LabColor) dengan kategori warna teoretis standar.
   Future<StandardShade?> matchStandardShade(LabColor targetColor);
+
+  /// Mengambil semua shade produk komersial yang tersedia di database.
+  Future<List<ProductShade>> getAllProductShades();
 }

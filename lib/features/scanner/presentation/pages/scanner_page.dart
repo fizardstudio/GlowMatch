@@ -7,6 +7,7 @@ import '../bloc/scanner_event.dart';
 import '../bloc/scanner_state.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'results_page.dart';
+import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
@@ -40,6 +41,7 @@ class _ScannerPageState extends State<ScannerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A), // Dark elegant background
+      drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: const Text(
           'GlowMatch Scanner',

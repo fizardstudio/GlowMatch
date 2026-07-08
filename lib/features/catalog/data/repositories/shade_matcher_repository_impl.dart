@@ -70,4 +70,9 @@ class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
 
     return closestShade;
   }
+
+  @override
+  Future<List<ProductShade>> getAllProductShades() async {
+    return await _dbService.isar.productShades.where().findAll();
+  }
 }
