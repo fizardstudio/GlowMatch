@@ -27,7 +27,17 @@ class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
     final List<Map<String, dynamic>> matches = [];
 
     for (final shade in allShades) {
-      final productLab = LabColor(shade.l, shade.a, shade.b);
+      double calibratedL = shade.l;
+      final int totalFeedback = shade.perfectCount + shade.tooDarkCount + shade.tooLightCount;
+      
+      // Mengkalibrasi L (Lightness) secara dinamis berdasarkan ulasan komunitas
+      // tanpa memodifikasi data mentah di database (Community Offset Delta L)
+      if (totalFeedback > 0) {
+        final double offsetL = (shade.tooLightCount - shade.tooDarkCount) * 1.5 / totalFeedback;
+        calibratedL = (calibratedL + offsetL).clamp(0.0, 100.0);
+      }
+
+      final productLab = LabColor(calibratedL, shade.a, shade.b);
       final double deltaE = ColorCalculator.deltaE76(targetColor, productLab);
 
       // Hanya masukkan produk yang memiliki kecocokan layak (Delta E <= 5.0)
