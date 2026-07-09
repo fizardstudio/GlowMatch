@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/data/models/standard_shade.dart';
 import '../../../../core/data/models/product_shade.dart';
+import '../../../../core/network/database_service.dart';
 
-class ResultsPage extends StatelessWidget {
+class ResultsPage extends StatefulWidget {
   final List<int> extractedRgb;
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
@@ -15,6 +16,11 @@ class ResultsPage extends StatelessWidget {
     required this.commercialMatches,
   });
 
+  @override
+  State<ResultsPage> createState() => _ResultsPageState();
+}
+
+class _ResultsPageState extends State<ResultsPage> {
   /// Mengonversi warna RGB menjadi kelas Color Flutter.
   Color _getRgbColor(List<int> rgb) {
     return Color.fromARGB(255, rgb[0], rgb[1], rgb[2]);
@@ -47,6 +53,43 @@ class ResultsPage extends StatelessWidget {
     }
   }
 
+  /// Logika luring umpan balik kecocokan komunitas
+  Future<void> _submitFeedback(ProductShade product, String type) async {
+    final isar = DatabaseService().isar;
+    try {
+      await isar.writeTxn(() async {
+        final dbProduct = await isar.productShades.get(product.id);
+        if (dbProduct != null) {
+          if (type == 'PERFECT') {
+            dbProduct.perfectCount++;
+          } else if (type == 'TOO_DARK') {
+            dbProduct.tooDarkCount++;
+          } else if (type == 'TOO_LIGHT') {
+            dbProduct.tooLightCount++;
+          }
+          await isar.productShades.put(dbProduct);
+          
+          // Sinkronisasi data lokal agar langsung ter-render di UI
+          setState(() {
+            product.perfectCount = dbProduct.perfectCount;
+            product.tooDarkCount = dbProduct.tooDarkCount;
+            product.tooLightCount = dbProduct.tooLightCount;
+          });
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terima kasih atas ulasan kecocokan Anda!'),
+            backgroundColor: Color(0xFFE5C185),
+            duration: Duration(milliseconds: 800),
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
   /// Mengambil deskripsi penjelasan berdasarkan hasil undertone
   String _getUndertoneExplanation(String undertone) {
     switch (undertone.toLowerCase()) {
@@ -62,7 +105,7 @@ class ResultsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final skinColor = _getRgbColor(extractedRgb);
+    final skinColor = _getRgbColor(widget.extractedRgb);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A), // Dark premium color
@@ -114,7 +157,7 @@ class ResultsPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            matchedStandard.name,
+                            widget.matchedStandard.name,
                             style: const TextStyle(
                               color: Color(0xFFE5A93B),
                               fontSize: 22,
@@ -124,13 +167,13 @@ class ResultsPage extends StatelessWidget {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              _buildPillTag(matchedStandard.skinTone, Colors.blueAccent),
+                              _buildPillTag(widget.matchedStandard.skinTone, Colors.blueAccent),
                               const SizedBox(width: 8),
                               _buildPillTag(
-                                '${matchedStandard.undertone} Undertone',
-                                matchedStandard.undertone.toLowerCase() == 'warm'
+                                '${widget.matchedStandard.undertone} Undertone',
+                                widget.matchedStandard.undertone.toLowerCase() == 'warm'
                                     ? Colors.orangeAccent
-                                    : matchedStandard.undertone.toLowerCase() == 'cool'
+                                    : widget.matchedStandard.undertone.toLowerCase() == 'cool'
                                         ? Colors.pinkAccent
                                         : Colors.tealAccent,
                               ),
@@ -138,9 +181,9 @@ class ResultsPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'HEX: #${extractedRgb[0].toRadixString(16).padLeft(2, '0').toUpperCase()}'
-                            '${extractedRgb[1].toRadixString(16).padLeft(2, '0').toUpperCase()}'
-                            '${extractedRgb[2].toRadixString(16).padLeft(2, '0').toUpperCase()}',
+                            'HEX: #${widget.extractedRgb[0].toRadixString(16).padLeft(2, '0').toUpperCase()}'
+                            '${widget.extractedRgb[1].toRadixString(16).padLeft(2, '0').toUpperCase()}'
+                            '${widget.extractedRgb[2].toRadixString(16).padLeft(2, '0').toUpperCase()}',
                             style: const TextStyle(color: Colors.white60, fontSize: 13, fontFamily: 'monospace'),
                           ),
                         ],
@@ -159,7 +202,7 @@ class ResultsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  _getUndertoneExplanation(matchedStandard.undertone),
+                  _getUndertoneExplanation(widget.matchedStandard.undertone),
                   style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                 ),
               ),
@@ -177,19 +220,21 @@ class ResultsPage extends StatelessWidget {
               const SizedBox(height: 12),
 
               // 4. Daftar Produk Hasil Pencocokan
-              commercialMatches.isEmpty
+              widget.commercialMatches.isEmpty
                   ? _buildEmptyState()
                   : ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: commercialMatches.length,
+                      itemCount: widget.commercialMatches.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
-                        final match = commercialMatches[index];
+                        final match = widget.commercialMatches[index];
                         final ProductShade product = match['product'] as ProductShade;
                         final double matchPercentage = match['matchPercentage'] as double;
                         final double deltaE = match['deltaE'] as double;
                         final productShadeColor = _getHexColor(product.hexCode);
+
+                        final totalFeedback = product.perfectCount + product.tooDarkCount + product.tooLightCount;
 
                         return Container(
                           padding: const EdgeInsets.all(16),
@@ -285,6 +330,82 @@ class ResultsPage extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 14),
+
+                              // Umpan Balik / Community Validation Loop
+                              const Divider(color: Colors.white10, height: 1),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Ulasan Statistik Komunitas
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'ULASAN KECOCOKAN KOMUNITAS:',
+                                        style: TextStyle(color: Colors.white30, fontSize: 8, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      totalFeedback == 0
+                                          ? const Text(
+                                              'Belum ada ulasan',
+                                              style: TextStyle(color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic),
+                                            )
+                                          : Row(
+                                              children: [
+                                                const Icon(Icons.thumb_up_alt_rounded, color: Colors.greenAccent, size: 10),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  '${product.perfectCount}',
+                                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Icon(Icons.dark_mode_rounded, color: Colors.amberAccent, size: 10),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  '${product.tooDarkCount}',
+                                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Icon(Icons.light_mode_rounded, color: Colors.orangeAccent, size: 10),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  '${product.tooLightCount}',
+                                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
+                                    ],
+                                  ),
+                                  // Tombol Beri Ulasan
+                                  Row(
+                                    children: [
+                                      _buildVoteButton(
+                                        icon: Icons.thumb_up_alt_outlined,
+                                        color: Colors.greenAccent,
+                                        tooltip: 'Pas / Cocok',
+                                        onPressed: () => _submitFeedback(product, 'PERFECT'),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _buildVoteButton(
+                                        icon: Icons.dark_mode_outlined,
+                                        color: Colors.amberAccent,
+                                        tooltip: 'Kegelapan',
+                                        onPressed: () => _submitFeedback(product, 'TOO_DARK'),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _buildVoteButton(
+                                        icon: Icons.light_mode_outlined,
+                                        color: Colors.orangeAccent,
+                                        tooltip: 'Keterangan',
+                                        onPressed: () => _submitFeedback(product, 'TOO_LIGHT'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
                               // Tombol belanja/beli affiliate
                               SizedBox(
                                 width: double.infinity,
@@ -317,6 +438,30 @@ class ResultsPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildVoteButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        shape: BoxShape.circle,
+        border: Border.all(color: color.withOpacity(0.2), width: 0.8),
+      ),
+      child: IconButton(
+        icon: Icon(icon, size: 12),
+        color: color,
+        padding: EdgeInsets.zero,
+        tooltip: tooltip,
+        onPressed: onPressed,
       ),
     );
   }
@@ -367,4 +512,3 @@ class ResultsPage extends StatelessWidget {
     );
   }
 }
-

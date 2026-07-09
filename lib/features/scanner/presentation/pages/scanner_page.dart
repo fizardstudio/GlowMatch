@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
 import '../bloc/scanner_bloc.dart';
@@ -17,6 +18,9 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
+  bool _isCameraDisposed = false;
+  bool _canPop = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,7 +43,45 @@ class _ScannerPageState extends State<ScannerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        setState(() {
+          _isCameraDisposed = true;
+        });
+        
+        final bloc = context.read<ScannerBloc>();
+        final state = bloc.state;
+        final controller = (state is ScannerCameraReady)
+            ? state.controller
+            : (state is ScannerProcessing)
+                ? state.controller
+                : null;
+                
+        if (controller != null) {
+          try {
+            if (controller.value.isStreamingImages) {
+              await controller.stopImageStream();
+            }
+            await controller.dispose();
+          } catch (e) {
+            debugPrint("Error stopping camera in ScannerPage.PopScope: $e");
+          }
+        }
+        
+        setState(() {
+          _canPop = true;
+        });
+        if (mounted) {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            await SystemNavigator.pop();
+          }
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFF0F0F1A), // Dark elegant background
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
@@ -149,7 +191,7 @@ class _ScannerPageState extends State<ScannerPage> {
                   ? state.controller
                   : null;
 
-          if (controller == null || !controller.value.isInitialized) {
+          if (controller == null || !controller.value.isInitialized || _isCameraDisposed) {
             return const Center(
               child: Text(
                 'Kamera tidak siap.',
@@ -158,202 +200,211 @@ class _ScannerPageState extends State<ScannerPage> {
             );
           }
 
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              // 1. Preview Kamera
-              CameraPreview(controller),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final double cameraAreaWidth = constraints.maxWidth;
+              final double cameraAreaHeight = constraints.maxHeight;
 
-              // Live Face Tracking Bounding Box Overlay
-              if (state is ScannerCameraReady && state.detectedFaces.isNotEmpty)
-                IgnorePointer(
-                  child: CustomPaint(
-                    painter: FaceTrackerPainter(
-                      faces: state.detectedFaces,
-                      imageWidth: state.imageWidth ?? 0,
-                      imageHeight: state.imageHeight ?? 0,
-                      lensDirection: state.lensDirection,
+              final double rawAspectRatio = controller.value.aspectRatio; // landscape (e.g. 1.333)
+              final double previewWidth = cameraAreaWidth;
+              final double previewHeight = cameraAreaWidth * rawAspectRatio;
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 1. Preview Kamera (FittedBox cover)
+                  Positioned.fill(
+                    child: ClipRect(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: previewWidth,
+                          height: previewHeight,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              CameraPreview(controller),
+
+                              // Live Face Tracking Bounding Box Overlay
+                              if (state is ScannerCameraReady && state.detectedFaces.isNotEmpty)
+                                IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: FaceTrackerPainter(
+                                      faces: state.detectedFaces,
+                                      imageWidth: state.imageWidth ?? 0,
+                                      imageHeight: state.imageHeight ?? 0,
+                                      lensDirection: state.lensDirection,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
 
-              // 3. UI Keterangan Atas & Real-time Lighting Indicator
-              Positioned(
-                top: 24,
-                left: 16,
-                right: 16,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF16162A).withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline, color: Color(0xFFE5C185)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              state is ScannerCameraReady && state.detectedFaces.isEmpty
-                                  ? 'Arahkan kamera ke wajah Anda'
-                                  : 'Posisikan wajah Anda secara tegak di bawah cahaya terang yang merata. Sensor akan melacak dahi dan pipi Anda secara otomatis.',
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Lencana status pencahayaan dinamis
-                    if (state is ScannerCameraReady)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _getLightingColor(state.lightingStatus).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: _getLightingColor(state.lightingStatus).withOpacity(0.7),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _getLightingColor(state.lightingStatus),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _getLightingColor(state.lightingStatus).withOpacity(0.6),
-                                    blurRadius: 4,
-                                    spreadRadius: 1,
-                                  )
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Pencahayaan: ${state.lightingStatus}',
-                              style: TextStyle(
-                                color: _getLightingColor(state.lightingStatus),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // 4. Tombol Ambil Gambar di Bawah
-              Positioned(
-                bottom: 40,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: state is ScannerProcessing
-                      ? Container(
-                          padding: const EdgeInsets.all(16),
+                  // 3. UI Keterangan Atas & Real-time Lighting Indicator
+                  Positioned(
+                    top: 24,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16162A).withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: const Color(0xFFE5C185)),
+                            color: const Color(0xFF16162A).withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.3)),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
+                          child: Row(
                             children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text(
-                                'Menganalisis Warna Kulit...',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                              const Icon(Icons.info_outline, color: Color(0xFFE5C185)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  state is ScannerCameraReady && state.detectedFaces.isEmpty
+                                      ? 'Arahkan kamera ke wajah Anda'
+                                      : 'Posisikan wajah Anda secara tegak di bawah cahaya terang yang merata. Sensor akan melacak dahi dan pipi Anda secara otomatis.',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12),
                                 ),
                               ),
                             ],
                           ),
-                        )
-                      : GestureDetector(
-                          onTap: () {
-                            context.read<ScannerBloc>().add(CaptureImage());
-                          },
-                          child: Container(
-                            height: 84,
-                            width: 84,
+                        ),
+                        const SizedBox(height: 10),
+                        // Lencana status pencahayaan dinamis
+                        if (state is ScannerCameraReady)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
+                              color: _getLightingColor(state.lightingStatus).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _getLightingColor(state.lightingStatus).withOpacity(0.7),
+                                width: 1.2,
+                              ),
                             ),
-                            child: Container(
-                              margin: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [Color(0xFFE5C185), Color(0xFFC78F26)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: _getLightingColor(state.lightingStatus),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: Colors.black,
-                                size: 36,
-                              ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Pencahayaan: ${state.lightingStatus}',
+                                  style: TextStyle(
+                                    color: _getLightingColor(state.lightingStatus),
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                ),
-              ),
-
-              // 5. Tombol Switch Camera di Pojok Kanan Bawah
-              if (state is ScannerCameraReady && state is! ScannerProcessing)
-                Positioned(
-                  bottom: 56,
-                  right: 36,
-                  child: FloatingActionButton(
-                    heroTag: 'switch_camera_fab',
-                    onPressed: () {
-                      context.read<ScannerBloc>().add(SwitchCamera());
-                    },
-                    backgroundColor: const Color(0xFF16162A).withOpacity(0.85),
-                    mini: true,
-                    shape: CircleBorder(
-                      side: BorderSide(
-                        color: const Color(0xFFE5C185).withOpacity(0.5),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.flip_camera_ios,
-                      color: Colors.white,
-                      size: 20,
+                      ],
                     ),
                   ),
-                ),
-            ],
+
+                  // 4. Tombol Ambil Foto / Capture di Bagian Bawah Tengah (Glassmorphism)
+                  if (state is ScannerCameraReady)
+                    Positioned(
+                      bottom: 36,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: (state is ScannerProcessing)
+                            ? Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF16162A).withOpacity(0.9),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFE5C185), width: 2),
+                                ),
+                                child: const SizedBox(
+                                  width: 36,
+                                  height: 36,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3.0,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
+                                  ),
+                                ),
+                              )
+                            : GestureDetector(
+                              onTap: () {
+                                context.read<ScannerBloc>().add(CaptureImage());
+                              },
+                              child: Container(
+                                height: 84,
+                                width: 84,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 4),
+                                ),
+                                child: Container(
+                                  margin: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFFE5C185), Color(0xFFC78F26)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.black,
+                                    size: 36,
+                                  ),
+                                ),
+                              ),
+                            ),
+                      ),
+                    ),
+
+                  // 5. Tombol Switch Camera di Pojok Kanan Bawah
+                  if (state is ScannerCameraReady && state is! ScannerProcessing)
+                    Positioned(
+                      bottom: 56,
+                      right: 36,
+                      child: FloatingActionButton(
+                        heroTag: 'switch_camera_fab',
+                        onPressed: () {
+                          context.read<ScannerBloc>().add(SwitchCamera());
+                        },
+                        backgroundColor: const Color(0xFF16162A).withOpacity(0.85),
+                        mini: true,
+                        shape: CircleBorder(
+                          side: BorderSide(
+                            color: const Color(0xFFE5C185).withOpacity(0.5),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.flip_camera_ios,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 

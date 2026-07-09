@@ -52,15 +52,30 @@ const ProductShadeSchema = CollectionSchema(
       name: r'l',
       type: IsarType.double,
     ),
-    r'productName': PropertySchema(
+    r'perfectCount': PropertySchema(
       id: 7,
+      name: r'perfectCount',
+      type: IsarType.long,
+    ),
+    r'productName': PropertySchema(
+      id: 8,
       name: r'productName',
       type: IsarType.string,
     ),
     r'shadeName': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'shadeName',
       type: IsarType.string,
+    ),
+    r'tooDarkCount': PropertySchema(
+      id: 10,
+      name: r'tooDarkCount',
+      type: IsarType.long,
+    ),
+    r'tooLightCount': PropertySchema(
+      id: 11,
+      name: r'tooLightCount',
+      type: IsarType.long,
     )
   },
   estimateSize: _productShadeEstimateSize,
@@ -105,8 +120,11 @@ void _productShadeSerialize(
   writer.writeString(offsets[4], object.category);
   writer.writeString(offsets[5], object.hexCode);
   writer.writeDouble(offsets[6], object.l);
-  writer.writeString(offsets[7], object.productName);
-  writer.writeString(offsets[8], object.shadeName);
+  writer.writeLong(offsets[7], object.perfectCount);
+  writer.writeString(offsets[8], object.productName);
+  writer.writeString(offsets[9], object.shadeName);
+  writer.writeLong(offsets[10], object.tooDarkCount);
+  writer.writeLong(offsets[11], object.tooLightCount);
 }
 
 ProductShade _productShadeDeserialize(
@@ -124,8 +142,11 @@ ProductShade _productShadeDeserialize(
   object.hexCode = reader.readString(offsets[5]);
   object.id = id;
   object.l = reader.readDouble(offsets[6]);
-  object.productName = reader.readString(offsets[7]);
-  object.shadeName = reader.readString(offsets[8]);
+  object.perfectCount = reader.readLong(offsets[7]);
+  object.productName = reader.readString(offsets[8]);
+  object.shadeName = reader.readString(offsets[9]);
+  object.tooDarkCount = reader.readLong(offsets[10]);
+  object.tooLightCount = reader.readLong(offsets[11]);
   return object;
 }
 
@@ -151,9 +172,15 @@ P _productShadeDeserializeProp<P>(
     case 6:
       return (reader.readDouble(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 8:
       return (reader.readString(offset)) as P;
+    case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
+      return (reader.readLong(offset)) as P;
+    case 11:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1035,6 +1062,62 @@ extension ProductShadeQueryFilter
   }
 
   QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      perfectCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'perfectCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      perfectCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'perfectCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      perfectCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'perfectCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      perfectCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'perfectCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
       productNameEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1305,6 +1388,118 @@ extension ProductShadeQueryFilter
       ));
     });
   }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooDarkCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'tooDarkCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooDarkCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'tooDarkCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooDarkCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'tooDarkCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooDarkCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'tooDarkCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooLightCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'tooLightCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooLightCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'tooLightCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooLightCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'tooLightCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      tooLightCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'tooLightCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension ProductShadeQueryObject
@@ -1400,6 +1595,19 @@ extension ProductShadeQuerySortBy
     });
   }
 
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByPerfectCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'perfectCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      sortByPerfectCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'perfectCount', Sort.desc);
+    });
+  }
+
   QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByProductName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'productName', Sort.asc);
@@ -1422,6 +1630,32 @@ extension ProductShadeQuerySortBy
   QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByShadeNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'shadeName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByTooDarkCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooDarkCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      sortByTooDarkCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooDarkCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByTooLightCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooLightCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      sortByTooLightCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooLightCount', Sort.desc);
     });
   }
 }
@@ -1525,6 +1759,19 @@ extension ProductShadeQuerySortThenBy
     });
   }
 
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByPerfectCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'perfectCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      thenByPerfectCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'perfectCount', Sort.desc);
+    });
+  }
+
   QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByProductName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'productName', Sort.asc);
@@ -1547,6 +1794,32 @@ extension ProductShadeQuerySortThenBy
   QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByShadeNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'shadeName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByTooDarkCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooDarkCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      thenByTooDarkCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooDarkCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByTooLightCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooLightCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      thenByTooLightCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tooLightCount', Sort.desc);
     });
   }
 }
@@ -1599,6 +1872,12 @@ extension ProductShadeQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ProductShade, ProductShade, QDistinct> distinctByPerfectCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'perfectCount');
+    });
+  }
+
   QueryBuilder<ProductShade, ProductShade, QDistinct> distinctByProductName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1610,6 +1889,19 @@ extension ProductShadeQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'shadeName', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QDistinct> distinctByTooDarkCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'tooDarkCount');
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QDistinct>
+      distinctByTooLightCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'tooLightCount');
     });
   }
 }
@@ -1664,6 +1956,12 @@ extension ProductShadeQueryProperty
     });
   }
 
+  QueryBuilder<ProductShade, int, QQueryOperations> perfectCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'perfectCount');
+    });
+  }
+
   QueryBuilder<ProductShade, String, QQueryOperations> productNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'productName');
@@ -1673,6 +1971,18 @@ extension ProductShadeQueryProperty
   QueryBuilder<ProductShade, String, QQueryOperations> shadeNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'shadeName');
+    });
+  }
+
+  QueryBuilder<ProductShade, int, QQueryOperations> tooDarkCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'tooDarkCount');
+    });
+  }
+
+  QueryBuilder<ProductShade, int, QQueryOperations> tooLightCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'tooLightCount');
     });
   }
 }

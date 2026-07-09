@@ -15,4 +15,8 @@ class ProductShade {
   late double b;
   late String category; // Foundation, Concealer, Lipstick, etc.
   late String affiliateUrl;
+
+  int perfectCount = 0;
+  int tooDarkCount = 0;
+  int tooLightCount = 0;
 }

@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import '../data/models/standard_shade.dart';
 import '../data/models/product_shade.dart';
 import '../../features/pouch/data/models/pouch_item.dart';
+import '../../features/premium_subscription/data/models/app_settings.dart';
 import '../utils/color_calculator.dart';
 
 class DatabaseService {
@@ -33,6 +34,7 @@ class DatabaseService {
         StandardShadeSchema,
         ProductShadeSchema,
         PouchItemSchema,
+        AppSettingsSchema,
       ],
       directory: path,
     );

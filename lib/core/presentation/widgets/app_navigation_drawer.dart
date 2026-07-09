@@ -5,6 +5,7 @@ import '../../../../features/catalog/presentation/pages/shade_converter_page.dar
 import '../../../../features/catalog/data/repositories/shade_matcher_repository_impl.dart';
 import '../../network/database_service.dart';
 import '../../../../features/pouch/presentation/pages/makeup_pouch_page.dart';
+import '../../../../features/premium_subscription/presentation/pages/ar_try_on_page.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
   const AppNavigationDrawer({super.key});
@@ -158,6 +159,24 @@ class AppNavigationDrawer extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const MakeupPouchPage(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDrawerItem(
+                        context: context,
+                        icon: Icons.face_retouching_natural_rounded,
+                        title: 'AR Lip Try-On (Premium)',
+                        isActive: context.widget is ArTryOnPage,
+                        onTap: () {
+                          Navigator.pop(context); // Tutup drawer
+                          if (context.widget is! ArTryOnPage) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ArTryOnPage(),
                               ),
                             );
                           }

@@ -495,9 +495,22 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   }
 
   @override
-  Future<void> close() {
-    _cameraController?.dispose();
-    _faceDetector.close();
+  Future<void> close() async {
+    if (_cameraController != null) {
+      try {
+        if (_cameraController!.value.isStreamingImages) {
+          await _cameraController!.stopImageStream();
+        }
+      } catch (e) {
+        debugPrint("Error stopping image stream in ScannerBloc.close(): $e");
+      }
+      try {
+        await _cameraController!.dispose();
+      } catch (e) {
+        debugPrint("Error disposing CameraController in ScannerBloc.close(): $e");
+      }
+    }
+    await _faceDetector.close();
     return super.close();
   }
 }
