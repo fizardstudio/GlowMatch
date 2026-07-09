@@ -40,8 +40,8 @@ class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
       final productLab = LabColor(calibratedL, shade.a, shade.b);
       final double deltaE = ColorCalculator.deltaE00(targetColor, productLab);
 
-      // Hanya masukkan produk yang memiliki kecocokan layak (Delta E <= 5.0)
-      if (deltaE <= 5.0) {
+      // Hanya masukkan produk yang memiliki kecocokan layak (Delta E <= 8.0)
+      if (deltaE <= 8.0) {
         final double matchPercentage = ColorCalculator.calculateMatchPercentage(deltaE);
         matches.add({
           'product': shade,
