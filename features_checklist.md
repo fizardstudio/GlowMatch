@@ -15,7 +15,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Community Validation Loop** | Fitur voting kecocokan komunitas (*Perfect / Too Dark / Too Light*) yang langsung disimpan luring ke database Isar. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Community Offset Delta L** | Kalibrasi otomatis kecerahan formula Delta E menggunakan rata-rata ulasan komunitas agar rekomendasi semakin cerdas. | `lib/features/catalog/data/repositories/shade_matcher_repository_impl.dart` |
 | **[x]** | **Virtual Makeup Pouch** | Pencatatan tanggal buka kosmetik luring, masa kadaluwarsa PAO, notifikasi lokal, dan progress bar gradien. | `lib/features/pouch/presentation/pages/makeup_pouch_page.dart` |
-| **[ ]** | **Filter Preferensi Riasan** *(Subjektif)* | Filter khusus pada hasil pemindaian untuk memilih hasil rekomendasi yang murni *Natural*, *Brightening (Tone-Up)*, atau *Sun-Kissed (Tanned)*. | *Rencana Pengembangan Mendatang* |
+| **[x]** | **Filter Preferensi Riasan** *(Subjektif)* | Filter khusus pada hasil pemindaian untuk memilih hasil rekomendasi yang murni *Natural*, *Brightening (Tone-Up)*, atau *Sun-Kissed (Tanned)*. | `lib/features/scanner/presentation/pages/results_page.dart` |
 
 ---
 

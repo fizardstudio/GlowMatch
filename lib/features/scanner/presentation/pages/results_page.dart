@@ -4,6 +4,7 @@ import '../../../../core/data/models/standard_shade.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/utils/color_calculator.dart';
+import '../../../premium_subscription/data/models/app_settings.dart';
 
 class ResultsPage extends StatefulWidget {
   final List<int> extractedRgb;
@@ -23,6 +24,107 @@ class ResultsPage extends StatefulWidget {
 
 class _ResultsPageState extends State<ResultsPage> {
   String _selectedFilter = 'natural'; // 'natural', 'brightening', 'sunkissed'
+  bool _isPremium = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final isar = DatabaseService().isar;
+    final settings = await isar.appSettings.get(0);
+    if (settings != null && settings.isPremium) {
+      setState(() {
+        _isPremium = true;
+      });
+    }
+  }
+
+  Future<void> _activatePremium() async {
+    final isar = DatabaseService().isar;
+    final settings = AppSettings()
+      ..id = 0
+      ..isPremium = true;
+
+    await isar.writeTxn(() async {
+      await isar.appSettings.put(settings);
+    });
+
+    setState(() {
+      _isPremium = true;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
+          backgroundColor: Color(0xFFE5C185),
+        ),
+      );
+    }
+  }
+
+  void _showPremiumUnlockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFF16162A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5A93B).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.stars_rounded, color: Color(0xFFE5A93B), size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Buka Fitur Premium',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+               ),
+              const SizedBox(height: 8),
+              const Text(
+                'Dapatkan analisis mendalam 12 Musim Warna (Seasonal Color) dan rekomendasi warna Hijab komersial tercocok dengan kulit Anda!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE5A93B),
+                  foregroundColor: const Color(0xFF0F0F1A),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _activatePremium();
+                },
+                child: const Text('Aktifkan Premium Permanen', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Nanti Saja', style: TextStyle(color: Colors.white30)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Menyaring dan mengurutkan rekomendasi kosmetik berdasarkan preferensi riasan subjektif pengguna.
   List<Map<String, dynamic>> _getFilteredMatches(LabColor targetLab) {
@@ -290,6 +392,10 @@ class _ResultsPageState extends State<ResultsPage> {
                   style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                 ),
               ),
+              const SizedBox(height: 20),
+
+              // 2.2 Seasonal Color Palette & Hijab Recommendations (Fitur PREMIUM)
+              _buildSeasonalColorSection(targetLab),
               const SizedBox(height: 28),
 
               // Preferensi Hasil Riasan (Subjektif)
@@ -680,6 +786,214 @@ class _ResultsPageState extends State<ResultsPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSeasonalColorSection(LabColor targetLab) {
+    final profile = ColorCalculator.getSeasonalColorProfile(targetLab.l, targetLab.a, targetLab.b);
+    final String season = profile['season'] as String;
+    final String description = profile['description'] as String;
+    final List<String> paletteColors = List<String>.from(profile['paletteColors'] as List);
+    final List<String> hijabColors = List<String>.from(profile['hijabColors'] as List);
+    final List<String> hijabColorNames = List<String>.from(profile['hijabColorNames'] as List);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16162A),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: _isPremium 
+              ? const Color(0xFFE5A93B).withOpacity(0.2) 
+              : Colors.white.withOpacity(0.05),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.palette_rounded, 
+                color: _isPremium ? const Color(0xFFE5A93B) : Colors.white38,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Seasonal Color & Hijab (Premium)',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (!_isPremium)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5A93B).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_rounded, color: Color(0xFFE5A93B), size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'Locked',
+                        style: TextStyle(color: Color(0xFFE5A93B), fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (!_isPremium) ...[
+            // Tampilan Teaser Terkunci
+            Stack(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tipe Musim Warna Anda: ?????',
+                      style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Analisis dinamis warna kulit Anda berdasarkan temperatur, saturasi, dan tingkat kecerahan untuk mencarikan kecocokan palet warna.',
+                      style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: List.generate(5, (index) => Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        height: 24,
+                        width: 24,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white12,
+                        ),
+                      )),
+                    ),
+                  ],
+                ),
+                Positioned.fill(
+                  child: Container(
+                    color: const Color(0xFF16162A).withOpacity(0.7),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFE5A93B),
+                              foregroundColor: const Color(0xFF0F0F1A),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.stars_rounded, size: 16),
+                            label: const Text('Buka Sekarang 👑', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            onPressed: _showPremiumUnlockDialog,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            // Tampilan Premium Terbuka
+            Text(
+              'Tipe Musim Warna Anda: $season',
+              style: const TextStyle(
+                color: Color(0xFFE5A93B),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Palet Warna Kosmetik Rekomendasi:',
+              style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: paletteColors.map((hex) {
+                final color = _getHexColor(hex);
+                return Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  height: 32,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color,
+                    border: Border.all(color: Colors.white24, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            const Divider(color: Colors.white10),
+            const SizedBox(height: 12),
+            const Text(
+              'Warna Hijab Terbaik untuk Kulit Anda:',
+              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(hijabColors.length, (idx) {
+                final hex = hijabColors[idx];
+                final name = hijabColorNames[idx];
+                final color = _getHexColor(hex);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 12,
+                        width: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        name,
+                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ],
+        ],
       ),
     );
   }

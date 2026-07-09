@@ -217,4 +217,111 @@ class ColorCalculator {
 
     return [finalR.round(), finalG.round(), finalB.round()];
   }
+
+  /// Menganalisis warna kulit di ruang warna Lab untuk mengklasifikasikan pengguna ke dalam salah satu dari 12 Musim Warna (Seasonal Color Profile).
+  /// Menghasilkan palet warna makeup dan rekomendasi warna hijab yang serasi.
+  static Map<String, dynamic> getSeasonalColorProfile(double L, double a, double b) {
+    final double chroma = math.sqrt(a * a + b * b);
+    double hueAngle = math.atan2(b, a) * 180.0 / math.pi;
+    if (hueAngle < 0) hueAngle += 360.0;
+
+    // Menentukan undertone berdasarkan parameter b* (kuning hangat vs cool kemerahan/biru)
+    final bool isWarm = b > 2.0;
+
+    String season;
+    String description;
+    List<String> paletteColors;
+    List<String> hijabColors;
+    List<String> hijabColorNames;
+
+    if (isWarm) {
+      if (L > 62) {
+        if (chroma > 20) {
+          season = "Light Spring";
+          description = "Tipe musim semi yang cerah dan hangat. Kulit Anda memiliki kilau keemasan alami yang segar.";
+          paletteColors = ["#FEE2C5", "#FDBA74", "#FB7185", "#F472B6", "#A7F3D0"];
+          hijabColors = ["#EEDBB8", "#DB9B70", "#CE6060", "#F0A6B2", "#A6D5C2"];
+          hijabColorNames = ["Peach Nude", "Warm Terracotta", "Coral Pink", "Blush Pink", "Sage Green"];
+        } else {
+          season = "Soft Autumn";
+          description = "Tipe musim gugur yang lembut, hangat, dengan saturasi rendah. Warna-warna tanah yang teredam sangat serasi dengan Anda.";
+          paletteColors = ["#FFE4C4", "#DDB892", "#B08968", "#7F5539", "#9C6644"];
+          hijabColors = ["#CDB4DB", "#D8B2D1", "#E29578", "#83C5BE", "#A3B19B"];
+          hijabColorNames = ["Muted Mauve", "Warm Taupe", "Burnt Orange", "Muted Teal", "Olive Drab"];
+        }
+      } else if (L < 48) {
+        season = "Deep Autumn";
+        description = "Tipe musim gugur yang pekat, hangat, dan dramatis. Warna-warna gelap yang kaya akan mempertegas keindahan kulit Anda.";
+        paletteColors = ["#78350F", "#92400E", "#B45309", "#D97706", "#451A03"];
+        hijabColors = ["#4A154B", "#5C2018", "#1E3F20", "#875C36", "#DCA842"];
+        hijabColorNames = ["Deep Plum", "Burgundy", "Forest Green", "Dark Mustard", "Warm Bronze"];
+      } else {
+        if (chroma > 22) {
+          season = "True Spring";
+          description = "Tipe musim semi murni dengan warna keemasan yang hangat dan kontras yang hidup.";
+          paletteColors = ["#F59E0B", "#EF4444", "#10B981", "#3B82F6", "#EC4899"];
+          hijabColors = ["#EAB308", "#DC2626", "#059669", "#2563EB", "#DB2777"];
+          hijabColorNames = ["Bright Marigold", "True Coral", "Kelly Green", "Royal Blue", "Hot Pink"];
+        } else {
+          season = "True Autumn";
+          description = "Tipe musim gugur murni yang kaya akan warna-warna tanah yang hangat, teduh, dan berkarakter.";
+          paletteColors = ["#A16207", "#854D0E", "#A7F3D0", "#15803D", "#78350F"];
+          hijabColors = ["#C18C5D", "#7F4F24", "#582F0E", "#4B5320", "#6A4C93"];
+          hijabColorNames = ["Caramel", "Mocha", "Dark Chocolate", "Olive Green", "Deep Grape"];
+        }
+      }
+    } else {
+      if (L > 62) {
+        if (chroma > 20) {
+          season = "Clear Winter";
+          description = "Tipe musim dingin yang jernih, dingin, dengan kontras yang cerah dan memikat.";
+          paletteColors = ["#F43F5E", "#D946EF", "#8B5CF6", "#3B82F6", "#06B6D4"];
+          hijabColors = ["#FFFFFF", "#000000", "#C1121F", "#03045E", "#7209B7"];
+          hijabColorNames = ["Pure White", "Jet Black", "Ruby Red", "Deep Navy", "Royal Violet"];
+        } else {
+          season = "Light Summer";
+          description = "Tipe musim panas yang ringan, ber-undertone dingin, dan ber-saturasi lembut. Warna-warna pastel yang sejuk akan terlihat sangat elegan.";
+          paletteColors = ["#FCE7F3", "#F3E8FF", "#E0F2FE", "#CCFBF1", "#E2E8F0"];
+          hijabColors = ["#D8B4FE", "#C084FC", "#93C5FD", "#A5F3FC", "#F472B6"];
+          hijabColorNames = ["Lavender", "Orchid Purple", "Sky Blue", "Ice Mint", "Baby Pink"];
+        }
+      } else if (L < 48) {
+        if (chroma > 18) {
+          season = "Deep Winter";
+          description = "Tipe musim dingin yang pekat, dingin, dan intens. Warna-warna permata yang dingin berpadu kontras menciptakan tampilan eksklusif.";
+          paletteColors = ["#4C1D95", "#1E3A8A", "#881337", "#064E3B", "#111827"];
+          hijabColors = ["#3B0764", "#172554", "#4C0519", "#022C22", "#0F172A"];
+          hijabColorNames = ["Midnight Purple", "Dark Sapphire", "Deep Burgundy", "Emerald Green", "Charcoal Gray"];
+        } else {
+          season = "Soft Summer";
+          description = "Tipe musim panas yang lembut, teduh, dengan tone dingin yang meredup abu-abu hangat.";
+          paletteColors = ["#E9D5FF", "#C084FC", "#F472B6", "#93C5FD", "#A5F3FC"];
+          hijabColors = ["#9A8C98", "#F0A6CA", "#B5E2FA", "#EDF2F4", "#8D99AE"];
+          hijabColorNames = ["Dusty Rose", "Soft Mauve", "Pastel Blue", "Light Gray", "Steel Blue"];
+        }
+      } else {
+        if (chroma > 20) {
+          season = "True Winter";
+          description = "Tipe musim dingin murni dengan rona warna sangat dingin, kontras tajam, dan jernih.";
+          paletteColors = ["#E11D48", "#C026D3", "#7C3AED", "#2563EB", "#0891B2"];
+          hijabColors = ["#E11D48", "#000814", "#FFFFFF", "#1E6091", "#4A0E17"];
+          hijabColorNames = ["Crimson Red", "Obsidian Black", "Pure Snow", "Cobalt Blue", "Dark Maroon"];
+        } else {
+          season = "True Summer";
+          description = "Tipe musim panas murni yang tenang, lembut, dengan keanggunan tone biru-keabuan yang dingin.";
+          paletteColors = ["#F472B6", "#C084FC", "#93C5FD", "#A5F3FC", "#F3F4F6"];
+          hijabColors = ["#D1A3C4", "#B8C0FF", "#A9DEF9", "#E8AEB7", "#6D597A"];
+          hijabColorNames = ["Dull Orchid", "Periwinkle", "Soft Cerulean", "Blush Gray", "Eggplant Violet"];
+        }
+      }
+    }
+
+    return {
+      "season": season,
+      "description": description,
+      "paletteColors": paletteColors,
+      "hijabColors": hijabColors,
+      "hijabColorNames": hijabColorNames,
+    };
+  }
 }
