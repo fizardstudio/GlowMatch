@@ -38,7 +38,7 @@ class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
       }
 
       final productLab = LabColor(calibratedL, shade.a, shade.b);
-      final double deltaE = ColorCalculator.deltaE76(targetColor, productLab);
+      final double deltaE = ColorCalculator.deltaE00(targetColor, productLab);
 
       // Hanya masukkan produk yang memiliki kecocokan layak (Delta E <= 5.0)
       if (deltaE <= 5.0) {
@@ -70,7 +70,7 @@ class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
 
     for (final std in allStandards) {
       final stdLab = LabColor(std.l, std.a, std.b);
-      final double deltaE = ColorCalculator.deltaE76(targetColor, stdLab);
+      final double deltaE = ColorCalculator.deltaE00(targetColor, stdLab);
 
       if (deltaE < minDeltaE) {
         minDeltaE = deltaE;

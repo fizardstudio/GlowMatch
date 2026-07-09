@@ -151,7 +151,7 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
 
     for (final candidate in candidates) {
       final candidateLab = LabColor(candidate.l, candidate.a, candidate.b);
-      final double deltaE = ColorCalculator.deltaE76(sourceLab, candidateLab);
+      final double deltaE = ColorCalculator.deltaE00(sourceLab, candidateLab);
       
       // Ambil yang kemiripannya cukup dekat secara visual (Delta E <= 8.0)
       if (deltaE <= 8.0) {

@@ -91,6 +91,93 @@ class ColorCalculator {
     );
   }
 
+  /// Menghitung jarak warna Delta E (CIEDE2000) antara dua LabColor.
+  /// Ini adalah standar emas industri kecantikan modern karena mengompensasi kelemahan
+  /// penglihatan mata manusia terhadap kecerahan dan hue di bagian saturasi tertentu.
+  static double deltaE00(LabColor c1, LabColor c2) {
+    final double l1 = c1.l;
+    final double a1 = c1.a;
+    final double b1 = c1.b;
+    final double l2 = c2.l;
+    final double a2 = c2.a;
+    final double b2 = c2.b;
+
+    final double c1Val = math.sqrt(a1 * a1 + b1 * b1);
+    final double c2Val = math.sqrt(a2 * a2 + b2 * b2);
+    final double cBar = (c1Val + c2Val) / 2.0;
+
+    final double cBar7 = math.pow(cBar, 7).toDouble();
+    final double constant25_7 = math.pow(25, 7).toDouble(); // 25^7 = 6103515625
+    final double g = 0.5 * (1.0 - math.sqrt(cBar7 / (cBar7 + constant25_7)));
+
+    final double a1Prime = (1.0 + g) * a1;
+    final double a2Prime = (1.0 + g) * a2;
+
+    final double c1Prime = math.sqrt(a1Prime * a1Prime + b1 * b1);
+    final double c2Prime = math.sqrt(a2Prime * a2Prime + b2 * b2);
+    final double cBarPrime = (c1Prime + c2Prime) / 2.0;
+
+    double h1Prime = math.atan2(b1, a1Prime) * 180.0 / math.pi;
+    if (h1Prime < 0) h1Prime += 360.0;
+
+    double h2Prime = math.atan2(b2, a2Prime) * 180.0 / math.pi;
+    if (h2Prime < 0) h2Prime += 360.0;
+
+    double deltaHPrime = 0.0;
+    double deltaHPrimeDiff = h2Prime - h1Prime;
+    if (c1Prime * c2Prime != 0.0) {
+      if (deltaHPrimeDiff.abs() <= 180.0) {
+        deltaHPrime = deltaHPrimeDiff;
+      } else if (deltaHPrimeDiff > 180.0) {
+        deltaHPrime = deltaHPrimeDiff - 360.0;
+      } else {
+        deltaHPrime = deltaHPrimeDiff + 360.0;
+      }
+    }
+    final double deltaHBigPrime = 2.0 * math.sqrt(c1Prime * c2Prime) * math.sin((deltaHPrime / 2.0) * math.pi / 180.0);
+
+    final double deltaLPrime = l2 - l1;
+    final double deltaCPrime = c2Prime - c1Prime;
+
+    double hBarPrime = 0.0;
+    if (c1Prime * c2Prime != 0.0) {
+      if (deltaHPrimeDiff.abs() <= 180.0) {
+        hBarPrime = (h1Prime + h2Prime) / 2.0;
+      } else if ((h1Prime + h2Prime) < 360.0) {
+        hBarPrime = (h1Prime + h2Prime + 360.0) / 2.0;
+      } else {
+        hBarPrime = (h1Prime + h2Prime - 360.0) / 2.0;
+      }
+    }
+
+    final double t = 1.0 -
+        0.17 * math.cos((hBarPrime - 30.0) * math.pi / 180.0) +
+        0.24 * math.cos((2.0 * hBarPrime) * math.pi / 180.0) +
+        0.32 * math.cos((3.0 * hBarPrime + 6.0) * math.pi / 180.0) -
+        0.20 * math.cos((4.0 * hBarPrime - 63.0) * math.pi / 180.0);
+
+    final double lBarPrimeMinus50Sq = math.pow((l1 + l2) / 2.0 - 50.0, 2).toDouble();
+    final double sL = 1.0 + (0.015 * lBarPrimeMinus50Sq) / math.sqrt(20.0 + lBarPrimeMinus50Sq);
+    final double sC = 1.0 + 0.045 * cBarPrime;
+    final double sH = 1.0 + 0.015 * cBarPrime * t;
+
+    final double deltaTheta = 30.0 * math.exp(-math.pow((hBarPrime - 275.0) / 25.0, 2).toDouble());
+    final double cBarPrime7 = math.pow(cBarPrime, 7).toDouble();
+    final double rC = 2.0 * math.sqrt(cBarPrime7 / (cBarPrime7 + constant25_7));
+    final double rT = -math.sin((2.0 * deltaTheta) * math.pi / 180.0) * rC;
+
+    final double termL = deltaLPrime / sL;
+    final double termC = deltaCPrime / sC;
+    final double termH = deltaHBigPrime / sH;
+
+    return math.sqrt(
+      termL * termL +
+      termC * termC +
+      termH * termH +
+      rT * termC * termH
+    );
+  }
+
   /// Mengonversi nilai Delta E menjadi persentase kecocokan warna (0% - 100%).
   static double calculateMatchPercentage(double deltaE) {
     // Berdasarkan rumus: 100 - (Delta E * 10)
