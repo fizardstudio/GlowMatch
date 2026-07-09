@@ -188,6 +188,10 @@ void addCommunityFeedback(String shadeId, String feedbackType) {
   database.saveFeedbackStats(stats);
 }
 ```
+*   **Filter Preferensi Riasan (Subjektif - Pengembangan Mendatang):** Untuk mengakomodasi selera personal pengguna yang bervariasi (ingin terlihat natural, lebih putih, atau eksotis), algoritma pencarian menyediakan opsi filter preferensi riasan:
+    1.  *Natural Look (Default):* Rekomendasi murni berdasarkan Delta E paling mendekati ($\Delta E_{ab}^* \approx 0$ atau $\Delta L \approx 0$).
+    2.  *Brightening (Tone-Up):* Secara otomatis menyaring/merekomendasikan shade yang memiliki nilai kecerahan ($L^*$) lebih tinggi $2 \sim 3$ poin di atas kulit asli hasil scan.
+    3.  *Sun-Kissed (Tanned):* Secara otomatis menyaring/merekomendasikan shade yang memiliki nilai kecerahan ($L^*$) lebih rendah $2 \sim 3$ poin, atau bergeser ke rona warna yang lebih hangat (*Warm/Golden*).
 
 ### C. Virtual Makeup Pouch & Expiration Reminder (Fitur FREE)
 *   **Kalkulator PAO & Reminder:** Menghitung sisa waktu aman penggunaan kosmetik luring.
