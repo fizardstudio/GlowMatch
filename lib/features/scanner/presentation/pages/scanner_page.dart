@@ -11,6 +11,7 @@ import 'results_page.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../premium_subscription/data/models/app_settings.dart';
+import '../../../../core/utils/widget_helper.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
@@ -732,6 +733,9 @@ class _ScannerPageState extends State<ScannerPage> {
     setState(() {
       _isPremium = true;
     });
+
+    // Update native widget data
+    WidgetHelper.updateExpiryWidget();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

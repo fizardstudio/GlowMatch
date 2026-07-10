@@ -4,6 +4,7 @@ import '../../../../core/network/database_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../data/models/pouch_item.dart';
+import '../../../../core/utils/widget_helper.dart';
 
 class MakeupPouchPage extends StatefulWidget {
   const MakeupPouchPage({super.key});
@@ -30,6 +31,9 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
         _pouchItems = items;
         _isLoading = false;
       });
+
+      // Update native widget data
+      WidgetHelper.updateExpiryWidget();
 
       // Tampilkan peringatan dalam aplikasi setelah build frame pertama
       // jika ada produk yang kedaluwarsa

@@ -11,6 +11,7 @@ import '../../../../core/network/database_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../data/models/app_settings.dart';
 import '../widgets/lip_filter_painter.dart';
+import '../../../../core/utils/widget_helper.dart';
 
 class ArTryOnPage extends StatefulWidget {
   const ArTryOnPage({super.key});
@@ -126,6 +127,9 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
       _showPaywall = false;
       _isDemoActive = false;
     });
+
+    // Update native widget data
+    WidgetHelper.updateExpiryWidget();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

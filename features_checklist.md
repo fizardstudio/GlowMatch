@@ -34,7 +34,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **AI Makeup Dupe Finder** | Perhitungan Delta E untuk mencari padanan kosmetik luxury ke brand lokal/murah yang warnanya mirip s.d 99%. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Couple Undertone Matcher** | Memindai wajah bersama pacar/teman, menghitung kecocokan undertone, dan merekomendasikan baju senada. | `lib/features/scanner/presentation/` |
-| **[ ]** | **Expiry Alert Widget** | Widget minimalis layar utama HP untuk pengingat masa kadaluwarsa produk terdekat dari pouch kosmetik. | *Rencana Pengembangan Mendatang* |
+| **[x]** | **Expiry Alert Widget** | Widget minimalis layar utama HP untuk pengingat masa kadaluwarsa produk terdekat dari pouch kosmetik. | `android/app/src/main/res/` & `lib/core/utils/widget_helper.dart` |
 
 ---
 

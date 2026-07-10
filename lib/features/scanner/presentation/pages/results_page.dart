@@ -7,6 +7,7 @@ import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/utils/color_calculator.dart';
 import '../../../premium_subscription/data/models/app_settings.dart';
+import '../../../../core/utils/widget_helper.dart';
 
 class ResultsPage extends StatefulWidget {
   final List<int> extractedRgb;
@@ -65,6 +66,9 @@ class _ResultsPageState extends State<ResultsPage> {
     setState(() {
       _isPremium = true;
     });
+
+    // Update native widget data
+    WidgetHelper.updateExpiryWidget();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
