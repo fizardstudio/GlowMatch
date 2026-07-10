@@ -4,6 +4,9 @@ platform :ios, '15.5'
 # CocoaPods analytics sends network stats so feel free to disable it.
 # disable_cocoapods_analytics!
 
+# Require the Flutter helper script to define helper functions
+require File.expand_path(File.join('Flutter', 'podhelper'), __dir__)
+
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
