@@ -283,7 +283,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
             ..shadeName = closestLip['shade']!
             ..hexCode = closestLip['hex']!
             ..affiliateUrl = closestLip['url']!;
-          _lipstickMatchPercent = ColorCalculator.calculateMatchPercentage(minLipDelta);
+          _lipstickMatchPercent = _friendlyMatchPercent(minLipDelta);
         }
 
         if (closestBlush != null) {
@@ -293,12 +293,12 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
             ..shadeName = closestBlush['shade']!
             ..hexCode = closestBlush['hex']!
             ..affiliateUrl = closestBlush['url']!;
-          _blushMatchPercent = ColorCalculator.calculateMatchPercentage(minBlushDelta);
+          _blushMatchPercent = _friendlyMatchPercent(minBlushDelta);
         }
 
         if (closestFound != null) {
           _matchedFoundation = closestFound;
-          _foundationMatchPercent = ColorCalculator.calculateMatchPercentage(minFoundDelta);
+          _foundationMatchPercent = _friendlyMatchPercent(minFoundDelta);
         }
 
         _isLoading = false;
@@ -313,6 +313,12 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
         SnackBar(content: Text('Analisis gagal: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: Colors.redAccent),
       );
     }
+  }
+
+  // Formula toleran pencahayaan kamera
+  double _friendlyMatchPercent(double deltaE) {
+    final double pct = 98.0 - (deltaE * 0.85);
+    return pct.clamp(60.0, 99.0);
   }
 
   // Menerjemahkan format HEX
