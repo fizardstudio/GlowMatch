@@ -17,8 +17,13 @@ const AppSettingsSchema = CollectionSchema(
   name: r'AppSettings',
   id: -5633561779022347008,
   properties: {
-    r'isPremium': PropertySchema(
+    r'hasUsedCoupleTrial': PropertySchema(
       id: 0,
+      name: r'hasUsedCoupleTrial',
+      type: IsarType.bool,
+    ),
+    r'isPremium': PropertySchema(
+      id: 1,
       name: r'isPremium',
       type: IsarType.bool,
     )
@@ -52,7 +57,8 @@ void _appSettingsSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.isPremium);
+  writer.writeBool(offsets[0], object.hasUsedCoupleTrial);
+  writer.writeBool(offsets[1], object.isPremium);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -62,8 +68,9 @@ AppSettings _appSettingsDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppSettings();
+  object.hasUsedCoupleTrial = reader.readBool(offsets[0]);
   object.id = id;
-  object.isPremium = reader.readBool(offsets[0]);
+  object.isPremium = reader.readBool(offsets[1]);
   return object;
 }
 
@@ -75,6 +82,8 @@ P _appSettingsDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
+      return (reader.readBool(offset)) as P;
+    case 1:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -174,6 +183,16 @@ extension AppSettingsQueryWhere
 
 extension AppSettingsQueryFilter
     on QueryBuilder<AppSettings, AppSettings, QFilterCondition> {
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      hasUsedCoupleTrialEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'hasUsedCoupleTrial',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> idEqualTo(
       Id value) {
     return QueryBuilder.apply(this, (query) {
@@ -246,6 +265,20 @@ extension AppSettingsQueryLinks
 
 extension AppSettingsQuerySortBy
     on QueryBuilder<AppSettings, AppSettings, QSortBy> {
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByHasUsedCoupleTrial() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasUsedCoupleTrial', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByHasUsedCoupleTrialDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasUsedCoupleTrial', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIsPremium() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPremium', Sort.asc);
@@ -261,6 +294,20 @@ extension AppSettingsQuerySortBy
 
 extension AppSettingsQuerySortThenBy
     on QueryBuilder<AppSettings, AppSettings, QSortThenBy> {
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByHasUsedCoupleTrial() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasUsedCoupleTrial', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByHasUsedCoupleTrialDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasUsedCoupleTrial', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -288,6 +335,13 @@ extension AppSettingsQuerySortThenBy
 
 extension AppSettingsQueryWhereDistinct
     on QueryBuilder<AppSettings, AppSettings, QDistinct> {
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByHasUsedCoupleTrial() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hasUsedCoupleTrial');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIsPremium() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isPremium');
@@ -300,6 +354,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations>
+      hasUsedCoupleTrialProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hasUsedCoupleTrial');
     });
   }
 

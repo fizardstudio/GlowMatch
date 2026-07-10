@@ -13,12 +13,20 @@ class ResultsPage extends StatefulWidget {
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
 
+  // Fields for Face 2 (Couple Mode)
+  final List<int>? coupleExtractedRgb;
+  final StandardShade? coupleMatchedStandard;
+
   const ResultsPage({
     super.key,
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    this.coupleExtractedRgb,
+    this.coupleMatchedStandard,
   });
+
+  bool get isCoupleMode => coupleMatchedStandard != null && coupleExtractedRgb != null;
 
   @override
   State<ResultsPage> createState() => _ResultsPageState();
@@ -287,6 +295,10 @@ class _ResultsPageState extends State<ResultsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isCoupleMode) {
+      return _buildCoupleResults(context);
+    }
+
     final skinColor = _getRgbColor(widget.extractedRgb);
     final targetLab = ColorCalculator.rgbToLab(
       widget.extractedRgb[0],
@@ -1710,6 +1722,621 @@ class _ResultsPageState extends State<ResultsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCoupleResults(BuildContext context) {
+    final rgb1 = widget.extractedRgb;
+    final rgb2 = widget.coupleExtractedRgb!;
+    final color1 = Color.fromARGB(255, rgb1[0], rgb1[1], rgb1[2]);
+    final color2 = Color.fromARGB(255, rgb2[0], rgb2[1], rgb2[2]);
+    final shade1 = widget.matchedStandard;
+    final shade2 = widget.coupleMatchedStandard!;
+
+    final undertone1 = shade1.undertone.toLowerCase();
+    final undertone2 = shade2.undertone.toLowerCase();
+
+    int compatibilityScore = 92;
+    String compatibilityTitle = 'Perfect Balance ⚖️';
+    String compatibilityDesc = 'Perpaduan yang sangat seimbang! Salah satu memiliki warna kulit netral fleksibel, melengkapi undertone pasangan/sahabat dengan sangat mulus.';
+    List<Color> couplePalette = [
+      const Color(0xFF008080), // Teal
+      const Color(0xFFE0B0FF), // Mauve
+      const Color(0xFFFFCC99), // Peach
+      const Color(0xFF1F305E), // Navy
+      const Color(0xFFF5F5DC), // Beige
+    ];
+    List<String> couplePaletteNames = ['Teal', 'Mauve', 'Peach', 'Navy', 'Beige'];
+
+    if (undertone1 == undertone2) {
+      compatibilityScore = 96;
+      compatibilityTitle = 'Twin Soul 👯‍♀️';
+      compatibilityDesc = 'Kalian berdua memiliki rona undertone yang sama! Sangat serasi dalam memilih palet kosmetik dan pakaian yang senada untuk hang out bersama.';
+      if (undertone1 == 'warm') {
+        couplePalette = [
+          const Color(0xFFD4AF37), // Gold
+          const Color(0xFFC85A17), // Terracotta
+          const Color(0xFF808000), // Olive
+          const Color(0xFFFFFDD0), // Cream
+          const Color(0xFFFFDB58), // Mustard
+        ];
+        couplePaletteNames = ['Gold', 'Terracotta', 'Olive', 'Cream', 'Mustard'];
+      } else if (undertone1 == 'cool') {
+        couplePalette = [
+          const Color(0xFF4169E1), // Royal Blue
+          const Color(0xFF50C878), // Emerald
+          const Color(0xFF8F00FF), // Violet
+          const Color(0xFFA5F2F3), // Ice Blue
+          const Color(0xFF808080), // Grey
+        ];
+        couplePaletteNames = ['Royal Blue', 'Emerald', 'Violet', 'Ice Blue', 'Grey'];
+      }
+    } else if ((undertone1 == 'warm' && undertone2 == 'cool') || (undertone1 == 'cool' && undertone2 == 'warm')) {
+      compatibilityScore = 88;
+      compatibilityTitle = 'Harmonious Contrast ☯️';
+      compatibilityDesc = 'Rona undertone kalian saling melengkapi satu sama lain! Kombinasi yang unik antara kehangatan (Warm) dan kesegaran (Cool) membuat kalian saling menyempurnakan.';
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F1A),
+      appBar: AppBar(
+        title: const Text(
+          'Couple & Bestie Matcher 👥',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        backgroundColor: const Color(0xFF16162A),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16162A),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Kamu 👤',
+                                style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                height: 80,
+                                width: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: color1,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color1.withOpacity(0.4),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                shade1.undertone,
+                                style: const TextStyle(color: Color(0xFFE5A93B), fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Text(
+                                shade1.name,
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          height: 120,
+                          width: 1,
+                          color: Colors.white10,
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Partner / Bestie 👥',
+                                style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                height: 80,
+                                width: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: color2,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color2.withOpacity(0.4),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                shade2.undertone,
+                                style: const TextStyle(color: Color(0xFFE5A93B), fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Text(
+                                shade2.name,
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE5A93B),
+                          foregroundColor: const Color(0xFF0F0F1A),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                        ),
+                        onPressed: () => _showCoupleGlowCardModal(context, shade1, shade2, color1, color2),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.share_rounded, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              'Generate Couple Glow Card 📸',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16162A),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'UNDERTONE COMPATIBILITY INDEX 🔬',
+                      style: TextStyle(
+                        color: Color(0xFFE5A93B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE5A93B).withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$compatibilityScore%',
+                            style: const TextStyle(
+                              color: Color(0xFFE5A93B),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                compatibilityTitle,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                compatibilityDesc,
+                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11.5, height: 1.4),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16162A),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'HARMONIOUS COUPLE OUTFIT COLORS 👗👔',
+                      style: TextStyle(
+                        color: Color(0xFFE5A93B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Warna pakaian yang direkomendasikan saat kalian berfoto atau hangout bersama agar terlihat kompak dan saling bersinar:',
+                      style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(couplePalette.length, (index) {
+                        final color = couplePalette[index];
+                        final name = couplePaletteNames[index];
+                        return Expanded(
+                          child: Column(
+                            children: [
+                              Container(
+                                height: 36,
+                                width: 36,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16162A),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'CELEBRITY COUPLE INSPIRATION 🌟',
+                      style: TextStyle(
+                        color: Color(0xFFE5A93B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _getCoupleCelebrityInspiration(undertone1, undertone2),
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Mereka adalah contoh selebriti dengan kecocokan rona warna kulit serupa dengan kalian berdua.',
+                      style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getCoupleCelebrityInspiration(String u1, String u2) {
+    if (u1 == 'warm' && u2 == 'warm') {
+      return "Zendaya (Deep Autumn) & Lisa Blackpink (True Autumn)";
+    } else if (u1 == 'cool' && u2 == 'cool') {
+      return "Anne Hathaway (True Winter) & Elle Fanning (Light Summer)";
+    } else if (u1 == 'neutral' && u2 == 'neutral') {
+      return "Gigi Hadid (Soft Summer) & Jisoo Blackpink (Soft Autumn)";
+    } else {
+      return "Zendaya (Warm) & Gigi Hadid (Neutral/Cool)";
+    }
+  }
+
+  void _showCoupleGlowCardModal(
+    BuildContext context,
+    StandardShade shade1,
+    StandardShade shade2,
+    Color color1,
+    Color color2,
+  ) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Couple Glow Card',
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F0F1A), Color(0xFF1E1E38)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.3), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE5A93B).withOpacity(0.12),
+                    blurRadius: 30,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'GLOW CARD',
+                        style: TextStyle(
+                          color: Color(0xFFE5A93B),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5A93B).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'COUPLE MODE',
+                          style: TextStyle(color: Color(0xFFE5A93B), fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+
+                  const Text(
+                    'Dual Skin Harmony ✨',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Pencocokan undertone & rona kulit presisi tinggi',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                  ),
+                  const Spacer(),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 70,
+                              width: 70,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: color1,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color1.withOpacity(0.4),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Kamu 👤',
+                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              shade1.undertone,
+                              style: const TextStyle(color: Color(0xFFE5A93B), fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '#${color1.value.toRadixString(16).substring(2).toUpperCase()}',
+                              style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5A93B).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.favorite, color: Color(0xFFE5A93B), size: 18),
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 70,
+                              width: 70,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: color2,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color2.withOpacity(0.4),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Bestie 👥',
+                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              shade2.undertone,
+                              style: const TextStyle(color: Color(0xFFE5A93B), fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '#${color2.value.toRadixString(16).substring(2).toUpperCase()}',
+                              style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.02),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.04)),
+                    ),
+                    child: const Column(
+                      children: [
+                        Text(
+                          'Scan Undertone & Rona Kulit Aslimu',
+                          style: TextStyle(color: Colors.white60, fontSize: 10.5, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Download GlowMatch di PlayStore sekarang 📱',
+                          style: TextStyle(color: Color(0xFFE5A93B), fontSize: 9.5, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.05),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: Colors.white12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            final text = 'GlowCard Couple Mode matched! Rona saya: ${shade1.name} (${shade1.undertone}) & Partner saya: ${shade2.name} (${shade2.undertone}). Cek warna kulitmu di GlowMatch!';
+                            Clipboard.setData(ClipboardData(text: text));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Info profil disalin ke clipboard 📋'),
+                                backgroundColor: Color(0xFFE5C185),
+                              ),
+                            );
+                          },
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.copy, size: 14),
+                              SizedBox(width: 6),
+                              Text('Salin Text', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE5A93B),
+                            foregroundColor: const Color(0xFF0F0F1A),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            elevation: 0,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Tutup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '📸 Screenshot layar ini untuk dibagikan ke IG/TikTok!',
+                    style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

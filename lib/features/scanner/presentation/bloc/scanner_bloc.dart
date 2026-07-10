@@ -10,6 +10,7 @@ import '../../../../core/utils/image_processor.dart';
 import '../../../catalog/domain/repositories/shade_matcher_repository.dart';
 import 'scanner_event.dart';
 import 'scanner_state.dart';
+import '../../../../core/data/models/standard_shade.dart';
 
 class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   final ShadeMatcherRepository _shadeMatcherRepository;
@@ -317,76 +318,33 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       }
 
       List<int> finalRgb = [0, 0, 0];
+      List<int>? coupleRgb;
 
-      if (detectedFaces.isNotEmpty) {
-        final face = detectedFaces.first;
-        final rect = face.boundingBox;
-
-        // Ambil posisi landmark jika terdeteksi, jika tidak gunakan fallback persentase
-        final leftCheek = face.landmarks[FaceLandmarkType.leftCheek]?.position;
-        final rightCheek = face.landmarks[FaceLandmarkType.rightCheek]?.position;
-        final leftEye = face.landmarks[FaceLandmarkType.leftEye]?.position;
-        final rightEye = face.landmarks[FaceLandmarkType.rightEye]?.position;
-
-        final double boxW = (rect.width * 0.14);
-        final double boxH = (rect.height * 0.12);
-
-        int cheekLeftX = (leftCheek != null) ? (leftCheek.x - boxW / 2).round() : (rect.left + rect.width * 0.25).round();
-        int cheekLeftY = (leftCheek != null) ? (leftCheek.y - boxW / 2).round() : (rect.top + rect.height * 0.55).round();
-
-        int cheekRightX = (rightCheek != null) ? (rightCheek.x - boxW / 2).round() : (rect.left + rect.width * 0.60).round();
-        int cheekRightY = (rightCheek != null) ? (rightCheek.y - boxW / 2).round() : (rect.top + rect.height * 0.55).round();
-
-        int foreheadX = (rect.left + rect.width * 0.42).round();
-        int foreheadY = (rect.top + rect.height * 0.20).round();
-
-        if (leftEye != null && rightEye != null) {
-          final midpointX = (leftEye.x + rightEye.x) / 2;
-          final midpointY = (leftEye.y + rightEye.y) / 2;
-          final double eyeDistance = (leftEye.x - rightEye.x).abs().toDouble();
-          foreheadX = (midpointX - boxW / 2).round();
-          foreheadY = (midpointY - eyeDistance * 0.85 - boxH / 2).round();
+      if (event.isCoupleMode) {
+        if (detectedFaces.length < 2) {
+          emit(const ScannerFailure('Mode Couple memerlukan 2 wajah terdeteksi di kamera.'));
+          return;
         }
-
-        final regions = [
-          // Pipi Kiri
-          {
-            'x': cheekLeftX,
-            'y': cheekLeftY,
-            'w': boxW.round(),
-            'h': boxW.round(),
-          },
-          // Pipi Kanan
-          {
-            'x': cheekRightX,
-            'y': cheekRightY,
-            'w': boxW.round(),
-            'h': boxW.round(),
-          },
-          // Dahi
-          {
-            'x': foreheadX,
-            'y': foreheadY,
-            'w': boxW.round(),
-            'h': boxH.round(),
-          }
-        ];
-
-        finalRgb = ImageProcessor.extractSkinColor(decodedImage, regions);
+        finalRgb = _extractSkinColorForFace(decodedImage, detectedFaces[0]);
+        coupleRgb = _extractSkinColorForFace(decodedImage, detectedFaces[1]);
       } else {
-        // Fallback jika tidak ada wajah terdeteksi: Ambil sampel area tengah gambar
-        final int w = (decodedImage.width * 0.20).round();
-        final int h = (decodedImage.height * 0.20).round();
-        final int x = (decodedImage.width * 0.40).round();
-        final int y = (decodedImage.height * 0.40).round();
+        if (detectedFaces.isNotEmpty) {
+          finalRgb = _extractSkinColorForFace(decodedImage, detectedFaces.first);
+        } else {
+          // Fallback jika tidak ada wajah terdeteksi: Ambil sampel area tengah gambar
+          final int w = (decodedImage.width * 0.20).round();
+          final int h = (decodedImage.height * 0.20).round();
+          final int x = (decodedImage.width * 0.40).round();
+          final int y = (decodedImage.height * 0.40).round();
 
-        finalRgb = ImageProcessor.calculateAverageRgb(
-          decodedImage,
-          startX: x,
-          startY: y,
-          width: w,
-          height: h,
-        );
+          finalRgb = ImageProcessor.calculateAverageRgb(
+            decodedImage,
+            startX: x,
+            startY: y,
+            width: w,
+            height: h,
+          );
+        }
       }
 
       // Hapus file foto sementara secara asinkron agar tidak membebani memori
@@ -395,29 +353,104 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       } catch (_) {}
 
       if (finalRgb[0] == 0 && finalRgb[1] == 0 && finalRgb[2] == 0) {
-        emit(const ScannerFailure('Gagal mendeteksi warna kulit. Pastikan cahaya cukup.'));
+        emit(const ScannerFailure('Gagal mendeteksi warna kulit wajah pertama.'));
+        return;
+      }
+
+      if (event.isCoupleMode && coupleRgb != null && (coupleRgb[0] == 0 && coupleRgb[1] == 0 && coupleRgb[2] == 0)) {
+        emit(const ScannerFailure('Gagal mendeteksi warna kulit wajah kedua.'));
         return;
       }
 
       // 4. Konversi RGB rata-rata ke LabColor
       final targetLab = ColorCalculator.rgbToLab(finalRgb[0], finalRgb[1], finalRgb[2]);
-
-      // 5. Cari kecocokan dengan warna teoretis standar & brand komersial
       final matchedStandard = await _shadeMatcherRepository.matchStandardShade(targetLab);
       final commercialMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
 
       if (matchedStandard == null) {
-        emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit.'));
+        emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah pertama.'));
         return;
+      }
+
+      StandardShade? coupleMatchedStandard;
+      if (event.isCoupleMode && coupleRgb != null) {
+        final coupleLab = ColorCalculator.rgbToLab(coupleRgb[0], coupleRgb[1], coupleRgb[2]);
+        coupleMatchedStandard = await _shadeMatcherRepository.matchStandardShade(coupleLab);
+        if (coupleMatchedStandard == null) {
+          emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah kedua.'));
+          return;
+        }
       }
 
       emit(ScannerSuccess(
         extractedRgb: finalRgb,
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
+        coupleExtractedRgb: coupleRgb,
+        coupleMatchedStandard: coupleMatchedStandard,
       ));
     } catch (e) {
       emit(ScannerFailure('Gagal memproses gambar: ${e.toString()}'));
+    }
+  }
+
+  List<int> _extractSkinColorForFace(dynamic decodedImage, Face face) {
+    final rect = face.boundingBox;
+
+    // Ambil posisi landmark jika terdeteksi, jika tidak gunakan fallback persentase
+    final leftCheek = face.landmarks[FaceLandmarkType.leftCheek]?.position;
+    final rightCheek = face.landmarks[FaceLandmarkType.rightCheek]?.position;
+    final leftEye = face.landmarks[FaceLandmarkType.leftEye]?.position;
+    final rightEye = face.landmarks[FaceLandmarkType.rightEye]?.position;
+
+    final double boxW = (rect.width * 0.14);
+    final double boxH = (rect.height * 0.12);
+
+    int cheekLeftX = (leftCheek != null) ? (leftCheek.x - boxW / 2).round() : (rect.left + rect.width * 0.25).round();
+    int cheekLeftY = (leftCheek != null) ? (leftCheek.y - boxW / 2).round() : (rect.top + rect.height * 0.55).round();
+
+    int cheekRightX = (rightCheek != null) ? (rightCheek.x - boxW / 2).round() : (rect.left + rect.width * 0.60).round();
+    int cheekRightY = (rightCheek != null) ? (rightCheek.y - boxW / 2).round() : (rect.top + rect.height * 0.55).round();
+
+    int foreheadX = (rect.left + rect.width * 0.42).round();
+    int foreheadY = (rect.top + rect.height * 0.20).round();
+
+    if (leftEye != null && rightEye != null) {
+      final midpointX = (leftEye.x + rightEye.x) / 2;
+      final midpointY = (leftEye.y + rightEye.y) / 2;
+      final double eyeDistance = (leftEye.x - rightEye.x).abs().toDouble();
+      foreheadX = (midpointX - boxW / 2).round();
+      foreheadY = (midpointY - eyeDistance * 0.85 - boxH / 2).round();
+    }
+
+    final regions = [
+      // Pipi Kiri
+      {
+        'x': cheekLeftX,
+        'y': cheekLeftY,
+        'w': boxW.round(),
+        'h': boxW.round(),
+      },
+      // Pipi Kanan
+      {
+        'x': cheekRightX,
+        'y': cheekRightY,
+        'w': boxW.round(),
+        'h': boxW.round(),
+      },
+      // Dahi
+      {
+        'x': foreheadX,
+        'y': foreheadY,
+        'w': boxW.round(),
+        'h': boxH.round(),
+      }
+    ];
+
+    try {
+      return ImageProcessor.extractSkinColor(decodedImage, regions);
+    } catch (_) {
+      return [0, 0, 0];
     }
   }
 

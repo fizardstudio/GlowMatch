@@ -9,6 +9,8 @@ import '../bloc/scanner_state.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'results_page.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
+import '../../../../core/network/database_service.dart';
+import '../../../premium_subscription/data/models/app_settings.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
@@ -20,12 +22,27 @@ class ScannerPage extends StatefulWidget {
 class _ScannerPageState extends State<ScannerPage> {
   bool _isCameraDisposed = false;
   bool _canPop = false;
+  bool _isCoupleMode = false;
+  bool _isPremium = false;
+  bool _hasUsedCoupleTrial = false;
 
   @override
   void initState() {
     super.initState();
     // Inisialisasi kamera saat halaman dimuat
     context.read<ScannerBloc>().add(InitializeCamera());
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final isar = DatabaseService().isar;
+    final settings = await isar.appSettings.get(0);
+    if (settings != null) {
+      setState(() {
+        _isPremium = settings.isPremium;
+        _hasUsedCoupleTrial = settings.hasUsedCoupleTrial;
+      });
+    }
   }
 
   Color _getLightingColor(String status) {
@@ -110,6 +127,21 @@ class _ScannerPageState extends State<ScannerPage> {
       body: BlocConsumer<ScannerBloc, ScannerState>(
         listener: (context, state) {
           if (state is ScannerSuccess) {
+            // Jika dalam mode Couple dan pengguna bukan premium, tandai trial telah digunakan
+            if (state.isCoupleMode && !_isPremium) {
+              final isar = DatabaseService().isar;
+              isar.appSettings.get(0).then((settingsObj) async {
+                final settings = settingsObj ?? (AppSettings()..id = 0..isPremium = false);
+                settings.hasUsedCoupleTrial = true;
+                await isar.writeTxn(() async {
+                  await isar.appSettings.put(settings);
+                });
+                setState(() {
+                  _hasUsedCoupleTrial = true;
+                });
+              });
+            }
+
             // Arahkan ke halaman hasil saat sukses
             Navigator.push(
               context,
@@ -118,6 +150,8 @@ class _ScannerPageState extends State<ScannerPage> {
                   extractedRgb: state.extractedRgb,
                   matchedStandard: state.matchedStandard,
                   commercialMatches: state.commercialMatches,
+                  coupleExtractedRgb: state.coupleExtractedRgb,
+                  coupleMatchedStandard: state.coupleMatchedStandard,
                 ),
               ),
             ).then((_) {
@@ -370,7 +404,162 @@ class _ScannerPageState extends State<ScannerPage> {
                   ),
 
                   // 4. Tombol Ambil Foto / Capture di Bagian Bawah Tengah (Glassmorphism)
-                  if (state is ScannerCameraReady)
+                  if (state is ScannerCameraReady) ...[
+                    // A. Mode Selector Toggle (di atas tombol jepret)
+                    Positioned(
+                      bottom: 136,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16162A).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: Colors.white12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _isCoupleMode = false;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: !_isCoupleMode
+                                        ? const Color(0xFFE5A93B)
+                                        : Colors.transparent,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.person_outline_rounded,
+                                        size: 16,
+                                        color: !_isCoupleMode ? Colors.black : Colors.white70,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Personal 👤',
+                                        style: TextStyle(
+                                          color: !_isCoupleMode ? Colors.black : Colors.white70,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () async {
+                                  await _checkPremiumStatus();
+                                  if (!_isPremium && _hasUsedCoupleTrial) {
+                                    _showCouplePremiumUnlockDialog();
+                                  } else {
+                                    setState(() {
+                                      _isCoupleMode = true;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: _isCoupleMode
+                                        ? const Color(0xFFE5A93B)
+                                        : Colors.transparent,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.people_outline_rounded,
+                                        size: 16,
+                                        color: _isCoupleMode ? Colors.black : Colors.white70,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Couple 👥',
+                                            style: TextStyle(
+                                              color: _isCoupleMode ? Colors.black : Colors.white70,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          if (!_isPremium) ...[
+                                            const SizedBox(width: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: _hasUsedCoupleTrial ? const Color(0xFFE5A93B) : Colors.greenAccent,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                _hasUsedCoupleTrial ? 'PRO' : 'TRIAL',
+                                                style: const TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ]
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // B. Banner Wajah kurang dari 2 di Couple Mode
+                    if (_isCoupleMode && state.detectedFaces.length < 2)
+                      Positioned(
+                        bottom: 200,
+                        left: 24,
+                        right: 24,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black38, blurRadius: 10, offset: const Offset(0, 4)),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Sejajarkan 2 wajah bersama dalam frame!',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // C. Tombol Jepret
                     Positioned(
                       bottom: 36,
                       left: 0,
@@ -394,36 +583,46 @@ class _ScannerPageState extends State<ScannerPage> {
                                 ),
                               )
                             : GestureDetector(
-                              onTap: () {
-                                context.read<ScannerBloc>().add(CaptureImage());
-                              },
-                              child: Container(
-                                height: 84,
-                                width: 84,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 4),
-                                ),
+                                onTap: () {
+                                  if (_isCoupleMode && state.detectedFaces.length < 2) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Harap posisikan 2 wajah dalam kamera untuk memindai berdua!'),
+                                        backgroundColor: Colors.orangeAccent,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  context.read<ScannerBloc>().add(CaptureImage(isCoupleMode: _isCoupleMode));
+                                },
                                 child: Container(
-                                  margin: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
+                                  height: 84,
+                                  width: 84,
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFFE5C185), Color(0xFFC78F26)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
+                                    border: Border.all(color: Colors.white, width: 4),
                                   ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.black,
-                                    size: 36,
+                                  child: Container(
+                                    margin: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [Color(0xFFE5C185), Color(0xFFC78F26)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.black,
+                                      size: 36,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                       ),
                     ),
+                  ],
 
                   // 5. Tombol Switch Camera di Pojok Kanan Bawah
                   if (state is ScannerCameraReady && state is! ScannerProcessing)
@@ -459,6 +658,90 @@ class _ScannerPageState extends State<ScannerPage> {
     ),
   );
 }
+
+  void _showCouplePremiumUnlockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFF16162A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5A93B).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.people_alt_rounded, color: Color(0xFFE5A93B), size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Buka Couple Matcher 👥',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Uji coba gratis Anda telah habis. Berlangganan Premium untuk memindai undertone berdua dengan pacar atau sahabat sepuasnya!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE5A93B),
+                  foregroundColor: const Color(0xFF0F0F1A),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _activatePremium();
+                },
+                child: const Text('Aktifkan Premium Permanen', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Nanti Saja', style: TextStyle(color: Colors.white30)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _activatePremium() async {
+    final isar = DatabaseService().isar;
+    final settings = AppSettings()
+      ..id = 0
+      ..isPremium = true;
+
+    await isar.writeTxn(() async {
+      await isar.appSettings.put(settings);
+    });
+
+    setState(() {
+      _isPremium = true;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
+          backgroundColor: Color(0xFFE5C185),
+        ),
+      );
+    }
+  }
 }
 
 

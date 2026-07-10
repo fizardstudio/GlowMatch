@@ -79,14 +79,28 @@ class ScannerSuccess extends ScannerState {
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
 
+  // Fields for Face 2 (Couple Mode)
+  final List<int>? coupleExtractedRgb;
+  final StandardShade? coupleMatchedStandard;
+
   const ScannerSuccess({
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    this.coupleExtractedRgb,
+    this.coupleMatchedStandard,
   });
 
+  bool get isCoupleMode => coupleMatchedStandard != null;
+
   @override
-  List<Object?> get props => [extractedRgb, matchedStandard, commercialMatches];
+  List<Object?> get props => [
+        extractedRgb,
+        matchedStandard,
+        commercialMatches,
+        coupleExtractedRgb,
+        coupleMatchedStandard,
+      ];
 }
 
 class ScannerFailure extends ScannerState {

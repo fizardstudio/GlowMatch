@@ -33,6 +33,12 @@ class FaceDetected extends ScannerEvent {
 
 class SwitchCamera extends ScannerEvent {}
 
-class CaptureImage extends ScannerEvent {}
+class CaptureImage extends ScannerEvent {
+  final bool isCoupleMode;
+  const CaptureImage({this.isCoupleMode = false});
+
+  @override
+  List<Object?> get props => [isCoupleMode];
+}
 
 class ResetScanner extends ScannerEvent {}

@@ -7,4 +7,5 @@ class AppSettings {
   Id id = 0; // Kunci tunggal untuk pengaturan tunggal
 
   late bool isPremium;
+  bool hasUsedCoupleTrial = false;
 }
