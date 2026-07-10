@@ -626,6 +626,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         extractedRgb: finalRgb,
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
+        galleryFilePath: event.filePath,
       ));
     } catch (e) {
       emit(ScannerFailure('Gagal memproses gambar galeri: ${e.toString()}'));

@@ -8,11 +8,13 @@ import '../../../../core/network/database_service.dart';
 import '../../../../core/utils/color_calculator.dart';
 import '../../../premium_subscription/data/models/app_settings.dart';
 import '../../../../core/utils/widget_helper.dart';
+import '../../../premium_subscription/presentation/pages/photo_try_on_page.dart';
 
 class ResultsPage extends StatefulWidget {
   final List<int> extractedRgb;
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
+  final String? galleryFilePath;
 
   // Fields for Face 2 (Couple Mode)
   final List<int>? coupleExtractedRgb;
@@ -23,6 +25,7 @@ class ResultsPage extends StatefulWidget {
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    this.galleryFilePath,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
   });
@@ -425,6 +428,53 @@ class _ResultsPageState extends State<ResultsPage> {
                   ],
                 ),
               ),
+              if (widget.galleryFilePath != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE5A99E), Color(0xFFC89E88)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE5A99E).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    icon: const Icon(Icons.face_retouching_natural_rounded, color: Colors.white),
+                    label: const Text(
+                      'Uji Coba Riasan 2D di Foto Ini 💄',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PhotoTryOnPage(
+                            initialFilePath: widget.galleryFilePath,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // 2. Deskripsi Teori Warna Kulit

@@ -7,6 +7,7 @@ import '../../network/database_service.dart';
 import '../../../../features/pouch/presentation/pages/makeup_pouch_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/ar_try_on_page.dart';
 import '../../../../features/color_mixer/presentation/pages/color_mixer_page.dart';
+import '../../../../features/premium_subscription/presentation/pages/photo_try_on_page.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
   const AppNavigationDrawer({super.key});
@@ -197,6 +198,24 @@ class AppNavigationDrawer extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const ArTryOnPage(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDrawerItem(
+                        context: context,
+                        icon: Icons.photo_size_select_large_rounded,
+                        title: 'Uji Riasan 2D (Foto)',
+                        isActive: context.widget is PhotoTryOnPage,
+                        onTap: () {
+                          Navigator.pop(context); // Tutup drawer
+                          if (context.widget is! PhotoTryOnPage) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PhotoTryOnPage(),
                               ),
                             );
                           }

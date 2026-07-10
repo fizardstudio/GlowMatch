@@ -78,6 +78,7 @@ class ScannerSuccess extends ScannerState {
   final List<int> extractedRgb;
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
+  final String? galleryFilePath;
 
   // Fields for Face 2 (Couple Mode)
   final List<int>? coupleExtractedRgb;
@@ -87,6 +88,7 @@ class ScannerSuccess extends ScannerState {
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    this.galleryFilePath,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
   });
@@ -98,6 +100,7 @@ class ScannerSuccess extends ScannerState {
         extractedRgb,
         matchedStandard,
         commercialMatches,
+        galleryFilePath,
         coupleExtractedRgb,
         coupleMatchedStandard,
       ];
