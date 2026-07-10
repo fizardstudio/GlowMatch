@@ -44,3 +44,11 @@ class CaptureImage extends ScannerEvent {
 class ResetScanner extends ScannerEvent {}
 
 class DisposeCamera extends ScannerEvent {}
+
+class ProcessGalleryImage extends ScannerEvent {
+  final String filePath;
+  const ProcessGalleryImage(this.filePath);
+
+  @override
+  List<Object?> get props => [filePath];
+}

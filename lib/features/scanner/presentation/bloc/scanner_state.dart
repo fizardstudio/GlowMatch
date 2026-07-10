@@ -111,3 +111,5 @@ class ScannerFailure extends ScannerState {
   @override
   List<Object?> get props => [errorMessage];
 }
+
+class ScannerGalleryProcessing extends ScannerState {}

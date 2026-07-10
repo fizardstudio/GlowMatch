@@ -37,6 +37,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     on<CaptureImage>(_onCaptureImage);
     on<ResetScanner>(_onResetScanner);
     on<DisposeCamera>(_onDisposeCamera);
+    on<ProcessGalleryImage>(_onProcessGalleryImage);
   }
 
   Future<void> _onInitializeCamera(
@@ -572,6 +573,57 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     }
     
     return nv21;
+  }
+
+  Future<void> _onProcessGalleryImage(
+    ProcessGalleryImage event,
+    Emitter<ScannerState> emit,
+  ) async {
+    emit(ScannerGalleryProcessing());
+
+    try {
+      // 1. Deteksi wajah pada foto dari galeri
+      final inputImage = InputImage.fromFilePath(event.filePath);
+      final List<Face> detectedFaces = await _faceDetector.processImage(inputImage);
+
+      if (detectedFaces.isEmpty) {
+        emit(const ScannerFailure('Wajah tidak terdeteksi di foto galeri. Silakan pilih foto selfie dengan wajah menghadap lurus ke depan dengan cahaya cukup.'));
+        return;
+      }
+
+      // 2. Muat gambar ke memori untuk pemrosesan piksel
+      final decodedImage = await ImageProcessor.loadAndDecodeImage(event.filePath);
+      if (decodedImage == null) {
+        emit(const ScannerFailure('Gagal membaca gambar dari galeri.'));
+        return;
+      }
+
+      // 3. Ekstrak warna kulit wajah pertama yang terdeteksi
+      final finalRgb = _extractSkinColorForFace(decodedImage, detectedFaces.first);
+
+      if (finalRgb[0] == 0 && finalRgb[1] == 0 && finalRgb[2] == 0) {
+        emit(const ScannerFailure('Gagal mendeteksi rona warna kulit pada wajah.'));
+        return;
+      }
+
+      // 4. Konversi RGB rata-rata ke LabColor dan cari pencocokan
+      final targetLab = ColorCalculator.rgbToLab(finalRgb[0], finalRgb[1], finalRgb[2]);
+      final matchedStandard = await _shadeMatcherRepository.matchStandardShade(targetLab);
+      final commercialMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
+
+      if (matchedStandard == null) {
+        emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah.'));
+        return;
+      }
+
+      emit(ScannerSuccess(
+        extractedRgb: finalRgb,
+        matchedStandard: matchedStandard,
+        commercialMatches: commercialMatches,
+      ));
+    } catch (e) {
+      emit(ScannerFailure('Gagal memproses gambar galeri: ${e.toString()}'));
+    }
   }
 
   @override

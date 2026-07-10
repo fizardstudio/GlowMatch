@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import '../bloc/scanner_bloc.dart';
 import '../bloc/scanner_event.dart';
 import '../bloc/scanner_state.dart';
@@ -205,18 +206,21 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
           }
         },
         builder: (context, state) {
-          if (state is ScannerCameraLoading || state is ScannerInitial) {
-            return const Center(
+          if (state is ScannerCameraLoading || state is ScannerInitial || state is ScannerGalleryProcessing) {
+            final String loadingMessage = state is ScannerGalleryProcessing
+                ? 'Menganalisis Foto Galeri...'
+                : 'Menyalakan Kamera...';
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A93B)),
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
-                    'Menyalakan Kamera...',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                    loadingMessage,
+                    style: const TextStyle(color: Color(0xFF8E807E), fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -654,6 +658,7 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                   ],
 
                   // 5. Tombol Switch Camera di Pojok Kanan Bawah
+                  // 5. Tombol Switch Camera di Pojok Kanan Bawah
                   if (state is ScannerCameraReady && state is! ScannerProcessing)
                     Positioned(
                       bottom: 56,
@@ -673,6 +678,36 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                         ),
                         child: const Icon(
                           Icons.flip_camera_ios,
+                          color: Color(0xFF3E3635),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+
+                  // 6. Tombol Galeri di Pojok Kiri Bawah
+                  if (state is ScannerCameraReady && state is! ScannerProcessing)
+                    Positioned(
+                      bottom: 56,
+                      left: 36,
+                      child: FloatingActionButton(
+                        heroTag: 'open_gallery_fab',
+                        onPressed: () async {
+                          final ImagePicker picker = ImagePicker();
+                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                          if (image != null && mounted) {
+                            context.read<ScannerBloc>().add(ProcessGalleryImage(image.path));
+                          }
+                        },
+                        backgroundColor: Colors.white.withOpacity(0.92),
+                        mini: true,
+                        shape: CircleBorder(
+                          side: BorderSide(
+                            color: const Color(0xFFE5A99E).withOpacity(0.5),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.photo_library_outlined,
                           color: Color(0xFF3E3635),
                           size: 20,
                         ),
