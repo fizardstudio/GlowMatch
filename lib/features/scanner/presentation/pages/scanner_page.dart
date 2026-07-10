@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../bloc/scanner_bloc.dart';
 import '../bloc/scanner_event.dart';
 import '../bloc/scanner_state.dart';
@@ -27,14 +28,49 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   bool _isCoupleMode = false;
   bool _isPremium = false;
   bool _hasUsedCoupleTrial = false;
+  
+  bool _isCameraPermissionGranted = false;
+  bool _isPermissionChecking = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Inisialisasi kamera saat halaman dimuat
-    context.read<ScannerBloc>().add(InitializeCamera());
+    _checkPermissionAndInit();
     _checkPremiumStatus();
+  }
+
+  Future<void> _checkPermissionAndInit() async {
+    setState(() {
+      _isPermissionChecking = true;
+    });
+
+    final status = await Permission.camera.status;
+    if (status.isGranted) {
+      setState(() {
+        _isCameraPermissionGranted = true;
+        _isPermissionChecking = false;
+      });
+      if (mounted) {
+        context.read<ScannerBloc>().add(InitializeCamera());
+      }
+    } else {
+      final requestResult = await Permission.camera.request();
+      if (requestResult.isGranted) {
+        setState(() {
+          _isCameraPermissionGranted = true;
+          _isPermissionChecking = false;
+        });
+        if (mounted) {
+          context.read<ScannerBloc>().add(InitializeCamera());
+        }
+      } else {
+        setState(() {
+          _isCameraPermissionGranted = false;
+          _isPermissionChecking = false;
+        });
+      }
+    }
   }
 
   @override
@@ -46,7 +82,6 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Lepas kamera secara sinkron via setState agar widget CameraPreview langsung dicopot dari widget tree
       if (mounted) {
         setState(() {
           _isCameraDisposed = true;
@@ -54,13 +89,14 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
       }
       context.read<ScannerBloc>().add(DisposeCamera());
     } else if (state == AppLifecycleState.resumed) {
-      // Inisialisasi ulang kamera saat aplikasi kembali ke foreground
       if (mounted) {
         setState(() {
           _isCameraDisposed = false;
         });
       }
-      context.read<ScannerBloc>().add(InitializeCamera());
+      if (_isCameraPermissionGranted) {
+        context.read<ScannerBloc>().add(InitializeCamera());
+      }
     }
   }
 
@@ -96,6 +132,113 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
     } else {
       return const Color(0xFF00E676); // Hijau netral
     }
+  }
+
+  Widget _buildPermissionDeniedView() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(
+          color: const Color(0xFFFCF9F6),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5A99E).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.camera_alt_outlined,
+                  size: 64,
+                  color: Color(0xFFE5A99E),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Akses Kamera Diperlukan',
+                style: TextStyle(
+                  color: Color(0xFF3E3635),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'GlowMatch memerlukan izin kamera untuk menganalisis warna kulit wajah secara langsung. Data foto Anda sepenuhnya diproses secara lokal di HP Anda.',
+                style: TextStyle(
+                  color: Color(0xFF8E807E),
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE5A99E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                icon: const Icon(Icons.settings),
+                label: const Text(
+                  'Aktifkan Izin Kamera',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onPressed: () async {
+                  final status = await Permission.camera.request();
+                  if (status.isPermanentlyDenied) {
+                    await openAppSettings();
+                  } else if (status.isGranted) {
+                    setState(() {
+                      _isCameraPermissionGranted = true;
+                    });
+                    if (mounted) {
+                      context.read<ScannerBloc>().add(InitializeCamera());
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          bottom: 56,
+          left: 36,
+          child: FloatingActionButton(
+            heroTag: 'open_gallery_fab_no_perm',
+            onPressed: () async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+              if (image != null && mounted) {
+                context.read<ScannerBloc>().add(ProcessGalleryImage(image.path));
+              }
+            },
+            backgroundColor: Colors.white,
+            mini: true,
+            shape: CircleBorder(
+              side: BorderSide(
+                color: const Color(0xFFE5A99E).withOpacity(0.5),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.photo_library_outlined,
+              color: Color(0xFF3E3635),
+              size: 20,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -154,7 +297,15 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
       ),
-      body: BlocConsumer<ScannerBloc, ScannerState>(
+      body: _isPermissionChecking
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
+              ),
+            )
+          : !_isCameraPermissionGranted
+              ? _buildPermissionDeniedView()
+              : BlocConsumer<ScannerBloc, ScannerState>(
         listener: (context, state) {
           if (state is ScannerSuccess) {
             // Jika dalam mode Couple dan pengguna bukan premium, tandai trial telah digunakan
