@@ -25,7 +25,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 
 | Status | Fitur | Detail Fungsionalitas | Lokasi Kode / File Utama |
 | :---: | :--- | :--- | :--- |
-| **[x]** | **Advanced Color Mixing** | Simulator pencampuran 2-3 kosmetik cair dengan rasio dinamis di ruang warna linear (HEX Code real-time). | `lib/features/color_mixer/` |
+| **[x]** | **Advanced Color Mixing** | Simulator pencampuran 2-3 kosmetik cair dengan rasio dinamis di ruang warna linear (HEX Code real-time). | `lib/features/color_mixer/presentation/pages/color_mixer_page.dart` |
 | **[x]** | **Brand Matcher & Affiliate** | Pencocokan Delta E otomatis ke database produk komersial nyata lengkap dengan tombol affiliate Tokopedia/Shopee. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Split-Screen AR Try-On** | Kamera depan AR Try-On split-screen dengan divider geser dinamis. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 | **[x]** | **Matte & Glossy Overlay** | Riasan bibir presisi 3D Face Mesh dengan finishing Matte dan Glossy (Specular preservation). | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
