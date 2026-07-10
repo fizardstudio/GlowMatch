@@ -41,6 +41,16 @@ class _ScannerPageState extends State<ScannerPage> {
     }
   }
 
+  Color _getTempColor(String temp) {
+    if (temp.contains('Warm')) {
+      return const Color(0xFFFFD600); // Kuning/Oranye hangat
+    } else if (temp.contains('Cool')) {
+      return const Color(0xFF29B6F6); // Biru dingin
+    } else {
+      return const Color(0xFF00E676); // Hijau netral
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -277,39 +287,83 @@ class _ScannerPageState extends State<ScannerPage> {
                         const SizedBox(height: 10),
                         // Lencana status pencahayaan dinamis
                         if (state is ScannerCameraReady)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: _getLightingColor(state.lightingStatus).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: _getLightingColor(state.lightingStatus).withOpacity(0.7),
-                                width: 1.2,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              // 1. Status Intensitas Cahaya
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _getLightingColor(state.lightingStatus).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _getLightingColor(state.lightingStatus).withOpacity(0.7),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: _getLightingColor(state.lightingStatus),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Cahaya: ${state.lightingStatus}',
+                                      style: TextStyle(
+                                        color: _getLightingColor(state.lightingStatus),
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: _getLightingColor(state.lightingStatus),
-                                    shape: BoxShape.circle,
+
+                              // 2. Status Suhu Cahaya
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _getTempColor(state.lightingTemp).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _getTempColor(state.lightingTemp).withOpacity(0.7),
+                                    width: 1.2,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Pencahayaan: ${state.lightingStatus}',
-                                  style: TextStyle(
-                                    color: _getLightingColor(state.lightingStatus),
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: _getTempColor(state.lightingTemp),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Suhu: ${state.lightingTemp}',
+                                      style: TextStyle(
+                                        color: _getTempColor(state.lightingTemp),
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                       ],
                     ),

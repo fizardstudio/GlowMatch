@@ -80,7 +80,9 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         if (_isDetecting) return;
         _isDetecting = true;
 
-        final lightingStatus = _analyzeLighting(image);
+        final lightingResult = _analyzeLighting(image);
+        final lightingStatus = lightingResult['status'] ?? 'Optimal';
+        final lightingTemp = lightingResult['temp'] ?? 'Neutral';
 
         _processCameraImage(image).then((faces) {
           if (faces != null && !isClosed) {
@@ -89,6 +91,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
               imageWidth: image.width,
               imageHeight: image.height,
               lightingStatus: lightingStatus,
+              lightingTemp: lightingTemp,
             ));
           }
           _isDetecting = false;
@@ -109,6 +112,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         imageWidth: event.imageWidth,
         imageHeight: event.imageHeight,
         lightingStatus: event.lightingStatus,
+        lightingTemp: event.lightingTemp,
       ));
     }
   }
@@ -139,16 +143,17 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     add(InitializeCamera());
   }
 
-  String _analyzeLighting(CameraImage image) {
-    if (image.planes.isEmpty) return 'Optimal';
+  Map<String, String> _analyzeLighting(CameraImage image) {
+    if (image.planes.isEmpty) return {'status': 'Optimal', 'temp': 'Neutral'};
 
     try {
       final isBgra = image.format.group == ImageFormatGroup.bgra8888;
       final bytes = image.planes[0].bytes;
-      if (bytes.isEmpty) return 'Optimal';
+      if (bytes.isEmpty) return {'status': 'Optimal', 'temp': 'Neutral'};
 
       double avgY = 127;
       double colorBias = 0;
+      String temp = 'Neutral';
 
       if (isBgra) {
         // Format BGRA (biasanya di iOS atau emulator/fallback Android)
@@ -180,6 +185,15 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
           final double maxVal = [avgR, avgG, avgB].reduce((curr, next) => curr > next ? curr : next);
           final double minVal = [avgR, avgG, avgB].reduce((curr, next) => curr < next ? curr : next);
           colorBias = maxVal - minVal;
+
+          // Deteksi suhu warna dari RGB
+          if (avgR > avgB + 12) {
+            temp = 'Warm (Kuning/Hangat)';
+          } else if (avgB > avgR + 12) {
+            temp = 'Cool (Biru/Dingin)';
+          } else {
+            temp = 'Neutral';
+          }
         }
       } else {
         // Format YUV / NV21
@@ -224,7 +238,6 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
           colorBias = ((avgU - 128).abs() + (avgV - 128).abs());
         } else if (image.planes.length == 1) {
           // Format Semi-Planar NV21 (Y dan VU digabung dalam satu plane)
-          // Saluran VU dimulai setelah data Y. Gunakan pembagian rasio 1.5 untuk Y size
           final int ySize = (bytes.length / 1.5).round();
           if (bytes.length > ySize) {
             int uSum = 0;
@@ -233,7 +246,6 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
             final int uvStep = ((bytes.length - ySize) / 300).round().clamp(2, 50);
             final int alignedUvStep = uvStep - (uvStep % 2);
             
-            // Loop data VU yang saling selang-seling (V, U, V, U)
             for (int k = ySize; k < bytes.length - 1; k += alignedUvStep > 0 ? alignedUvStep : 2) {
               vSum += bytes[k];
               uSum += bytes[k + 1];
@@ -246,29 +258,34 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
           }
           colorBias = ((avgU - 128).abs() + (avgV - 128).abs());
         }
+
+        // Deteksi suhu warna dari YUV (V = red/warm bias, U = blue/cool bias)
+        if (avgV > avgU + 6) {
+          temp = 'Warm (Kuning/Hangat)';
+        } else if (avgU > avgV + 6) {
+          temp = 'Cool (Biru/Dingin)';
+        } else {
+          temp = 'Neutral';
+        }
       }
 
-      // Cetak log untuk analisis manual tingkat kecerahan saat pengembangan
-      // debugPrint('LIGHTING LOG - avgY: $avgY, colorBias: $colorBias');
-
-      // Ambang batas yang lebih peka terhadap Auto Exposure:
-      // Y < 65: Terlalu redup
-      // Y > 200: Terlalu terang
-      // Bias warna: YUV colorBias > 48, RGB colorBias > 70
+      String status = 'Optimal';
       if (avgY < 65) {
-        return 'Cahaya Terlalu Redup';
+        status = 'Cahaya Terlalu Redup';
       } else if (avgY > 200) {
-        return 'Cahaya Terlalu Terang';
+        status = 'Cahaya Terlalu Terang';
       } else if (isBgra && colorBias > 70) {
-        return 'Cahaya Tidak Netral (Gunakan Cahaya Alami)';
+        status = 'Cahaya Tidak Netral (Gunakan Cahaya Alami)';
       } else if (!isBgra && colorBias > 48) {
-        return 'Cahaya Tidak Netral (Gunakan Cahaya Alami)';
+        status = 'Cahaya Tidak Netral (Gunakan Cahaya Alami)';
       }
+
+      return {'status': status, 'temp': temp};
     } catch (e, stack) {
       debugPrint('Error in _analyzeLighting: $e\n$stack');
     }
 
-    return 'Optimal';
+    return {'status': 'Optimal', 'temp': 'Neutral'};
   }
 
   Future<void> _onCaptureImage(

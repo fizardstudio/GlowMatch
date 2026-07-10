@@ -17,7 +17,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Virtual Makeup Pouch** | Pencatatan tanggal buka kosmetik luring, masa kadaluwarsa PAO, notifikasi lokal, dan progress bar gradien. | `lib/features/pouch/presentation/pages/makeup_pouch_page.dart` |
 | **[x]** | **Filter Preferensi Riasan** *(Subjektif)* | Filter khusus pada hasil pemindaian untuk memilih hasil rekomendasi yang murni *Natural*, *Brightening (Tone-Up)*, atau *Sun-Kissed (Tanned)*. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Glow Card Generator** | Membuat kartu persona 12 Musim Warna bergaya glassmorphic estetik untuk dibagikan secara instan ke media sosial. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[ ]** | **Lighting Inspector** | Deteksi real-time suhu cahaya ruangan (hangat/dingin/netral) agar hasil pindai akurat. | *Rencana Pengembangan Mendatang* |
+| **[x]** | **Lighting Inspector** | Deteksi real-time suhu cahaya ruangan (hangat/dingin/netral) agar hasil pindai akurat. | `lib/features/scanner/presentation/pages/scanner_page.dart` |
 
 ---
 

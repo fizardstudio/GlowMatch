@@ -20,6 +20,7 @@ class ScannerCameraReady extends ScannerState {
   final int? imageWidth;
   final int? imageHeight;
   final String lightingStatus;
+  final String lightingTemp;
   final CameraLensDirection lensDirection;
 
   const ScannerCameraReady({
@@ -28,6 +29,7 @@ class ScannerCameraReady extends ScannerState {
     this.imageWidth,
     this.imageHeight,
     this.lightingStatus = 'Optimal',
+    this.lightingTemp = 'Neutral',
     this.lensDirection = CameraLensDirection.front,
   });
 
@@ -37,6 +39,7 @@ class ScannerCameraReady extends ScannerState {
     int? imageWidth,
     int? imageHeight,
     String? lightingStatus,
+    String? lightingTemp,
     CameraLensDirection? lensDirection,
   }) {
     return ScannerCameraReady(
@@ -45,6 +48,7 @@ class ScannerCameraReady extends ScannerState {
       imageWidth: imageWidth ?? this.imageWidth,
       imageHeight: imageHeight ?? this.imageHeight,
       lightingStatus: lightingStatus ?? this.lightingStatus,
+      lightingTemp: lightingTemp ?? this.lightingTemp,
       lensDirection: lensDirection ?? this.lensDirection,
     );
   }
@@ -56,6 +60,7 @@ class ScannerCameraReady extends ScannerState {
         imageWidth,
         imageHeight,
         lightingStatus,
+        lightingTemp,
         lensDirection,
       ];
 }

@@ -17,16 +17,18 @@ class FaceDetected extends ScannerEvent {
   final int imageWidth;
   final int imageHeight;
   final String lightingStatus;
+  final String lightingTemp;
 
   const FaceDetected({
     required this.faces,
     required this.imageWidth,
     required this.imageHeight,
     required this.lightingStatus,
+    required this.lightingTemp,
   });
 
   @override
-  List<Object?> get props => [faces, imageWidth, imageHeight, lightingStatus];
+  List<Object?> get props => [faces, imageWidth, imageHeight, lightingStatus, lightingTemp];
 }
 
 class SwitchCamera extends ScannerEvent {}
