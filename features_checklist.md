@@ -32,6 +32,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Paywall & Offline Access** | Validasi status langganan premium melalui database Isar dan timer gratis demo 1 menit. | `lib/features/premium_subscription/data/models/app_settings.dart` |
 | **[x]** | **2D Photo Makeup Try-On** | Uji coba riasan wajah lengkap (dasaran/foundation, lipstik, & blush-on) secara interaktif langsung pada foto statis hasil unggahan menggunakan pemetaan titik Face Mesh. | `lib/features/premium_subscription/presentation/pages/photo_try_on_page.dart` |
 | **[x]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | `lib/features/scanner/presentation/pages/results_page.dart` & `lib/core/utils/color_calculator.dart` |
+| **[x]** | **AI Makeup Detector from Photo** | Deteksi otomatis warna riasan (lipstik, blush-on, foundation) dari foto unggahan galeri/kamera, lalu mencocokkannya ke shade produk komersial di database. | `lib/features/premium_subscription/presentation/pages/makeup_detector_page.dart` |
 
 ---
 

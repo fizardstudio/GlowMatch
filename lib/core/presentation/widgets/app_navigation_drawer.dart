@@ -8,6 +8,7 @@ import '../../../../features/pouch/presentation/pages/makeup_pouch_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/ar_try_on_page.dart';
 import '../../../../features/color_mixer/presentation/pages/color_mixer_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/photo_try_on_page.dart';
+import '../../../../features/premium_subscription/presentation/pages/makeup_detector_page.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
   const AppNavigationDrawer({super.key});
@@ -216,6 +217,24 @@ class AppNavigationDrawer extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const PhotoTryOnPage(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDrawerItem(
+                        context: context,
+                        icon: Icons.camera_enhance_outlined,
+                        title: 'AI Makeup Detector (Premium)',
+                        isActive: context.widget is MakeupDetectorPage,
+                        onTap: () {
+                          Navigator.pop(context); // Tutup drawer
+                          if (context.widget is! MakeupDetectorPage) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MakeupDetectorPage(),
                               ),
                             );
                           }
