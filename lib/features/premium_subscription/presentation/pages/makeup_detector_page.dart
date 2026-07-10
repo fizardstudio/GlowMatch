@@ -353,7 +353,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
     double rey = rightEye.map((p) => p.y).reduce((a, b) => a + b) / rightEye.length;
 
     final nTip = noseTip.last;
-    final double shiftX = (rex - (_detectedFace!.contours[FaceContourType.leftEye]!.points.first.x)) * 0.15;
+    final double shiftX = (rex - leftEye.first.x) * 0.15;
     final int cx = (rex + shiftX).round();
     final int cy = (rey + (nTip.y - rey) * 0.65).round();
 
