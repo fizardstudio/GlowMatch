@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:isar/isar.dart';
 import '../../../../core/data/models/standard_shade.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/network/database_service.dart';
@@ -665,29 +666,56 @@ class _ResultsPageState extends State<ResultsPage> {
                               ),
                               const SizedBox(height: 12),
 
-                              // Tombol belanja/beli affiliate
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1E1E38),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                              // Tombol belanja/beli affiliate & Cari Dupe
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF1E1E38),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        elevation: 0,
+                                      ),
+                                      onPressed: () => _launchUrl(context, product.affiliateUrl),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.shopping_bag_outlined, size: 16),
+                                          SizedBox(width: 6),
+                                          Text('Beli Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                        ],
+                                      ),
                                     ),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    elevation: 0,
                                   ),
-                                  onPressed: () => _launchUrl(context, product.affiliateUrl),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.shopping_bag_outlined, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Beli di Shopee/Tokopedia', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                    ],
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFE5A93B).withOpacity(0.12),
+                                        foregroundColor: const Color(0xFFE5A93B),
+                                        side: BorderSide(color: const Color(0xFFE5A93B).withOpacity(0.3)),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        elevation: 0,
+                                      ),
+                                      onPressed: () => _findDupesForProduct(context, product),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.discount_outlined, size: 16),
+                                          SizedBox(width: 6),
+                                          Text('Cari Dupe 🏷️', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -1367,6 +1395,320 @@ class _ResultsPageState extends State<ResultsPage> {
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Future<void> _findDupesForProduct(BuildContext context, ProductShade sourceProduct) async {
+    // 1. Validasi status langganan premium
+    if (!_isPremium) {
+      _showPremiumUnlockDialog();
+      return;
+    }
+
+    // 2. Ambil semua shade dalam kategori produk yang sama
+    final isar = DatabaseService().isar;
+    final allShades = await isar.productShades
+        .filter()
+        .categoryEqualTo(sourceProduct.category)
+        .findAll();
+
+    // 3. Hitung jarak persepsi warna Delta E00 luring
+    final List<Map<String, dynamic>> dupes = [];
+    final sourceLab = LabColor(sourceProduct.l, sourceProduct.a, sourceProduct.b);
+
+    for (var shade in allShades) {
+      // Lewati jika mereknya sama (bukan alternatif/dupe lintas merek)
+      if (shade.brand.toLowerCase() == sourceProduct.brand.toLowerCase()) continue;
+
+      final shadeLab = LabColor(shade.l, shade.a, shade.b);
+      final deltaE = ColorCalculator.deltaE00(sourceLab, shadeLab);
+
+      // Batasi hanya untuk kemiripan warna tinggi (Delta E <= 5.5)
+      if (deltaE <= 5.5) {
+        final double matchPercentage = (100.0 - (deltaE * 8)).clamp(50.0, 99.9);
+        dupes.add({
+          'product': shade,
+          'deltaE': deltaE,
+          'matchPercentage': matchPercentage,
+        });
+      }
+    }
+
+    // Urutkan berdasarkan Delta E terkecil (paling mirip warnanya)
+    dupes.sort((a, b) => (a['deltaE'] as double).compareTo(b['deltaE'] as double));
+
+    if (mounted) {
+      _showDupesBottomSheet(context, sourceProduct, dupes);
+    }
+  }
+
+  void _showDupesBottomSheet(
+    BuildContext context,
+    ProductShade sourceProduct,
+    List<Map<String, dynamic>> dupes,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F0F1A),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE5A93B).withOpacity(0.08),
+                blurRadius: 24,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.only(top: 12, left: 24, right: 24, bottom: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  height: 4,
+                  width: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5A93B).withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.discount_rounded,
+                      color: Color(0xFFE5A93B),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text(
+                      'AI Makeup Dupe Finder 🏷️',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11.5, height: 1.5),
+                  children: [
+                    const TextSpan(text: 'Padanan alternatif warna terdekat untuk:\n'),
+                    TextSpan(
+                      text: '${sourceProduct.brand} - ${sourceProduct.productName}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(
+                      text: ' (${sourceProduct.shadeName})',
+                      style: const TextStyle(color: Color(0xFFE5A93B), fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white10, height: 28),
+
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                ),
+                child: dupes.isEmpty
+                    ? _buildEmptyDupesState()
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: dupes.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = dupes[index];
+                          final ProductShade dupe = item['product'] as ProductShade;
+                          final double deltaE = item['deltaE'] as double;
+                          final double matchPercentage = item['matchPercentage'] as double;
+                          final Color dupeColor = _getHexColor(dupe.hexCode);
+
+                          String similarityLabel = 'Cukup Mirip';
+                          Color badgeColor = Colors.orangeAccent;
+                          if (deltaE <= 1.8) {
+                            similarityLabel = 'Kemiripan Sempurna';
+                            badgeColor = const Color(0xFF00E676);
+                          } else if (deltaE <= 3.5) {
+                            similarityLabel = 'Sangat Mirip';
+                            badgeColor = Colors.tealAccent;
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.02),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.04)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: 36,
+                                  width: 36,
+                                  decoration: BoxDecoration(
+                                    color: dupeColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: dupeColor.withOpacity(0.4),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        dupe.brand,
+                                        style: const TextStyle(
+                                          color: Color(0xFFE5A93B),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        dupe.productName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Shade: ${dupe.shadeName}',
+                                            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: badgeColor.withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              similarityLabel,
+                                              style: TextStyle(color: badgeColor, fontSize: 8, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${matchPercentage.toStringAsFixed(1)}%',
+                                      style: const TextStyle(
+                                        color: Color(0xFFE5A93B),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    InkWell(
+                                      onTap: () => _launchUrl(context, dupe.affiliateUrl),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.05),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.white12),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.shopping_bag_outlined, color: Colors.white70, size: 10),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Beli 🛒',
+                                              style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  '💡 Keakuratan warna dihitung luring berdasarkan data CIEDE2000.',
+                  style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 9.5),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyDupesState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.layers_clear_outlined, color: Colors.white.withOpacity(0.15), size: 48),
+          const SizedBox(height: 12),
+          Text(
+            'Tidak ditemukan dupe alternatif',
+            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Belum ada produk dari brand lain dengan toleransi warna mendekati.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 10.5),
+          ),
+        ],
       ),
     );
   }

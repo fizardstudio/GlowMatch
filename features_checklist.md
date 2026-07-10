@@ -32,7 +32,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Blush-on Outward Shift** | Rona pipi bergradasi lembut yang terkalibrasi dinamis bergeser keluar 22% ke tulang pipi berdasarkan lebar mata. | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Paywall & Offline Access** | Validasi status langganan premium melalui database Isar dan timer gratis demo 1 menit. | `lib/features/premium_subscription/data/models/app_settings.dart` |
 | **[x]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[ ]** | **AI Makeup Dupe Finder** | Perhitungan Delta E untuk mencari padanan kosmetik luxury ke brand lokal/murah yang warnanya mirip s.d 99%. | *Rencana Pengembangan Mendatang* |
+| **[x]** | **AI Makeup Dupe Finder** | Perhitungan Delta E untuk mencari padanan kosmetik luxury ke brand lokal/murah yang warnanya mirip s.d 99%. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[ ]** | **Couple Undertone Matcher** | Memindai wajah bersama pacar/teman, menghitung kecocokan undertone, dan merekomendasikan baju senada. | *Rencana Uji Coba Gratis / Premium* |
 | **[ ]** | **Expiry Alert Widget** | Widget minimalis layar utama HP untuk pengingat masa kadaluwarsa produk terdekat dari pouch kosmetik. | *Rencana Pengembangan Mendatang* |
 
