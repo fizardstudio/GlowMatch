@@ -31,7 +31,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
   bool _useCustom1 = false;
   bool _useCustom2 = false;
 
-  double _ratio = 0.5; // 0.0 sampai 1.0 (denoting ratio of cosmetic 1, 1 - ratio is cosmetic 2)
+  double _ratio = 0.5; // 0.0 sampai 1.0
 
   final List<Map<String, String>> _customPalette = [
     {'name': 'Cream', 'hex': '#FFFDD0'},
@@ -56,7 +56,6 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
 
   Future<void> _loadData() async {
     try {
-      // 1. Muat status premium
       final settings = await _isar.appSettings.get(0);
       if (settings != null && settings.isPremium) {
         setState(() {
@@ -64,13 +63,11 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
         });
       }
 
-      // 2. Muat shade standar
       final shades = await _isar.standardShades.where().findAll();
       setState(() {
         _shades = shades;
         _isLoading = false;
         if (_shades.isNotEmpty) {
-          // Set default values
           _targetShade = _shades.firstWhere(
             (s) => s.name.toLowerCase().contains('medium neutral'),
             orElse: () => _shades.first,
@@ -105,14 +102,13 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
       _isPremium = true;
     });
 
-    // Perbarui widget layar utama luring
     WidgetHelper.updateExpiryWidget();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
-          backgroundColor: Color(0xFFE5C185),
+          backgroundColor: Color(0xFFE5A99E),
         ),
       );
     }
@@ -137,7 +133,6 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
   }
 
   Color _mixColors(Color c1, Color c2, double ratio) {
-    // 1. Ubah sRGB non-linear ke Linear RGB
     final r1L = ColorCalculator.sRgbToLinear(c1.red.toDouble());
     final g1L = ColorCalculator.sRgbToLinear(c1.green.toDouble());
     final b1L = ColorCalculator.sRgbToLinear(c1.blue.toDouble());
@@ -146,12 +141,10 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
     final g2L = ColorCalculator.sRgbToLinear(c2.green.toDouble());
     final b2L = ColorCalculator.sRgbToLinear(c2.blue.toDouble());
 
-    // 2. Campur proporsional linear
     final rMixedL = r1L * ratio + r2L * (1.0 - ratio);
     final gMixedL = g1L * ratio + g2L * (1.0 - ratio);
     final bMixedL = b1L * ratio + b2L * (1.0 - ratio);
 
-    // 3. Konversi kembali ke sRGB
     final rMixed = ColorCalculator.linearToSrgb(rMixedL).round();
     final gMixed = ColorCalculator.linearToSrgb(gMixedL).round();
     final bMixed = ColorCalculator.linearToSrgb(bMixedL).round();
@@ -170,11 +163,11 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
 
     if (deltaE <= 1.5) {
       label = 'Perfect Match! 🌟';
-      badgeColor = const Color(0xFFE5C185);
+      badgeColor = const Color(0xFFC89E88); // Elegant champagne gold
       matchPercent = (100 - (deltaE * 2)).round().clamp(95, 100);
     } else if (deltaE <= 3.0) {
       label = 'Sangat Cocok ✨';
-      badgeColor = Colors.greenAccent;
+      badgeColor = const Color(0xFFE5A99E); // Rose Gold
       matchPercent = (100 - (deltaE * 4)).round().clamp(85, 94);
     } else if (deltaE <= 5.5) {
       label = 'Cukup Cocok 👍';
@@ -195,14 +188,14 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF16162A),
+          backgroundColor: const Color(0xFFFAFAF9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: Colors.white10),
+            side: const BorderSide(color: Color(0xFFF2ECE7)),
           ),
           title: Text(
             isCosmetic1 ? 'Warna Kustom Kosmetik 1' : 'Warna Kustom Kosmetik 2',
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Color(0xFF3E3635), fontSize: 16, fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -236,13 +229,13 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                     decoration: BoxDecoration(
                       color: color,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white24, width: 1.5),
+                      border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                     ),
                     child: Center(
                       child: Text(
                         item['name']!.substring(0, 1),
                         style: TextStyle(
-                          color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                          color: color.computeLuminance() > 0.5 ? const Color(0xFF3E3635) : Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -256,7 +249,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.white38)),
+              child: const Text('Batal', style: TextStyle(color: Color(0xFF8E807E))),
             ),
           ],
         );
@@ -271,7 +264,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
         drawer: AppNavigationDrawer(),
         body: Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
           ),
         ),
       );
@@ -283,16 +276,16 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
     final matchResult = _targetShade != null ? _calculateMatch(mixedColor, _targetShade!) : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFFFCF9F6),
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: const Text(
           'Advanced Color Mixer 🧪',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFCF9F6),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -300,26 +293,31 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Deskripsi Singkat
               Text(
                 'Lakukan simulasi percampuran warna dari 2 kosmetik cair dengan rasio tetesan berbeda secara akurat menggunakan sains warna Linear RGB.',
-                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11.5, height: 1.4),
+                style: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.8), fontSize: 11.5, height: 1.4),
               ),
               const SizedBox(height: 20),
 
-              // Mixer Panel Stack (with locked premium overlay if not premium)
               Stack(
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Target Skin Tone Selector Card
+                      // Target Skin Tone Card
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16162A),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.04)),
+                          border: Border.all(color: const Color(0xFFF2ECE7)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x055A4A45),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -329,20 +327,20 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                               children: [
                                 Text(
                                   'WARNA KULIT TARGET 🎯',
-                                  style: TextStyle(color: Color(0xFFE5A93B), fontSize: 9.5, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: Color(0xFFC89E88), fontSize: 9.5, fontWeight: FontWeight.bold),
                                 ),
                                 SizedBox(height: 4),
                                 Text(
                                   'Sebagai referensi pencocokan',
-                                  style: TextStyle(color: Colors.white30, fontSize: 10),
+                                  style: TextStyle(color: Color(0xFF8E807E), fontSize: 10),
                                 ),
                               ],
                             ),
                             DropdownButton<StandardShade>(
                               value: _targetShade,
-                              dropdownColor: const Color(0xFF16162A),
+                              dropdownColor: Colors.white,
                               underline: const SizedBox(),
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13, fontWeight: FontWeight.bold),
                               onChanged: (shade) {
                                 setState(() {
                                   _targetShade = shade;
@@ -373,7 +371,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Panel Kosmetik 1 & Kosmetik 2 Side-by-Side
+                      // Panel Kosmetik 1 & 2
                       Row(
                         children: [
                           // Kosmetik 1
@@ -381,9 +379,16 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF16162A),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white.withOpacity(0.04)),
+                                border: Border.all(color: const Color(0xFFF2ECE7)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x055A4A45),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,11 +398,11 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                     children: [
                                       const Text(
                                         'KOSMETIK 1 🧪',
-                                        style: TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: Color(0xFF8E807E), fontSize: 9, fontWeight: FontWeight.bold),
                                       ),
                                       InkWell(
                                         onTap: () => _showColorPickerDialog(true),
-                                        child: const Icon(Icons.palette_outlined, color: Color(0xFFE5A93B), size: 16),
+                                        child: const Icon(Icons.palette_outlined, color: Color(0xFFE5A99E), size: 16),
                                       ),
                                     ],
                                   ),
@@ -409,9 +414,9 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                       decoration: BoxDecoration(
                                         color: color1,
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white12, width: 2),
+                                        border: Border.all(color: const Color(0xFFF2ECE7), width: 2),
                                         boxShadow: [
-                                          BoxShadow(color: color1.withOpacity(0.3), blurRadius: 8),
+                                          BoxShadow(color: color1.withOpacity(0.2), blurRadius: 8),
                                         ],
                                       ),
                                       child: _useCustom1
@@ -422,11 +427,11 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                   const SizedBox(height: 12),
                                   DropdownButton<StandardShade>(
                                     value: _useCustom1 ? null : _cosmetic1,
-                                    hint: const Text('Kustom (Custom)', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                                    hint: const Text('Kustom', style: TextStyle(color: Color(0xFF8E807E), fontSize: 11)),
                                     isExpanded: true,
-                                    dropdownColor: const Color(0xFF16162A),
+                                    dropdownColor: Colors.white,
                                     underline: const SizedBox(),
-                                    style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11.5, fontWeight: FontWeight.bold),
                                     onChanged: (shade) {
                                       setState(() {
                                         _cosmetic1 = shade;
@@ -450,9 +455,16 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF16162A),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white.withOpacity(0.04)),
+                                border: Border.all(color: const Color(0xFFF2ECE7)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x055A4A45),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,11 +474,11 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                     children: [
                                       const Text(
                                         'KOSMETIK 2 🧪',
-                                        style: TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: Color(0xFF8E807E), fontSize: 9, fontWeight: FontWeight.bold),
                                       ),
                                       InkWell(
                                         onTap: () => _showColorPickerDialog(false),
-                                        child: const Icon(Icons.palette_outlined, color: Color(0xFFE5A93B), size: 16),
+                                        child: const Icon(Icons.palette_outlined, color: Color(0xFFE5A99E), size: 16),
                                       ),
                                     ],
                                   ),
@@ -478,9 +490,9 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                       decoration: BoxDecoration(
                                         color: color2,
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white12, width: 2),
+                                        border: Border.all(color: const Color(0xFFF2ECE7), width: 2),
                                         boxShadow: [
-                                          BoxShadow(color: color2.withOpacity(0.3), blurRadius: 8),
+                                          BoxShadow(color: color2.withOpacity(0.2), blurRadius: 8),
                                         ],
                                       ),
                                       child: _useCustom2
@@ -491,11 +503,11 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                   const SizedBox(height: 12),
                                   DropdownButton<StandardShade>(
                                     value: _useCustom2 ? null : _cosmetic2,
-                                    hint: const Text('Kustom (Custom)', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                                    hint: const Text('Kustom', style: TextStyle(color: Color(0xFF8E807E), fontSize: 11)),
                                     isExpanded: true,
-                                    dropdownColor: const Color(0xFF16162A),
+                                    dropdownColor: Colors.white,
                                     underline: const SizedBox(),
-                                    style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11.5, fontWeight: FontWeight.bold),
                                     onChanged: (shade) {
                                       setState(() {
                                         _cosmetic2 = shade;
@@ -517,13 +529,20 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Slider Rasio Campuran
+                      // Slider Rasio
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16162A),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.04)),
+                          border: Border.all(color: const Color(0xFFF2ECE7)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x055A4A45),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Column(
                           children: [
@@ -531,22 +550,22 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Kosmetik 1 (${(_ratio * 100).round()}% )',
-                                  style: const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.bold),
+                                  'Kosmetik 1 (${(_ratio * 100).round()}%)',
+                                  style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  'Kosmetik 2 (${((1.0 - _ratio) * 100).round()}% )',
-                                  style: const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.bold),
+                                  'Kosmetik 2 (${((1.0 - _ratio) * 100).round()}%)',
+                                  style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
                             SliderTheme(
                               data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: const Color(0xFFE5A93B),
-                                inactiveTrackColor: Colors.white12,
-                                thumbColor: const Color(0xFFE5A93B),
-                                overlayColor: const Color(0xFFE5A93B).withOpacity(0.2),
+                                activeTrackColor: const Color(0xFFE5A99E),
+                                inactiveTrackColor: const Color(0xFFF2ECE7),
+                                thumbColor: const Color(0xFFE5A99E),
+                                overlayColor: const Color(0xFFE5A99E).withOpacity(0.2),
                                 trackHeight: 4,
                               ),
                               child: Slider(
@@ -565,38 +584,44 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Bulatan Glowing Hasil Campuran & Status Delta E
+                      // Hasil Campuran Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16162A),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                          border: Border.all(color: const Color(0xFFF2ECE7)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x085A4A45),
+                              blurRadius: 20,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
                         ),
                         child: Column(
                           children: [
                             const Text(
                               'WARNA HASIL CAMPURAN (LINEAR SPACE) 🧪',
                               style: TextStyle(
-                                color: Color(0xFFE5A93B),
+                                color: Color(0xFFC89E88),
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.8,
                               ),
                             ),
                             const SizedBox(height: 20),
-                            // Swatch Bulat Glowing
                             Container(
                               height: 90,
                               width: 90,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: mixedColor,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: mixedColor.withOpacity(0.6),
+                                    color: mixedColor.withOpacity(0.4),
                                     blurRadius: 20,
                                     spreadRadius: 2,
                                   ),
@@ -607,7 +632,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                             Text(
                               '#${mixedColor.value.toRadixString(16).substring(2).toUpperCase()}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFF3E3635),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                                 letterSpacing: 1.0,
@@ -617,16 +642,15 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                             Container(
                               height: 1,
                               width: 80,
-                              color: Colors.white10,
+                              color: const Color(0xFFF2ECE7),
                             ),
                             const SizedBox(height: 16),
 
-                            // Indeks Pencocokan Target
                             if (matchResult != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: (matchResult['color'] as Color).withOpacity(0.15),
+                                  color: (matchResult['color'] as Color).withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -642,7 +666,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                               Text(
                                 'Indeks Kecocokan: ${matchResult['percent']}%',
                                 style: const TextStyle(
-                                  color: Colors.white70,
+                                  color: Color(0xFF3E3635),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),
@@ -651,7 +675,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                               Text(
                                 'CIEDE2000 Jarak (Delta E00): ${(matchResult['deltaE'] as double).toStringAsFixed(2)}',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: const Color(0xFF8E807E).withOpacity(0.6),
                                   fontSize: 9.5,
                                 ),
                               ),
@@ -662,7 +686,7 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                     ],
                   ),
 
-                  // Frosted Paywall Overlay (kaca buram jika belum premium)
+                  // Paywall Overlay
                   if (!_isPremium)
                     Positioned.fill(
                       child: ClipRRect(
@@ -670,15 +694,15 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
-                            color: const Color(0xFF0F0F1A).withOpacity(0.75),
+                            color: const Color(0xFFFCF9F6).withOpacity(0.85),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.lock_outline_rounded, color: Color(0xFFE5A93B), size: 48),
+                                const Icon(Icons.lock_outline_rounded, color: Color(0xFFE5A99E), size: 48),
                                 const SizedBox(height: 16),
                                 const Text(
                                   'Advanced Color Mixer 👑',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                  style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 18),
                                 ),
                                 const SizedBox(height: 8),
                                 Padding(
@@ -686,14 +710,14 @@ class _ColorMixerPageState extends State<ColorMixerPage> {
                                   child: Text(
                                     'Simulasikan percampuran 2 shade kosmetik secara akurat di ruang warna linear untuk mencocokkannya ke warna kulit targetmu.',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11.5, height: 1.4),
+                                    style: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.8), fontSize: 11.5, height: 1.4),
                                   ),
                                 ),
                                 const SizedBox(height: 24),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFE5A93B),
-                                    foregroundColor: const Color(0xFF0F0F1A),
+                                    backgroundColor: const Color(0xFFE5A99E),
+                                    foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                     elevation: 0,

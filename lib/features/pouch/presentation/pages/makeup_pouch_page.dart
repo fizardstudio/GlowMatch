@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/network/database_service.dart';
-import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/data/models/product_shade.dart';
-import '../../data/models/pouch_item.dart';
+import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/utils/widget_helper.dart';
+import '../models/pouch_item.dart';
 
 class MakeupPouchPage extends StatefulWidget {
   const MakeupPouchPage({super.key});
@@ -31,12 +31,7 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
         _pouchItems = items;
         _isLoading = false;
       });
-
-      // Update native widget data
-      WidgetHelper.updateExpiryWidget();
-
-      // Tampilkan peringatan dalam aplikasi setelah build frame pertama
-      // jika ada produk yang kedaluwarsa
+      // Pemicu in-app dialog kedaluwarsa setelah data pouch dimuat
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkExpiredProducts();
       });
@@ -59,10 +54,10 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            backgroundColor: const Color(0xFF16162A),
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.redAccent.withOpacity(0.4), width: 1),
+              side: BorderSide(color: Colors.redAccent.withOpacity(0.3), width: 1.5),
             ),
             title: const Row(
               children: [
@@ -70,20 +65,20 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
                 SizedBox(width: 12),
                 Text(
                   'Perhatian Medis!',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ],
             ),
             content: Text(
               'Terdeteksi $expiredCount produk kosmetik di Pouch Anda telah melewati masa kedaluwarsa PAO (Period After Opening).\n\nPenggunaan kosmetik kedaluwarsa dapat memicu iritasi kulit, jerawat, atau reaksi alergi. Disarankan untuk segera menggantinya.',
-              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.5),
+              style: const TextStyle(color: Color(0xFF8E807E), fontSize: 13, height: 1.5),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text(
                   'Mengerti',
-                  style: TextStyle(color: Color(0xFFE5C185), fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -97,13 +92,17 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF16162A),
-        title: const Text('Hapus Produk', style: TextStyle(color: Colors.white)),
-        content: Text('Apakah Anda yakin ingin menghapus ${item.productName} dari pouch Anda?', style: const TextStyle(color: Colors.white70)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFF2ECE7)),
+        ),
+        title: const Text('Hapus Produk', style: TextStyle(color: Color(0xFF3E3635))),
+        content: Text('Apakah Anda yakin ingin menghapus ${item.productName} dari pouch Anda?', style: const TextStyle(color: Color(0xFF8E807E))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.white38)),
+            child: const Text('Batal', style: TextStyle(color: Color(0xFF8E807E))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -117,10 +116,14 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
       await _isar.writeTxn(() async {
         await _isar.pouchItems.delete(item.id);
       });
+      
+      // Sinkronisasi widget layar utama dinamis
+      WidgetHelper.updateExpiryWidget();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${item.productName} berhasil dihapus.'),
-          backgroundColor: const Color(0xFFE5C185),
+          backgroundColor: const Color(0xFFE5A99E),
         ),
       );
       _loadPouchItems();
@@ -128,15 +131,13 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
   }
 
   void _showAddProductDialog() async {
-    // Muat daftar produk komersial yang tersedia di database
     final allCommercial = await _isar.productShades.where().findAll();
-    
     if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF16162A),
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -157,6 +158,9 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
               await _isar.pouchItems.put(newItem);
             });
 
+            // Sinkronisasi widget layar utama dinamis
+            WidgetHelper.updateExpiryWidget();
+
             _loadPouchItems();
           },
         );
@@ -169,273 +173,247 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
     final now = DateTime.now();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFFFCF9F6),
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: const Text(
           'Virtual Makeup Pouch',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF3E3635),
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
           ),
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFCF9F6),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
       ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
               ),
             )
-          : _pouchItems.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _pouchItems.length,
-                  itemBuilder: (context, index) {
-                    final item = _pouchItems[index];
-                    
-                    // Hitung Masa Kadaluwarsa PAO
-                    final expirationDate = item.openedDate.add(Duration(days: item.paoMonths * 30));
-                    final daysLeft = expirationDate.difference(now).inDays;
-                    final totalDays = item.paoMonths * 30;
-                    final double progress = (daysLeft / totalDays).clamp(0.0, 1.0);
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Judul Pengantar
+                  const Text(
+                    'Pouch kosmetik luring Anda. Pantau masa kedaluwarsa PAO (Period After Opening) agar kulit tetap sehat.',
+                    style: TextStyle(color: Color(0xFF8E807E), fontSize: 12, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
 
-                    final bool isExpired = daysLeft <= 0;
-                    final String statusText;
-                    final Color statusColor;
+                  // Daftar Produk Kosmetik
+                  Expanded(
+                    child: _pouchItems.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.separated(
+                            itemCount: _pouchItems.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final item = _pouchItems[index];
+                              final expirationDate = item.openedDate.add(Duration(days: item.paoMonths * 30));
+                              final daysRemaining = expirationDate.difference(now).inDays;
+                              final isExpired = now.isAfter(expirationDate);
 
-                    if (isExpired) {
-                      statusText = 'Kedaluwarsa!';
-                      statusColor = Colors.redAccent;
-                    } else if (daysLeft <= 30) {
-                      statusText = 'Sisa $daysLeft hari!';
-                      statusColor = const Color(0xFFFF9800); // Amber
-                    } else {
-                      final monthsLeft = (daysLeft / 30).round();
-                      statusText = 'Sisa $monthsLeft bulan';
-                      statusColor = const Color(0xFF4CAF50); // Hijau
-                    }
+                              // Hitung presentase progres sisa hari pakai
+                              final totalPaoDays = item.paoMonths * 30;
+                              final double progress = isExpired
+                                  ? 0.0
+                                  : (daysRemaining / totalPaoDays).clamp(0.0, 1.0);
 
-                    final colorVal = Color(int.parse(item.hexCode.replaceAll('#', '0xFF')));
+                              final hexColor = Color(int.parse('FF${item.hexCode.replaceAll('#', '')}', radix: 16));
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF16162A),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isExpired
-                              ? Colors.redAccent.withOpacity(0.2)
-                              : const Color(0xFFE5C185).withOpacity(0.1),
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              // Lingkaran warna shade
-                              Container(
-                                width: 42,
-                                height: 42,
+                              return Container(
                                 decoration: BoxDecoration(
-                                  color: colorVal,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white24, width: 2),
-                                  boxShadow: [
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isExpired
+                                        ? Colors.redAccent.withOpacity(0.2)
+                                        : const Color(0xFFF2ECE7),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: const [
                                     BoxShadow(
-                                      color: colorVal.withOpacity(0.2),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
+                                      color: Color(0x045A4A45),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              
-                              // Detail Info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.brand.toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Color(0xFFE5C185),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          // Swatch Bulat Warna Kosmetik
+                                          Container(
+                                            height: 36,
+                                            width: 36,
+                                            decoration: BoxDecoration(
+                                              color: hexColor,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.brand.toUpperCase(),
+                                                  style: const TextStyle(
+                                                    color: Color(0xFFC89E88),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  item.productName,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF3E3635),
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Shade: ${item.shadeName} (${item.category})',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF8E807E),
+                                                    fontSize: 11.5,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Tombol Hapus
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                            onPressed: () => _deleteItem(item),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      item.productName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Shade: ${item.shadeName} (${item.category})',
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.6),
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                                      const SizedBox(height: 16),
 
-                              // Status Umur Simpan
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: statusColor.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      statusText,
-                                      style: TextStyle(
-                                        color: statusColor,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                      // Progress Bar sisa PAO
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: SizedBox(
+                                          height: 8,
+                                          child: LinearProgressIndicator(
+                                            value: progress,
+                                            backgroundColor: const Color(0xFFF2ECE7),
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              isExpired
+                                                  ? Colors.redAccent
+                                                  : daysRemaining < 30
+                                                      ? Colors.orangeAccent
+                                                      : const Color(0xFFE5A99E),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  IconButton(
-                                    icon: Icon(Icons.delete_outline_rounded, color: Colors.white.withOpacity(0.3), size: 20),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () => _deleteItem(item),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          
-                          // Tanggal Buka & PAO info
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Dibuka: ${_formatDate(item.openedDate)}',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.4),
-                                  fontSize: 11,
-                                ),
-                              ),
-                              Text(
-                                'Batas PAO: ${item.paoMonths} Bulan',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.4),
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
+                                      const SizedBox(height: 10),
 
-                          // Visual Expiration Bar
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: isExpired ? 0.0 : progress,
-                              backgroundColor: Colors.white.withOpacity(0.05),
-                              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                              minHeight: 5,
-                            ),
+                                      // Label Tanggal Expiry
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Dibuka: ${item.openedDate.day}/${item.openedDate.month}/${item.openedDate.year}',
+                                            style: const TextStyle(color: Color(0xFF8E807E), fontSize: 10.5),
+                                          ),
+                                          Text(
+                                            isExpired
+                                                ? '🚨 KEDALUWARSA!'
+                                                : '$daysRemaining hari tersisa (${item.paoMonths}M PAO)',
+                                            style: TextStyle(
+                                              color: isExpired
+                                                  ? Colors.redAccent
+                                                  : daysRemaining < 30
+                                                      ? Colors.orangeAccent
+                                                      : const Color(0xFFC89E88),
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFE5C185),
-        foregroundColor: const Color(0xFF0F0F1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        onPressed: _showAddProductDialog,
-        child: const Icon(Icons.add_rounded, size: 28),
-      ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Tombol Tambah Produk Baru
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE5A99E),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 20),
+                    label: const Text(
+                      'Tambah Kosmetik ke Pouch',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _showAddProductDialog,
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFF16162A),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.15), width: 1.5),
-              ),
-              child: const Icon(
-                Icons.storefront_outlined,
-                color: Color(0xFFE5C185),
-                size: 64,
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFF2ECE7)),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Pouch Kosmetik Anda Kosong',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Simpan produk kosmetik yang Anda gunakan ke dalam pouch untuk memantau masa kedaluwarsa PAO-nya secara luring.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.5),
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
+            child: const Icon(Icons.storefront_outlined, size: 52, color: Color(0xFFE5A99E)),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Pouch Anda Masih Kosong',
+            style: TextStyle(color: Color(0xFF3E3635), fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Mulai catat kosmetik Anda untuk memantau masa kedaluwarsa PAO luring.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF8E807E), fontSize: 12),
+          ),
+        ],
       ),
     );
   }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
 }
 
+// Bottom Sheet Form Tambah Kosmetik
 class _AddPouchItemSheet extends StatefulWidget {
   final List<ProductShade> availableProducts;
-  final Function(
-    String brand,
-    String name,
-    String shade,
-    String hex,
-    String category,
-    DateTime opened,
-    int pao,
-  ) onSave;
+  final Function(String, String, String, String, String, DateTime, int) onSave;
 
   const _AddPouchItemSheet({
     required this.availableProducts,
@@ -447,22 +425,22 @@ class _AddPouchItemSheet extends StatefulWidget {
 }
 
 class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
-  // Pilihan form
   String? _selectedBrand;
   String? _selectedProduct;
   ProductShade? _selectedShade;
   DateTime _selectedDate = DateTime.now();
-  int _selectedPao = 12; // Default 12 bulan
+  int _selectedPao = 12; // Default 12 Bulan PAO
 
   List<String> _brands = [];
   List<String> _products = [];
   List<ProductShade> _shades = [];
 
-  final List<int> _paoPresets = [3, 6, 12, 18, 24, 36];
+  final List<int> _paoOptions = [3, 6, 9, 12, 18, 24, 36];
 
   @override
   void initState() {
     super.initState();
+    // Ekstrak merek unik dari database komersial
     _brands = widget.availableProducts.map((p) => p.brand).toSet().toList()..sort();
   }
 
@@ -506,26 +484,27 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        top: 24,
+        top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header Form
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Tambah Kosmetik Baru',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFE5C185),
+                  color: Color(0xFFE5A99E),
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF8E807E)),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: () => Navigator.pop(context),
@@ -557,12 +536,12 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
           // Dropdown 3: Shade
           _buildLabel('Shade Warna'),
           DropdownButtonFormField<ProductShade>(
-            dropdownColor: const Color(0xFF16162A),
+            dropdownColor: Colors.white,
             value: _selectedShade,
             decoration: _getDropdownDecoration(
               _selectedProduct == null ? 'Pilih Produk Dahulu' : 'Pilih Shade',
             ),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
             items: _shades.map((shade) {
               return DropdownMenuItem<ProductShade>(
                 value: shade,
@@ -572,9 +551,9 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: Color(int.parse(shade.hexCode.replaceAll('#', '0xFF'))),
+                        color: Color(int.parse('FF${shade.hexCode.replaceAll('#', '')}', radix: 16)),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24),
+                        border: Border.all(color: const Color(0xFFF2ECE7)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -605,10 +584,10 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
                 builder: (context, child) {
                   return Theme(
                     data: Theme.of(context).copyWith(
-                      colorScheme: const ColorScheme.dark(
-                        primary: Color(0xFFE5C185),
-                        onPrimary: Color(0xFF0F0F1A),
-                        surface: Color(0xFF16162A),
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFFE5A99E),
+                        onPrimary: Colors.white,
+                        surface: Colors.white,
                       ),
                     ),
                     child: child!,
@@ -624,18 +603,18 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F0F1A),
+                color: const Color(0xFFFCF9F6),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.15)),
+                border: Border.all(color: const Color(0xFFF2ECE7)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
                   ),
-                  const Icon(Icons.calendar_today_rounded, color: Color(0xFFE5C185), size: 18),
+                  const Icon(Icons.calendar_today_rounded, color: Color(0xFFE5A99E), size: 18),
                 ],
               ),
             ),
@@ -645,14 +624,14 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
           // Dropdown 5: PAO Months
           _buildLabel('Masa Kedaluwarsa PAO (Bulan)'),
           DropdownButtonFormField<int>(
-            dropdownColor: const Color(0xFF16162A),
+            dropdownColor: Colors.white,
             value: _selectedPao,
             decoration: _getDropdownDecoration('Pilih PAO'),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            items: _paoPresets.map((m) {
+            style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
+            items: _paoOptions.map((pao) {
               return DropdownMenuItem<int>(
-                value: m,
-                child: Text('$m Bulan (${m}M)'),
+                value: pao,
+                child: Text('$pao Bulan PAO'),
               );
             }).toList(),
             onChanged: (val) {
@@ -663,20 +642,18 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
               }
             },
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
           // Tombol Simpan
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE5C185),
-              foregroundColor: const Color(0xFF0F0F1A),
+              backgroundColor: const Color(0xFFE5A99E),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
+              elevation: 0,
             ),
-            onPressed: (_selectedBrand == null ||
-                    _selectedProduct == null ||
-                    _selectedShade == null)
+            onPressed: (_selectedBrand == null || _selectedProduct == null || _selectedShade == null)
                 ? null
                 : () {
                     widget.onSave(
@@ -692,7 +669,7 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
                   },
             child: const Text(
               'Simpan ke Pouch',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -700,13 +677,13 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Text(
-        text,
+        label,
         style: const TextStyle(
-          color: Colors.white70,
+          color: Color(0xFF8E807E),
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
@@ -721,10 +698,10 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
     required void Function(T?)? onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      dropdownColor: const Color(0xFF16162A),
+      dropdownColor: Colors.white,
       value: value,
       decoration: _getDropdownDecoration(hint),
-      style: const TextStyle(color: Colors.white, fontSize: 13),
+      style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
       items: items.map((item) {
         return DropdownMenuItem<T>(
           value: item,
@@ -738,17 +715,17 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
   InputDecoration _getDropdownDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
+      hintStyle: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.5), fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
-      fillColor: const Color(0xFF0F0F1A),
+      fillColor: const Color(0xFFFCF9F6),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: const Color(0xFFE5C185).withOpacity(0.15)),
+        borderSide: const BorderSide(color: Color(0xFFF2ECE7)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5C185)),
+        borderSide: const BorderSide(color: Color(0xFFE5A99E)),
       ),
     );
   }

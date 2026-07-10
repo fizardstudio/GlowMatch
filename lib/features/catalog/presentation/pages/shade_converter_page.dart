@@ -46,13 +46,8 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       final shades = await widget.repository.getAllProductShades();
       setState(() {
         _allShades = shades;
-        
-        // Ekstrak merek unik untuk Merek Asal
         _sourceBrands = shades.map((s) => s.brand).toSet().toList()..sort();
-        
-        // Ekstrak merek unik untuk Merek Tujuan
         _targetBrands = shades.map((s) => s.brand).toSet().toList()..sort();
-        
         _isLoading = false;
       });
     } catch (_) {
@@ -70,7 +65,6 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       _matches.clear();
 
       if (brand != null) {
-        // Filter nama produk berdasarkan brand asal yang dipilih
         _sourceProducts = _allShades
             .where((s) => s.brand == brand)
             .map((s) => s.productName)
@@ -91,7 +85,6 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       _matches.clear();
 
       if (product != null && _selectedSourceBrand != null) {
-        // Filter shade yang tersedia untuk produk asal tersebut
         _sourceShades = _allShades
             .where((s) => s.brand == _selectedSourceBrand && s.productName == product)
             .toList()
@@ -132,20 +125,14 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
 
     final List<Map<String, dynamic>> results = [];
 
-    // Filter kandidat shade tujuan
     final candidates = _allShades.where((s) {
-      // Jangan bandingkan produk dengan dirinya sendiri
       if (s.id == _selectedSourceShade!.id) return false;
-      
-      // Filter kategori yang sejenis (contoh: Foundation hanya dicocokkan dengan Foundation)
       if (s.category != _selectedSourceShade!.category) return false;
 
-      // Filter berdasarkan brand target jika dipilih
       if (_selectedTargetBrand != null && _selectedTargetBrand!.isNotEmpty) {
         return s.brand == _selectedTargetBrand;
       }
       
-      // Jika merek target tidak dipilih, cari di semua brand LAIN
       return s.brand != _selectedSourceBrand;
     }).toList();
 
@@ -153,7 +140,6 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       final candidateLab = LabColor(candidate.l, candidate.a, candidate.b);
       final double deltaE = ColorCalculator.deltaE00(sourceLab, candidateLab);
       
-      // Ambil yang kemiripannya cukup dekat secara visual (Delta E <= 8.0)
       if (deltaE <= 8.0) {
         final double matchPercentage = ColorCalculator.calculateMatchPercentage(deltaE);
         results.add({
@@ -164,7 +150,6 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       }
     }
 
-    // Urutkan berdasarkan tingkat kecocokan tertinggi
     results.sort((a, b) => (a['deltaE'] as double).compareTo(b['deltaE'] as double));
 
     setState(() {
@@ -173,33 +158,33 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
   }
 
   Color _getMatchPercentageColor(double percentage) {
-    if (percentage >= 90) return const Color(0xFF4CAF50); // Hijau
-    if (percentage >= 75) return const Color(0xFFFF9800); // Oranye
-    return const Color(0xFFE53935); // Merah
+    if (percentage >= 90) return const Color(0xFF4CAF50);
+    if (percentage >= 75) return const Color(0xFFFF9800);
+    return const Color(0xFFE53935);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFFFCF9F6),
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: const Text(
           'Shade Converter',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF3E3635),
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
           ),
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFCF9F6),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
       ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
               ),
             )
           : SingleChildScrollView(
@@ -207,16 +192,23 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Form Card input dengan style Glassmorphic
+                  // Form Card Input
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF16162A).withOpacity(0.8),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xFFE5C185).withOpacity(0.2),
+                        color: const Color(0xFFF2ECE7),
                         width: 1,
                       ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x055A4A45),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,14 +216,13 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                         const Text(
                           'Pilih Shade Anda Saat Ini',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFE5C185),
+                            color: Color(0xFFE5A99E),
                           ),
                         ),
                         const SizedBox(height: 16),
                         
-                        // Dropdown 1: Merek Asal
                         _buildDropdownLabel('Merek Asal'),
                         _buildDropdown<String>(
                           value: _selectedSourceBrand,
@@ -241,7 +232,6 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Dropdown 2: Produk Asal
                         _buildDropdownLabel('Nama Produk'),
                         _buildDropdown<String>(
                           value: _selectedSourceProduct,
@@ -253,32 +243,30 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Dropdown 3: Shade Asal
                         _buildDropdownLabel('Warna Shade Asal'),
                         DropdownButtonFormField<ProductShade>(
-                          dropdownColor: const Color(0xFF16162A),
+                          dropdownColor: Colors.white,
                           value: _selectedSourceShade,
                           decoration: _getDropdownDecoration(
                             _selectedSourceProduct == null
                                 ? 'Pilih Produk Terlebih Dahulu'
                                 : 'Pilih Shade',
                           ),
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
                           items: _sourceShades.map((shade) {
                             return DropdownMenuItem<ProductShade>(
                               value: shade,
                               child: Row(
                                 children: [
                                   Container(
-                                    width: 16,
-                                    height: 16,
+                                    height: 12,
+                                    width: 12,
                                     decoration: BoxDecoration(
-                                      color: Color(int.parse(shade.hexCode.replaceAll('#', '0xFF'))),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white24),
+                                      color: Color(int.parse('FF${shade.hexCode.replaceAll('#', '')}', radix: 16)),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
                                   Text(shade.shadeName),
                                 ],
                               ),
@@ -286,158 +274,165 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                           }).toList(),
                           onChanged: _selectedSourceProduct == null ? null : _onSourceShadeChanged,
                         ),
-                        const SizedBox(height: 20),
-                        
-                        Container(
-                          height: 1,
-                          color: const Color(0xFFE5C185).withOpacity(0.15),
-                        ),
-                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
+                  // Target Brand Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFF2ECE7),
+                        width: 1,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x055A4A45),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         const Text(
-                          'Pilih Merek Target Padanan',
+                          'Cari Padanan di Merek Lain (Target)',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFE5C185),
+                            color: Color(0xFFC89E88),
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Dropdown 4: Merek Tujuan
-                        _buildDropdownLabel('Merek Tujuan'),
-                        DropdownButtonFormField<String>(
-                          dropdownColor: const Color(0xFF16162A),
+                        _buildDropdownLabel('Merek Target (Opsional)'),
+                        _buildDropdown<String>(
                           value: _selectedTargetBrand,
-                          decoration: _getDropdownDecoration('Semua Merek (Selain Asal)'),
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                          items: [
-                            const DropdownMenuItem<String>(
-                              value: '',
-                              child: Text('Semua Merek (Selain Asal)'),
-                            ),
-                            ..._targetBrands.where((brand) => brand != _selectedSourceBrand).map((brand) {
-                              return DropdownMenuItem<String>(
-                                value: brand,
-                                child: Text(brand),
-                              );
-                            }),
-                          ],
-                          onChanged: _selectedSourceShade == null ? null : _onTargetBrandChanged,
+                          items: _targetBrands,
+                          hint: 'Cari di Semua Merek Lain',
+                          onChanged: _onTargetBrandChanged,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // Hasil Rekomendasi
+                  // Results Section
                   if (_selectedSourceShade != null) ...[
                     Text(
-                      'Padanan Shade untuk ${_selectedSourceShade!.shadeName}:',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      'Rekomendasi Shade Padanan (CIEDE2000):',
+                      style: TextStyle(
+                        color: const Color(0xFF3E3635).withOpacity(0.8),
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white70,
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
                     if (_matches.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16162A).withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF2ECE7)),
                         ),
                         child: const Center(
                           child: Text(
-                            'Tidak ada padanan shade yang cukup dekat terdeteksi di database.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white54, fontSize: 13),
+                            'Tidak ada padanan warna yang cukup dekat (Delta E > 8.0).',
+                            style: TextStyle(color: Color(0xFF8E807E), fontSize: 13),
                           ),
                         ),
                       )
                     else
-                      ListView.builder(
+                      ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _matches.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final match = _matches[index];
-                          final ProductShade product = match['product'] as ProductShade;
+                          final product = match['product'] as ProductShade;
                           final double pct = match['matchPercentage'] as double;
-                          final colorVal = Color(int.parse(product.hexCode.replaceAll('#', '0xFF')));
+                          final double dE = match['deltaE'] as double;
+                          final hexColor = Color(int.parse('FF${product.hexCode.replaceAll('#', '')}', radix: 16));
 
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16162A),
-                              borderRadius: BorderRadius.circular(16),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: const Color(0xFFE5C185).withOpacity(0.1),
+                                color: const Color(0xFFF2ECE7),
                                 width: 1,
                               ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x045A4A45),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Row(
                               children: [
-                                // Visual Warna
                                 Container(
-                                  width: 48,
                                   height: 48,
+                                  width: 48,
                                   decoration: BoxDecoration(
-                                    color: colorVal,
+                                    color: hexColor,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white30, width: 2),
+                                    border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                                     boxShadow: [
-                                      BoxShadow(
-                                        color: colorVal.withOpacity(0.3),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
+                                      BoxShadow(color: hexColor.withOpacity(0.15), blurRadius: 8),
                                     ],
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                
-                                // Info Produk
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        product.brand.toUpperCase(),
+                                        product.brand,
                                         style: const TextStyle(
-                                          color: Color(0xFFE5C185),
-                                          fontSize: 10,
+                                          color: Color(0xFFC89E88),
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 10.5,
                                           letterSpacing: 0.5,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         product.productName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          color: Colors.white,
+                                          color: Color(0xFF3E3635),
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                                          fontSize: 13,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 2),
                                       Text(
                                         'Shade: ${product.shadeName}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF8E807E),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Jarak Warna (Delta E): ${dE.toStringAsFixed(2)}',
                                         style: TextStyle(
-                                          color: Colors.white.withOpacity(0.6),
-                                          fontSize: 12,
+                                          color: const Color(0xFF8E807E).withOpacity(0.6),
+                                          fontSize: 9.5,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                
-                                // Skor Persentase & Tombol E-commerce
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
@@ -445,7 +440,7 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: _getHighlightBgColor(pct),
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
                                         '${pct.toStringAsFixed(1)}% Cocok',
@@ -463,7 +458,7 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(
                                               content: Text('Membuka toko online untuk ${product.shadeName}...'),
-                                              backgroundColor: const Color(0xFFE5C185),
+                                              backgroundColor: const Color(0xFFE5A99E),
                                             ),
                                           );
                                         },
@@ -471,14 +466,14 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
                                             gradient: const LinearGradient(
-                                              colors: [Color(0xFFE5C185), Color(0xFFC29047)],
+                                              colors: [Color(0xFFE5A99E), Color(0xFFC89E88)],
                                             ),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: const Text(
                                             'Beli',
                                             style: TextStyle(
-                                              color: Color(0xFF0F0F1A),
+                                              color: Colors.white,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 11,
                                             ),
@@ -512,7 +507,7 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       child: Text(
         label,
         style: const TextStyle(
-          color: Colors.white70,
+          color: Color(0xFF8E807E),
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
@@ -527,10 +522,10 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
     required void Function(T?)? onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      dropdownColor: const Color(0xFF16162A),
+      dropdownColor: Colors.white,
       value: value,
       decoration: _getDropdownDecoration(hint),
-      style: const TextStyle(color: Colors.white, fontSize: 13),
+      style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
       items: items.map((item) {
         return DropdownMenuItem<T>(
           value: item,
@@ -544,17 +539,17 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
   InputDecoration _getDropdownDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
+      hintStyle: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.5), fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
-      fillColor: const Color(0xFF0F0F1A),
+      fillColor: const Color(0xFFFCF9F6),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: const Color(0xFFE5C185).withOpacity(0.15)),
+        borderSide: const BorderSide(color: Color(0xFFF2ECE7)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5C185)),
+        borderSide: const BorderSide(color: Color(0xFFE5A99E)),
       ),
     );
   }

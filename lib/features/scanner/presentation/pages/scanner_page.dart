@@ -110,20 +110,20 @@ class _ScannerPageState extends State<ScannerPage> {
         }
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A), // Dark elegant background
+      backgroundColor: const Color(0xFFFCF9F6),
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: const Text(
           'GlowMatch Scanner',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF3E3635),
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
           ),
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFCF9F6),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
       ),
       body: BlocConsumer<ScannerBloc, ScannerState>(
         listener: (context, state) {
@@ -300,20 +300,20 @@ class _ScannerPageState extends State<ScannerPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16162A).withOpacity(0.85),
+                            color: Colors.white.withOpacity(0.92),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.3)),
+                            border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.4)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: Color(0xFFE5C185)),
+                              const Icon(Icons.info_outline, color: Color(0xFFE5A99E)),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   state is ScannerCameraReady && state.detectedFaces.isEmpty
                                       ? 'Arahkan kamera ke wajah Anda'
                                       : 'Posisikan wajah Anda secara tegak di bawah cahaya terang yang merata. Sensor akan melacak dahi dan pipi Anda secara otomatis.',
-                                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                                  style: const TextStyle(color: Color(0xFF3E3635), fontSize: 12),
                                 ),
                               ),
                             ],
@@ -415,9 +415,9 @@ class _ScannerPageState extends State<ScannerPage> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16162A).withOpacity(0.9),
+                            color: Colors.white.withOpacity(0.92),
                             borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: Colors.white12),
+                            border: Border.all(color: const Color(0xFFF2ECE7)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -433,7 +433,7 @@ class _ScannerPageState extends State<ScannerPage> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
                                     color: !_isCoupleMode
-                                        ? const Color(0xFFE5A93B)
+                                        ? const Color(0xFFE5A99E)
                                         : Colors.transparent,
                                   ),
                                   child: Row(
@@ -474,7 +474,7 @@ class _ScannerPageState extends State<ScannerPage> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
                                     color: _isCoupleMode
-                                        ? const Color(0xFFE5A93B)
+                                        ? const Color(0xFFE5A99E)
                                         : Colors.transparent,
                                   ),
                                   child: Row(
@@ -570,16 +570,16 @@ class _ScannerPageState extends State<ScannerPage> {
                             ? Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF16162A).withOpacity(0.9),
+                                  color: Colors.white.withOpacity(0.92),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: const Color(0xFFE5C185), width: 2),
+                                  border: Border.all(color: const Color(0xFFE5A99E), width: 2),
                                 ),
                                 child: const SizedBox(
                                   width: 36,
                                   height: 36,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 3.0,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
                                   ),
                                 ),
                               )
@@ -608,14 +608,14 @@ class _ScannerPageState extends State<ScannerPage> {
                                     decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
                                       gradient: LinearGradient(
-                                        colors: [Color(0xFFE5C185), Color(0xFFC78F26)],
+                                        colors: [Color(0xFFE5A99E), Color(0xFFC89E88)],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
                                     ),
                                     child: const Icon(
                                       Icons.camera_alt,
-                                      color: Colors.black,
+                                      color: Colors.white,
                                       size: 36,
                                     ),
                                   ),
@@ -635,17 +635,17 @@ class _ScannerPageState extends State<ScannerPage> {
                         onPressed: () {
                           context.read<ScannerBloc>().add(SwitchCamera());
                         },
-                        backgroundColor: const Color(0xFF16162A).withOpacity(0.85),
+                        backgroundColor: Colors.white.withOpacity(0.92),
                         mini: true,
                         shape: CircleBorder(
                           side: BorderSide(
-                            color: const Color(0xFFE5C185).withOpacity(0.5),
+                            color: const Color(0xFFE5A99E).withOpacity(0.5),
                             width: 1.5,
                           ),
                         ),
                         child: const Icon(
                           Icons.flip_camera_ios,
-                          color: Colors.white,
+                          color: Color(0xFF3E3635),
                           size: 20,
                         ),
                       ),
@@ -664,13 +664,13 @@ class _ScannerPageState extends State<ScannerPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.2)),
+            border: Border.all(color: const Color(0xFFF2ECE7)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -678,29 +678,30 @@ class _ScannerPageState extends State<ScannerPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5A93B).withOpacity(0.1),
+                  color: const Color(0xFFE5A99E).withOpacity(0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.people_alt_rounded, color: Color(0xFFE5A93B), size: 40),
+                child: const Icon(Icons.people_alt_rounded, color: Color(0xFFE5A99E), size: 40),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Buka Couple Matcher 👥',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Color(0xFF3E3635), fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Uji coba gratis Anda telah habis. Berlangganan Premium untuk memindai undertone berdua dengan pacar atau sahabat sepuasnya!',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
+                style: TextStyle(color: Color(0xFF8E807E), fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE5A93B),
-                  foregroundColor: const Color(0xFF0F0F1A),
+                  backgroundColor: const Color(0xFFE5A99E),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
                 onPressed: () async {
                   Navigator.pop(context);
@@ -711,7 +712,7 @@ class _ScannerPageState extends State<ScannerPage> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Nanti Saja', style: TextStyle(color: Colors.white30)),
+                child: const Text('Nanti Saja', style: TextStyle(color: Color(0xFF8E807E))),
               ),
             ],
           ),

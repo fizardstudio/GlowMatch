@@ -74,7 +74,7 @@ class _ResultsPageState extends State<ResultsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
-          backgroundColor: Color(0xFFE5C185),
+          backgroundColor: Color(0xFFE5A99E),
         ),
       );
     }
@@ -84,13 +84,13 @@ class _ResultsPageState extends State<ResultsPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFFFFFF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.2)),
+            border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.2)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -98,27 +98,27 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5A93B).withOpacity(0.1),
+                  color: const Color(0xFFE5A99E).withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.stars_rounded, color: Color(0xFFE5A93B), size: 40),
+                child: const Icon(Icons.stars_rounded, color: Color(0xFFE5A99E), size: 40),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Buka Fitur Premium',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: const Color(0xFF3E3635), fontSize: 18, fontWeight: FontWeight.bold),
                ),
               const SizedBox(height: 8),
               const Text(
                 'Dapatkan analisis mendalam 12 Musim Warna (Seasonal Color) dan rekomendasi warna Hijab komersial tercocok dengan kulit Anda!',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
+                style: TextStyle(color: const Color(0xFF8E807E), fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE5A93B),
-                  foregroundColor: const Color(0xFF0F0F1A),
+                  backgroundColor: const Color(0xFFE5A99E),
+                  foregroundColor: const Color(0xFFFCF9F6),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -276,7 +276,7 @@ class _ResultsPageState extends State<ResultsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Terima kasih atas ulasan kecocokan Anda!'),
-            backgroundColor: Color(0xFFE5C185),
+            backgroundColor: Color(0xFFE5A99E),
             duration: Duration(milliseconds: 800),
           ),
         );
@@ -312,13 +312,13 @@ class _ResultsPageState extends State<ResultsPage> {
     final filteredMatches = _getFilteredMatches(targetLab);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A), // Dark premium color
+      backgroundColor: const Color(0xFFFCF9F6), // Dark premium color
       appBar: AppBar(
         title: const Text(
           'Hasil Pemindaian',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -332,9 +332,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                 ),
                 child: Row(
                   children: [
@@ -352,7 +353,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             spreadRadius: 2,
                           ),
                         ],
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: const Color(0xFF3E3635), width: 2),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -363,7 +364,7 @@ class _ResultsPageState extends State<ResultsPage> {
                           Text(
                             widget.matchedStandard.name,
                             style: const TextStyle(
-                              color: Color(0xFFE5A93B),
+                              color: Color(0xFFE5A99E),
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -388,7 +389,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             'HEX: #${widget.extractedRgb[0].toRadixString(16).padLeft(2, '0').toUpperCase()}'
                             '${widget.extractedRgb[1].toRadixString(16).padLeft(2, '0').toUpperCase()}'
                             '${widget.extractedRgb[2].toRadixString(16).padLeft(2, '0').toUpperCase()}',
-                            style: const TextStyle(color: Colors.white60, fontSize: 13, fontFamily: 'monospace'),
+                            style: const TextStyle(color: const Color(0xFF8E807E), fontSize: 13, fontFamily: 'monospace'),
                           ),
                           const SizedBox(height: 10),
                           InkWell(
@@ -397,19 +398,19 @@ class _ResultsPageState extends State<ResultsPage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE5A93B).withOpacity(0.12),
+                                color: const Color(0xFFE5A99E).withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.3)),
+                                border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.3)),
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.qr_code_2_rounded, color: Color(0xFFE5A93B), size: 14),
+                                  Icon(Icons.qr_code_2_rounded, color: Color(0xFFE5A99E), size: 14),
                                   SizedBox(width: 6),
                                   Text(
                                     'Glow Card 📸',
                                     style: TextStyle(
-                                      color: Color(0xFFE5A93B),
+                                      color: Color(0xFFE5A99E),
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -435,7 +436,7 @@ class _ResultsPageState extends State<ResultsPage> {
                 ),
                 child: Text(
                   _getUndertoneExplanation(widget.matchedStandard.undertone),
-                  style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 13, height: 1.5),
                 ),
               ),
               const SizedBox(height: 20),
@@ -448,7 +449,7 @@ class _ResultsPageState extends State<ResultsPage> {
               const Text(
                 'Preferensi Tampilan Riasan',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Color(0xFF3E3635).withOpacity(0.8),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -458,9 +459,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                 ),
                 child: Row(
                   children: [
@@ -479,7 +481,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   const Text(
                     'Rekomendasi Produk Cocok',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: const Color(0xFF3E3635),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -487,7 +489,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   Text(
                     '${filteredMatches.length} Produk',
                     style: const TextStyle(
-                      color: Colors.white30,
+                      color: Color(0xFF8E807E).withOpacity(0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -515,11 +517,11 @@ class _ResultsPageState extends State<ResultsPage> {
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16162A),
+                            color: const Color(0xFFFFFFFF),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: index == 0
-                                  ? const Color(0xFFE5A93B).withOpacity(0.3)
+                                  ? const Color(0xFFE5A99E).withOpacity(0.3)
                                   : Colors.white.withOpacity(0.05),
                             ),
                           ),
@@ -547,7 +549,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         Text(
                                           product.brand,
                                           style: const TextStyle(
-                                            color: Color(0xFFE5A93B),
+                                            color: Color(0xFFE5A99E),
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             letterSpacing: 0.5,
@@ -557,7 +559,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         Text(
                                           product.productName,
                                           style: const TextStyle(
-                                            color: Colors.white,
+                                            color: const Color(0xFF3E3635),
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -566,7 +568,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         Text(
                                           'Shade: ${product.shadeName}',
                                           style: const TextStyle(
-                                            color: Colors.white70,
+                                            color: Color(0xFF3E3635).withOpacity(0.8),
                                             fontSize: 12,
                                           ),
                                         ),
@@ -580,14 +582,14 @@ class _ResultsPageState extends State<ResultsPage> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFE5A93B).withOpacity(0.15),
+                                          color: const Color(0xFFE5A99E).withOpacity(0.15),
                                           borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.4)),
+                                          border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.4)),
                                         ),
                                         child: Text(
                                           '${matchPercentage.toStringAsFixed(0)}% Cocok',
                                           style: const TextStyle(
-                                            color: Color(0xFFE5A93B),
+                                            color: Color(0xFFE5A99E),
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -597,7 +599,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                       Text(
                                         'Jarak: ${deltaE.toStringAsFixed(1)} ΔE',
                                         style: const TextStyle(
-                                          color: Colors.white30,
+                                          color: Color(0xFF8E807E).withOpacity(0.5),
                                           fontSize: 10,
                                         ),
                                       ),
@@ -619,13 +621,13 @@ class _ResultsPageState extends State<ResultsPage> {
                                     children: [
                                       const Text(
                                         'ULASAN KECOCOKAN KOMUNITAS:',
-                                        style: TextStyle(color: Colors.white30, fontSize: 8, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold),
                                       ),
                                       const SizedBox(height: 4),
                                       totalFeedback == 0
                                           ? const Text(
                                               'Belum ada ulasan',
-                                              style: TextStyle(color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic),
+                                              style: TextStyle(color: const Color(0xFF8E807E), fontSize: 10, fontStyle: FontStyle.italic),
                                             )
                                           : Row(
                                               children: [
@@ -633,21 +635,21 @@ class _ResultsPageState extends State<ResultsPage> {
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   '${product.perfectCount}',
-                                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 const Icon(Icons.dark_mode_rounded, color: Colors.amberAccent, size: 10),
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   '${product.tooDarkCount}',
-                                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 const Icon(Icons.light_mode_rounded, color: Colors.orangeAccent, size: 10),
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   '${product.tooLightCount}',
-                                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                                 ),
                                               ],
                                             ),
@@ -711,9 +713,9 @@ class _ResultsPageState extends State<ResultsPage> {
                                   Expanded(
                                     child: ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFE5A93B).withOpacity(0.12),
-                                        foregroundColor: const Color(0xFFE5A93B),
-                                        side: BorderSide(color: const Color(0xFFE5A93B).withOpacity(0.3)),
+                                        backgroundColor: const Color(0xFFE5A99E).withOpacity(0.12),
+                                        foregroundColor: const Color(0xFFE5A99E),
+                                        side: BorderSide(color: const Color(0xFFE5A99E).withOpacity(0.3)),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
                                         ),
@@ -793,22 +795,22 @@ class _ResultsPageState extends State<ResultsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Column(
         children: [
-          Icon(Icons.sentiment_dissatisfied_outlined, color: Colors.white30, size: 48),
+          Icon(Icons.sentiment_dissatisfied_outlined, color: Color(0xFF8E807E).withOpacity(0.5), size: 48),
           SizedBox(height: 12),
           Text(
             'Tidak ada kosmetik yang sangat pas.',
-            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 6),
           Text(
             'Coba pindai wajah lagi di bawah pencahayaan berbeda atau hapus filter kosmetik Anda.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white30, fontSize: 12),
+            style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 12),
           ),
         ],
       ),
@@ -829,12 +831,12 @@ class _ResultsPageState extends State<ResultsPage> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFFE5A93B).withOpacity(0.15)
+                ? const Color(0xFFE5A99E).withOpacity(0.15)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFFE5A93B).withOpacity(0.4)
+                  ? const Color(0xFFE5A99E).withOpacity(0.4)
                   : Colors.transparent,
               width: 1,
             ),
@@ -844,7 +846,7 @@ class _ResultsPageState extends State<ResultsPage> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? const Color(0xFFE5A93B) : Colors.white38,
+                color: isSelected ? const Color(0xFFE5A99E) : Colors.white38,
                 size: 18,
               ),
               const SizedBox(height: 6),
@@ -875,11 +877,11 @@ class _ResultsPageState extends State<ResultsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: _isPremium 
-              ? const Color(0xFFE5A93B).withOpacity(0.2) 
+              ? const Color(0xFFE5A99E).withOpacity(0.2) 
               : Colors.white.withOpacity(0.05),
         ),
       ),
@@ -890,14 +892,14 @@ class _ResultsPageState extends State<ResultsPage> {
             children: [
               Icon(
                 Icons.palette_rounded, 
-                color: _isPremium ? const Color(0xFFE5A93B) : Colors.white38,
+                color: _isPremium ? const Color(0xFFE5A99E) : Colors.white38,
                 size: 20,
               ),
               const SizedBox(width: 8),
               const Text(
                 'Seasonal Color & Hijab (Premium)',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: const Color(0xFF3E3635),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -907,16 +909,16 @@ class _ResultsPageState extends State<ResultsPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE5A93B).withOpacity(0.15),
+                    color: const Color(0xFFE5A99E).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.lock_rounded, color: Color(0xFFE5A93B), size: 12),
+                      Icon(Icons.lock_rounded, color: Color(0xFFE5A99E), size: 12),
                       SizedBox(width: 4),
                       Text(
                         'Locked',
-                        style: TextStyle(color: Color(0xFFE5A93B), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Color(0xFFE5A99E), fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -933,12 +935,12 @@ class _ResultsPageState extends State<ResultsPage> {
                   children: [
                     const Text(
                       'Tipe Musim Warna Anda: ?????',
-                      style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Analisis dinamis warna kulit Anda berdasarkan temperatur, saturasi, dan tingkat kecerahan untuk mencarikan kecocokan palet warna.',
-                      style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
+                      style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.6), fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -956,15 +958,15 @@ class _ResultsPageState extends State<ResultsPage> {
                 ),
                 Positioned.fill(
                   child: Container(
-                    color: const Color(0xFF16162A).withOpacity(0.7),
+                    color: const Color(0xFFFFFFFF).withOpacity(0.7),
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5A93B),
-                              foregroundColor: const Color(0xFF0F0F1A),
+                              backgroundColor: const Color(0xFFE5A99E),
+                              foregroundColor: const Color(0xFFFCF9F6),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
@@ -984,7 +986,7 @@ class _ResultsPageState extends State<ResultsPage> {
             Text(
               'Tipe Musim Warna Anda: $season',
               style: const TextStyle(
-                color: Color(0xFFE5A93B),
+                color: Color(0xFFE5A99E),
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -992,12 +994,12 @@ class _ResultsPageState extends State<ResultsPage> {
             const SizedBox(height: 8),
             Text(
               description,
-              style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 12, height: 1.4),
             ),
             const SizedBox(height: 16),
             const Text(
               'Palet Warna Kosmetik Rekomendasi:',
-              style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Row(
@@ -1010,7 +1012,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: color,
-                    border: Border.all(color: Colors.white24, width: 1),
+                    border: Border.all(color: Color(0xFF8E807E).withOpacity(0.4), width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: color.withOpacity(0.4),
@@ -1027,7 +1029,7 @@ class _ResultsPageState extends State<ResultsPage> {
             const SizedBox(height: 12),
             const Text(
               'Warna Hijab Terbaik untuk Kulit Anda:',
-              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(color: const Color(0xFF3E3635), fontSize: 12, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -1042,7 +1044,8 @@ class _ResultsPageState extends State<ResultsPage> {
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.03),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1058,7 +1061,7 @@ class _ResultsPageState extends State<ResultsPage> {
                       const SizedBox(width: 8),
                       Text(
                         name,
-                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11),
                       ),
                     ],
                   ),
@@ -1138,17 +1141,17 @@ class _ResultsPageState extends State<ResultsPage> {
                           end: Alignment.bottomRight,
                           colors: [
                             Color(0xFF1E1E38),
-                            Color(0xFF0F0F1A),
+                            Color(0xFFFCF9F6),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(32),
                         border: Border.all(
-                          color: const Color(0xFFE5A93B).withOpacity(0.3),
+                          color: const Color(0xFFE5A99E).withOpacity(0.3),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE5A93B).withOpacity(0.1),
+                            color: const Color(0xFFE5A99E).withOpacity(0.1),
                             blurRadius: 30,
                             spreadRadius: 2,
                           ),
@@ -1167,7 +1170,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                   const Text(
                                     'GLOW CARD',
                                     style: TextStyle(
-                                      color: Color(0xFFE5A93B),
+                                      color: Color(0xFFE5A99E),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 2,
@@ -1191,7 +1194,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                 ),
                                 child: const Icon(
                                   Icons.camera_alt_rounded,
-                                  color: Color(0xFFE5A93B),
+                                  color: Color(0xFFE5A99E),
                                   size: 16,
                                 ),
                               ),
@@ -1206,7 +1209,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]),
-                              border: Border.all(color: Colors.white, width: 3),
+                              border: Border.all(color: const Color(0xFF3E3635), width: 3),
                               boxShadow: [
                                 BoxShadow(
                                   color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]).withOpacity(0.6),
@@ -1220,7 +1223,7 @@ class _ResultsPageState extends State<ResultsPage> {
                           Text(
                             widget.matchedStandard.name,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: const Color(0xFF3E3635),
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1229,7 +1232,7 @@ class _ResultsPageState extends State<ResultsPage> {
                           Text(
                             skinHex,
                             style: const TextStyle(
-                              color: Colors.white38,
+                              color: Color(0xFF8E807E).withOpacity(0.6),
                               fontSize: 12,
                               fontFamily: 'monospace',
                               letterSpacing: 0.5,
@@ -1243,7 +1246,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               _buildCardBadge(widget.matchedStandard.skinTone, Colors.blueAccent),
                               const SizedBox(width: 8),
-                              _buildCardBadge('${widget.matchedStandard.undertone} Undertone', const Color(0xFFE5A93B)),
+                              _buildCardBadge('${widget.matchedStandard.undertone} Undertone', const Color(0xFFE5A99E)),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -1254,7 +1257,7 @@ class _ResultsPageState extends State<ResultsPage> {
                           const Text(
                             'Palet Kosmetik Musiman Terbaik',
                             style: TextStyle(
-                              color: Colors.white54,
+                              color: const Color(0xFF8E807E),
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
@@ -1272,7 +1275,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: color,
-                                  border: Border.all(color: Colors.white30, width: 1),
+                                  border: Border.all(color: Color(0xFF8E807E).withOpacity(0.5), width: 1),
                                 ),
                               );
                             }).toList(),
@@ -1286,7 +1289,8 @@ class _ResultsPageState extends State<ResultsPage> {
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.03),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white.withOpacity(0.05)),
+                              border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                             ),
                             child: Column(
                               children: [
@@ -1303,7 +1307,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                   celebMatch,
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: const Color(0xFF3E3635),
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1317,7 +1321,7 @@ class _ResultsPageState extends State<ResultsPage> {
                           Text(
                             'Dibuat Gratis di GlowMatch App',
                             style: TextStyle(
-                              color: const Color(0xFFE5A93B).withOpacity(0.6),
+                              color: const Color(0xFFE5A99E).withOpacity(0.6),
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.5,
@@ -1354,7 +1358,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Info profil berhasil disalin ke clipboard!'),
-                                backgroundColor: Color(0xFFE5C185),
+                                backgroundColor: Color(0xFFE5A99E),
                               ),
                             );
                           },
@@ -1378,7 +1382,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const SizedBox(height: 12),
                     const Text(
                       '💡 Tips: Silakan screenshot kartu di atas untuk dibagikan!',
-                      style: TextStyle(color: Colors.white30, fontSize: 11),
+                      style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 11),
                     ),
                   ],
                 ),
@@ -1472,12 +1476,12 @@ class _ResultsPageState extends State<ResultsPage> {
       builder: (context) {
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0F0F1A),
+            color: const Color(0xFFFCF9F6),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
             border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFE5A93B).withOpacity(0.08),
+                color: const Color(0xFFE5A99E).withOpacity(0.08),
                 blurRadius: 24,
                 spreadRadius: 2,
               ),
@@ -1505,12 +1509,12 @@ class _ResultsPageState extends State<ResultsPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5A93B).withOpacity(0.15),
+                      color: const Color(0xFFE5A99E).withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.discount_rounded,
-                      color: Color(0xFFE5A93B),
+                      color: Color(0xFFE5A99E),
                       size: 20,
                     ),
                   ),
@@ -1519,7 +1523,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     child: Text(
                       'AI Makeup Dupe Finder 🏷️',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: const Color(0xFF3E3635),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1535,11 +1539,11 @@ class _ResultsPageState extends State<ResultsPage> {
                     const TextSpan(text: 'Padanan alternatif warna terdekat untuk:\n'),
                     TextSpan(
                       text: '${sourceProduct.brand} - ${sourceProduct.productName}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold),
                     ),
                     TextSpan(
                       text: ' (${sourceProduct.shadeName})',
-                      style: const TextStyle(color: Color(0xFFE5A93B), fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1588,7 +1592,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                   decoration: BoxDecoration(
                                     color: dupeColor,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white24),
+                                    border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                                     boxShadow: [
                                       BoxShadow(
                                         color: dupeColor.withOpacity(0.4),
@@ -1606,7 +1610,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                       Text(
                                         dupe.brand,
                                         style: const TextStyle(
-                                          color: Color(0xFFE5A93B),
+                                          color: Color(0xFFE5A99E),
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.5,
@@ -1618,7 +1622,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          color: Colors.white,
+                                          color: const Color(0xFF3E3635),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -1654,7 +1658,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                     Text(
                                       '${matchPercentage.toStringAsFixed(1)}%',
                                       style: const TextStyle(
-                                        color: Color(0xFFE5A93B),
+                                        color: Color(0xFFE5A99E),
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -1668,16 +1672,16 @@ class _ResultsPageState extends State<ResultsPage> {
                                         decoration: BoxDecoration(
                                           color: Colors.white.withOpacity(0.05),
                                           borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.white12),
+                                          border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                                         ),
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.shopping_bag_outlined, color: Colors.white70, size: 10),
+                                            Icon(Icons.shopping_bag_outlined, color: Color(0xFF3E3635).withOpacity(0.8), size: 10),
                                             SizedBox(width: 4),
                                             Text(
                                               'Beli 🛒',
-                                              style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                             ),
                                           ],
                                         ),
@@ -1782,13 +1786,13 @@ class _ResultsPageState extends State<ResultsPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFFFCF9F6),
       appBar: AppBar(
         title: const Text(
           'Couple & Bestie Matcher 👥',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -1801,9 +1805,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                 ),
                 child: Column(
                   children: [
@@ -1814,7 +1819,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               const Text(
                                 'Kamu 👤',
-                                style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 10),
                               Container(
@@ -1829,17 +1834,17 @@ class _ResultsPageState extends State<ResultsPage> {
                                       blurRadius: 12,
                                     ),
                                   ],
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  border: Border.all(color: const Color(0xFF3E3635), width: 2),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 shade1.undertone,
-                                style: const TextStyle(color: Color(0xFFE5A93B), fontWeight: FontWeight.bold, fontSize: 13),
+                                style: const TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                               Text(
                                 shade1.name,
-                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11),
                               ),
                             ],
                           ),
@@ -1854,7 +1859,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               const Text(
                                 'Partner / Bestie 👥',
-                                style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 10),
                               Container(
@@ -1869,17 +1874,17 @@ class _ResultsPageState extends State<ResultsPage> {
                                       blurRadius: 12,
                                     ),
                                   ],
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  border: Border.all(color: const Color(0xFF3E3635), width: 2),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 shade2.undertone,
-                                style: const TextStyle(color: Color(0xFFE5A93B), fontWeight: FontWeight.bold, fontSize: 13),
+                                style: const TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                               Text(
                                 shade2.name,
-                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11),
                               ),
                             ],
                           ),
@@ -1891,8 +1896,8 @@ class _ResultsPageState extends State<ResultsPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE5A93B),
-                          foregroundColor: const Color(0xFF0F0F1A),
+                          backgroundColor: const Color(0xFFE5A99E),
+                          foregroundColor: const Color(0xFFFCF9F6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -1921,9 +1926,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1931,7 +1937,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const Text(
                       'UNDERTONE COMPATIBILITY INDEX 🔬',
                       style: TextStyle(
-                        color: Color(0xFFE5A93B),
+                        color: Color(0xFFE5A99E),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,
@@ -1943,13 +1949,13 @@ class _ResultsPageState extends State<ResultsPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE5A93B).withOpacity(0.15),
+                            color: const Color(0xFFE5A99E).withOpacity(0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Text(
                             '$compatibilityScore%',
                             style: const TextStyle(
-                              color: Color(0xFFE5A93B),
+                              color: Color(0xFFE5A99E),
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1962,7 +1968,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               Text(
                                 compatibilityTitle,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                style: const TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -1982,9 +1988,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1992,7 +1999,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const Text(
                       'HARMONIOUS COUPLE OUTFIT COLORS 👗👔',
                       style: TextStyle(
-                        color: Color(0xFFE5A93B),
+                        color: Color(0xFFE5A99E),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,
@@ -2018,7 +2025,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                 decoration: BoxDecoration(
                                   color: color,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white12),
+                                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -2026,7 +2033,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                 name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 9.5, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -2041,9 +2048,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2051,7 +2059,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const Text(
                       'CELEBRITY COUPLE INSPIRATION 🌟',
                       style: TextStyle(
-                        color: Color(0xFFE5A93B),
+                        color: Color(0xFFE5A99E),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,
@@ -2060,7 +2068,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const SizedBox(height: 12),
                     Text(
                       _getCoupleCelebrityInspiration(undertone1, undertone2),
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: const Color(0xFF3E3635), fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -2111,14 +2119,14 @@ class _ResultsPageState extends State<ResultsPage> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF0F0F1A), Color(0xFF1E1E38)],
+                  colors: [Color(0xFFFCF9F6), Color(0xFF1E1E38)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
-                border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.3), width: 1.5),
+                border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.3), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFE5A93B).withOpacity(0.12),
+                    color: const Color(0xFFE5A99E).withOpacity(0.12),
                     blurRadius: 30,
                     spreadRadius: 2,
                   ),
@@ -2133,7 +2141,7 @@ class _ResultsPageState extends State<ResultsPage> {
                       const Text(
                         'GLOW CARD',
                         style: TextStyle(
-                          color: Color(0xFFE5A93B),
+                          color: Color(0xFFE5A99E),
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           letterSpacing: 1.5,
@@ -2142,12 +2150,12 @@ class _ResultsPageState extends State<ResultsPage> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE5A93B).withOpacity(0.15),
+                          color: const Color(0xFFE5A99E).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
                           'COUPLE MODE',
-                          style: TextStyle(color: Color(0xFFE5A93B), fontSize: 9, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Color(0xFFE5A99E), fontSize: 9, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -2157,7 +2165,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   const Text(
                     'Dual Skin Harmony ✨',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: const Color(0xFF3E3635),
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -2183,7 +2191,7 @@ class _ResultsPageState extends State<ResultsPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: color1,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(color: const Color(0xFF3E3635), width: 2),
                                 boxShadow: [
                                   BoxShadow(
                                     color: color1.withOpacity(0.4),
@@ -2193,13 +2201,13 @@ class _ResultsPageState extends State<ResultsPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'Kamu 👤',
-                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               shade1.undertone,
-                              style: const TextStyle(color: Color(0xFFE5A93B), fontSize: 11, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               '#${color1.value.toRadixString(16).substring(2).toUpperCase()}',
@@ -2211,10 +2219,10 @@ class _ResultsPageState extends State<ResultsPage> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE5A93B).withOpacity(0.1),
+                          color: const Color(0xFFE5A99E).withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.favorite, color: Color(0xFFE5A93B), size: 18),
+                        child: const Icon(Icons.favorite, color: Color(0xFFE5A99E), size: 18),
                       ),
                       Expanded(
                         child: Column(
@@ -2225,7 +2233,7 @@ class _ResultsPageState extends State<ResultsPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: color2,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(color: const Color(0xFF3E3635), width: 2),
                                 boxShadow: [
                                   BoxShadow(
                                     color: color2.withOpacity(0.4),
@@ -2235,13 +2243,13 @@ class _ResultsPageState extends State<ResultsPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'Bestie 👥',
-                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               shade2.undertone,
-                              style: const TextStyle(color: Color(0xFFE5A93B), fontSize: 11, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               '#${color2.value.toRadixString(16).substring(2).toUpperCase()}',
@@ -2266,12 +2274,12 @@ class _ResultsPageState extends State<ResultsPage> {
                       children: [
                         Text(
                           'Scan Undertone & Rona Kulit Aslimu',
-                          style: TextStyle(color: Colors.white60, fontSize: 10.5, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: const Color(0xFF8E807E), fontSize: 10.5, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 2),
                         Text(
                           'Download GlowMatch di PlayStore sekarang 📱',
-                          style: TextStyle(color: Color(0xFFE5A93B), fontSize: 9.5, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Color(0xFFE5A99E), fontSize: 9.5, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -2298,7 +2306,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Info profil disalin ke clipboard 📋'),
-                                backgroundColor: Color(0xFFE5C185),
+                                backgroundColor: Color(0xFFE5A99E),
                               ),
                             );
                           },
@@ -2316,8 +2324,8 @@ class _ResultsPageState extends State<ResultsPage> {
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE5A93B),
-                            foregroundColor: const Color(0xFF0F0F1A),
+                            backgroundColor: const Color(0xFFE5A99E),
+                            foregroundColor: const Color(0xFFFCF9F6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
