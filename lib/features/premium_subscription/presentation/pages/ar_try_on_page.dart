@@ -341,7 +341,17 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopDemoTimer();
-    _cameraController?.dispose();
+    if (_cameraController != null) {
+      try {
+        if (_cameraController!.value.isStreamingImages) {
+          _cameraController!.stopImageStream();
+        }
+      } catch (_) {}
+      try {
+        _cameraController!.dispose();
+      } catch (_) {}
+      _cameraController = null;
+    }
     _faceDetector.close();
     super.dispose();
   }
