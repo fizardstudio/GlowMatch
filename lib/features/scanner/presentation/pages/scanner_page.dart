@@ -36,7 +36,9 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkPermissionAndInit();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermissionAndInit();
+    });
     _checkPremiumStatus();
   }
 
@@ -52,7 +54,10 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
         _isPermissionChecking = false;
       });
       if (mounted) {
-        context.read<ScannerBloc>().add(InitializeCamera());
+        await Future.delayed(const Duration(milliseconds: 250));
+        if (mounted) {
+          context.read<ScannerBloc>().add(InitializeCamera());
+        }
       }
     } else {
       final requestResult = await Permission.camera.request();
@@ -62,7 +67,10 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
           _isPermissionChecking = false;
         });
         if (mounted) {
-          context.read<ScannerBloc>().add(InitializeCamera());
+          await Future.delayed(const Duration(milliseconds: 350));
+          if (mounted) {
+            context.read<ScannerBloc>().add(InitializeCamera());
+          }
         }
       } else {
         setState(() {
