@@ -30,7 +30,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Matte & Glossy Overlay** | Riasan bibir presisi 3D Face Mesh dengan finishing Matte dan Glossy (Specular preservation). | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Blush-on Outward Shift** | Rona pipi bergradasi lembut yang terkalibrasi dinamis bergeser keluar 22% ke tulang pipi berdasarkan lebar mata. | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Paywall & Offline Access** | Validasi status langganan premium melalui database Isar dan timer gratis demo 1 menit. | `lib/features/premium_subscription/data/models/app_settings.dart` |
-| **[ ]** | **2D Photo Makeup Try-On** | Uji coba riasan lipstik & blush-on interaktif langsung pada foto statis hasil unggahan menggunakan pemetaan titik Face Mesh. | *Rencana Pengembangan Mendatang* |
+| **[ ]** | **2D Photo Makeup Try-On** | Uji coba riasan wajah lengkap (dasaran/foundation, lipstik, & blush-on) secara interaktif langsung pada foto statis hasil unggahan menggunakan pemetaan titik Face Mesh. | *Rencana Pengembangan Mendatang* |
 | **[ ]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | *Rencana Pengembangan Mendatang* |
 
 ---
