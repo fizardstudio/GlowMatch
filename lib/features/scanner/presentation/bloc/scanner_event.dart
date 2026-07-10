@@ -42,3 +42,5 @@ class CaptureImage extends ScannerEvent {
 }
 
 class ResetScanner extends ScannerEvent {}
+
+class DisposeCamera extends ScannerEvent {}

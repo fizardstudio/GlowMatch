@@ -20,7 +20,7 @@ class ArTryOnPage extends StatefulWidget {
   State<ArTryOnPage> createState() => _ArTryOnPageState();
 }
 
-class _ArTryOnPageState extends State<ArTryOnPage> {
+class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   final Isar _isar = DatabaseService().isar;
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
@@ -87,6 +87,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkPremiumStatus();
     _initializeCamera();
   }
@@ -339,10 +340,40 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _stopDemoTimer();
     _cameraController?.dispose();
     _faceDetector.close();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Lepas kamera ketika aplikasi diminimize untuk mencegah crash native
+      if (_cameraController != null) {
+        _isCameraInitialized = false;
+        try {
+          if (_cameraController!.value.isStreamingImages) {
+            _cameraController!.stopImageStream();
+          }
+        } catch (_) {}
+        try {
+          _cameraController!.dispose();
+        } catch (_) {}
+        _cameraController = null;
+        if (mounted) {
+          setState(() {
+            _isCameraInitialized = false;
+          });
+        }
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      // Inisialisasi ulang kamera saat kembali ke foreground
+      if (!_showPaywall) {
+        _initializeCamera();
+      }
+    }
   }
 
   @override

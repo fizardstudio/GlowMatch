@@ -20,7 +20,7 @@ class ScannerPage extends StatefulWidget {
   State<ScannerPage> createState() => _ScannerPageState();
 }
 
-class _ScannerPageState extends State<ScannerPage> {
+class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   bool _isCameraDisposed = false;
   bool _canPop = false;
   bool _isCoupleMode = false;
@@ -30,9 +30,27 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Inisialisasi kamera saat halaman dimuat
     context.read<ScannerBloc>().add(InitializeCamera());
     _checkPremiumStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Lepas kamera saat aplikasi diminimize untuk mencegah crash FlutterJNI
+      context.read<ScannerBloc>().add(DisposeCamera());
+    } else if (state == AppLifecycleState.resumed) {
+      // Inisialisasi ulang kamera saat aplikasi kembali ke foreground
+      context.read<ScannerBloc>().add(InitializeCamera());
+    }
   }
 
   Future<void> _checkPremiumStatus() async {

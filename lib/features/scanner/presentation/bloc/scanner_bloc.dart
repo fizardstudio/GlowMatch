@@ -36,6 +36,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     on<SwitchCamera>(_onSwitchCamera);
     on<CaptureImage>(_onCaptureImage);
     on<ResetScanner>(_onResetScanner);
+    on<DisposeCamera>(_onDisposeCamera);
   }
 
   Future<void> _onInitializeCamera(
@@ -44,6 +45,18 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   ) async {
     emit(ScannerCameraLoading());
     try {
+      if (_cameraController != null) {
+        try {
+          if (_cameraController!.value.isStreamingImages) {
+            await _cameraController!.stopImageStream();
+          }
+        } catch (_) {}
+        try {
+          await _cameraController!.dispose();
+        } catch (_) {}
+        _cameraController = null;
+      }
+
       final cameras = await availableCameras();
       
       final targetCamera = cameras.firstWhere(
@@ -69,6 +82,24 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     } catch (e) {
       emit(ScannerFailure('Gagal menginisialisasi kamera: ${e.toString()}'));
     }
+  }
+
+  Future<void> _onDisposeCamera(
+    DisposeCamera event,
+    Emitter<ScannerState> emit,
+  ) async {
+    if (_cameraController != null) {
+      try {
+        if (_cameraController!.value.isStreamingImages) {
+          await _cameraController!.stopImageStream();
+        }
+      } catch (_) {}
+      try {
+        await _cameraController!.dispose();
+      } catch (_) {}
+      _cameraController = null;
+    }
+    emit(ScannerInitial());
   }
 
   Future<void> _onStartScanning(
