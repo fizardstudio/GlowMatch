@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/data/models/standard_shade.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/network/database_service.dart';
@@ -371,6 +372,34 @@ class _ResultsPageState extends State<ResultsPage> {
                             '${widget.extractedRgb[1].toRadixString(16).padLeft(2, '0').toUpperCase()}'
                             '${widget.extractedRgb[2].toRadixString(16).padLeft(2, '0').toUpperCase()}',
                             style: const TextStyle(color: Colors.white60, fontSize: 13, fontFamily: 'monospace'),
+                          ),
+                          const SizedBox(height: 10),
+                          InkWell(
+                            onTap: () => _showGlowCardModal(context, targetLab),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE5A93B).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFE5A93B).withOpacity(0.3)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.qr_code_2_rounded, color: Color(0xFFE5A93B), size: 14),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Glow Card 📸',
+                                    style: TextStyle(
+                                      color: Color(0xFFE5A93B),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -994,6 +1023,350 @@ class _ResultsPageState extends State<ResultsPage> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  String _getCelebrityMatch(String season) {
+    switch (season) {
+      case "Light Spring":
+        return "Lisa (Blackpink), Amanda Seyfried";
+      case "True Spring":
+        return "Emma Stone, Scarlett Johansson";
+      case "Clear Winter":
+        return "Courteney Cox, Megan Fox";
+      case "Light Summer":
+        return "Elle Fanning, Margot Robbie";
+      case "Soft Summer":
+        return "Gigi Hadid, Bella Hadid";
+      case "Deep Autumn":
+        return "Zendaya, Meghan Markle";
+      case "Deep Winter":
+        return "Selena Gomez, Kim Kardashian";
+      case "Soft Autumn":
+        return "Drew Barrymore, Jisoo (Blackpink)";
+      case "True Autumn":
+        return "Jennifer Lopez, Jessica Alba";
+      case "True Winter":
+        return "Anne Hathaway, Lupita Nyong'o";
+      case "True Summer":
+        return "Emily Blunt, Kate Middleton";
+      default:
+        return "Zendaya, Lisa (Blackpink)";
+    }
+  }
+
+  void _showGlowCardModal(BuildContext context, LabColor targetLab) {
+    final profile = ColorCalculator.getSeasonalColorProfile(targetLab.l, targetLab.a, targetLab.b);
+    final String season = profile['season'] as String;
+    final List<String> paletteColors = List<String>.from(profile['paletteColors'] as List);
+    final String celebMatch = _getCelebrityMatch(season);
+
+    final skinHex = '#'
+        '${widget.extractedRgb[0].toRadixString(16).padLeft(2, '0').toUpperCase()}'
+        '${widget.extractedRgb[1].toRadixString(16).padLeft(2, '0').toUpperCase()}'
+        '${widget.extractedRgb[2].toRadixString(16).padLeft(2, '0').toUpperCase()}';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Glow Card',
+      barrierColor: Colors.black.withOpacity(0.85),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Area Kartu yang akan di-screenshot oleh user (Rasio ~9:16)
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF1E1E38),
+                            Color(0xFF0F0F1A),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: const Color(0xFFE5A93B).withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE5A93B).withOpacity(0.1),
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Header Kartu
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'GLOW CARD',
+                                    style: TextStyle(
+                                      color: Color(0xFFE5A93B),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Kecocokan Warna Kulit Persona',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.4),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Color(0xFFE5A93B),
+                                  size: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Lingkaran Swatch Warna Kulit Pengguna
+                          Container(
+                            height: 100,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]),
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]).withOpacity(0.6),
+                                  blurRadius: 24,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            widget.matchedStandard.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            skinHex,
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Baris Badge Karakteristik Warna
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildCardBadge(widget.matchedStandard.skinTone, Colors.blueAccent),
+                              const SizedBox(width: 8),
+                              _buildCardBadge('${widget.matchedStandard.undertone} Undertone', const Color(0xFFE5A93B)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildCardBadge('Musim Warna: $season', Colors.tealAccent),
+                          const SizedBox(height: 24),
+
+                          // Grid Palet Rekomendasi
+                          const Text(
+                            'Palet Kosmetik Musiman Terbaik',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: paletteColors.map((hex) {
+                              final color = _getHexColor(hex);
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 5),
+                                height: 26,
+                                width: 26,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: color,
+                                  border: Border.all(color: Colors.white30, width: 1),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Selebriti Kembar
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.03),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.05)),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Selebriti Kembaran Warna Kulit:',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.3),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  celebMatch,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Footer Promosi
+                          Text(
+                            'Dibuat Gratis di GlowMatch App',
+                            style: TextStyle(
+                              color: const Color(0xFFE5A93B).withOpacity(0.6),
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Kontrol Aksi di Bawah Kartu
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.1),
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          icon: const Icon(Icons.copy_all_rounded, size: 18),
+                          label: const Text('Salin Info Kartu 📋', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(
+                              text: '✨ GlowMatch Skin Profile ✨\n'
+                                  'Warna Kulit: ${widget.matchedStandard.name} ($skinHex)\n'
+                                  'Undertone: ${widget.matchedStandard.undertone}\n'
+                                  'Musim Warna: $season\n'
+                                  'Seleb Match: $celebMatch\n'
+                                  'Cari tahu kecocokan warna kulitmu gratis di aplikasi GlowMatch!',
+                            ));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Info profil berhasil disalin ke clipboard!'),
+                                backgroundColor: Color(0xFFE5C185),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.redAccent.withOpacity(0.15),
+                            foregroundColor: Colors.redAccent,
+                            padding: const EdgeInsets.all(12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: const BorderSide(color: Colors.redAccent, width: 0.5),
+                            ),
+                          ),
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '💡 Tips: Silakan screenshot kartu di atas untuk dibagikan!',
+                      style: TextStyle(color: Colors.white30, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+          child: child,
+        );
+      },
+    );
+  }
+
+  Widget _buildCardBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
