@@ -4,7 +4,7 @@ import '../../../../core/network/database_service.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/utils/widget_helper.dart';
-import '../models/pouch_item.dart';
+import '../../data/models/pouch_item.dart';
 
 class MakeupPouchPage extends StatefulWidget {
   const MakeupPouchPage({super.key});

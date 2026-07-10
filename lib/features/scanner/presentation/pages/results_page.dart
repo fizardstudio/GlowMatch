@@ -446,7 +446,7 @@ class _ResultsPageState extends State<ResultsPage> {
               const SizedBox(height: 28),
 
               // Preferensi Hasil Riasan (Subjektif)
-              const Text(
+              Text(
                 'Preferensi Tampilan Riasan',
                 style: TextStyle(
                   color: Color(0xFF3E3635).withOpacity(0.8),
@@ -488,7 +488,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   ),
                   Text(
                     '${filteredMatches.length} Produk',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Color(0xFF8E807E).withOpacity(0.5),
                       fontSize: 12,
                     ),
@@ -567,7 +567,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         const SizedBox(height: 4),
                                         Text(
                                           'Shade: ${product.shadeName}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             color: Color(0xFF3E3635).withOpacity(0.8),
                                             fontSize: 12,
                                           ),
@@ -598,7 +598,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                       const SizedBox(height: 6),
                                       Text(
                                         'Jarak: ${deltaE.toStringAsFixed(1)} ΔE',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: Color(0xFF8E807E).withOpacity(0.5),
                                           fontSize: 10,
                                         ),
@@ -619,7 +619,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'ULASAN KECOCOKAN KOMUNITAS:',
                                         style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold),
                                       ),
@@ -798,7 +798,7 @@ class _ResultsPageState extends State<ResultsPage> {
         color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Column(
+      child: Column(
         children: [
           Icon(Icons.sentiment_dissatisfied_outlined, color: Color(0xFF8E807E).withOpacity(0.5), size: 48),
           SizedBox(height: 12),
@@ -933,12 +933,12 @@ class _ResultsPageState extends State<ResultsPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Tipe Musim Warna Anda: ?????',
                       style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Analisis dinamis warna kulit Anda berdasarkan temperatur, saturasi, dan tingkat kecerahan untuk mencarikan kecocokan palet warna.',
                       style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.6), fontSize: 12, height: 1.4),
                     ),
@@ -997,7 +997,7 @@ class _ResultsPageState extends State<ResultsPage> {
               style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 12, height: 1.4),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Palet Warna Kosmetik Rekomendasi:',
               style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold),
             ),
@@ -1231,7 +1231,7 @@ class _ResultsPageState extends State<ResultsPage> {
                           const SizedBox(height: 4),
                           Text(
                             skinHex,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Color(0xFF8E807E).withOpacity(0.6),
                               fontSize: 12,
                               fontFamily: 'monospace',
@@ -1380,7 +1380,7 @@ class _ResultsPageState extends State<ResultsPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       '💡 Tips: Silakan screenshot kartu di atas untuk dibagikan!',
                       style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 11),
                     ),
@@ -1674,7 +1674,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                           borderRadius: BorderRadius.circular(8),
                                           border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                                         ),
-                                        child: const Row(
+                                        child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(Icons.shopping_bag_outlined, color: Color(0xFF3E3635).withOpacity(0.8), size: 10),
@@ -1817,7 +1817,7 @@ class _ResultsPageState extends State<ResultsPage> {
                         Expanded(
                           child: Column(
                             children: [
-                              const Text(
+                              Text(
                                 'Kamu 👤',
                                 style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
@@ -1857,7 +1857,7 @@ class _ResultsPageState extends State<ResultsPage> {
                         Expanded(
                           child: Column(
                             children: [
-                              const Text(
+                              Text(
                                 'Partner / Bestie 👥',
                                 style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
