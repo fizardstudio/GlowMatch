@@ -11,7 +11,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Basic Undertone Scanner** | Memindai wajah secara real-time lewat kamera depan untuk mendeteksi kecerahan kulit dasar dan undertone (*Warm/Cool/Neutral*). | `lib/features/scanner/presentation/` |
 | **[x]** | **Color Wheel Reference** | Panduan interaktif teknik *color correcting* secara dinamis dan luring. | `lib/features/scanner/presentation/` |
 | **[x]** | **Standard Shade Catalog** | Katalog shade warna standar kosmetik global luring. | `lib/core/data/models/standard_shade.dart` |
-| **[x]** | **Cross-Brand Shade Converter** | Pencarian padanan kosmetik lintas merek komersial dengan kalkulasi jarak warna CIELAB Delta E76 luring. | `lib/features/catalog/presentation/pages/shade_converter_page.dart` |
+| **[x]** | **Cross-Brand Shade Converter** | Pencarian padanan kosmetik lintas merek komersial dengan kalkulasi jarak warna CIELAB Delta E00 luring. | `lib/features/catalog/presentation/pages/shade_converter_page.dart` |
 | **[x]** | **Community Validation Loop** | Fitur voting kecocokan komunitas (*Perfect / Too Dark / Too Light*) yang langsung disimpan luring ke database Isar. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Community Offset Delta L** | Kalibrasi otomatis kecerahan formula Delta E menggunakan rata-rata ulasan komunitas agar rekomendasi semakin cerdas. | `lib/features/catalog/data/repositories/shade_matcher_repository_impl.dart` |
 | **[x]** | **Virtual Makeup Pouch** | Pencatatan tanggal buka kosmetik luring, masa kadaluwarsa PAO, notifikasi lokal, dan progress bar gradien. | `lib/features/pouch/presentation/pages/makeup_pouch_page.dart` |
