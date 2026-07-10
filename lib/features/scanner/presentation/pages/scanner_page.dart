@@ -241,17 +241,14 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
           child: FloatingActionButton(
             heroTag: 'open_gallery_fab_no_perm',
             onPressed: () async {
-              setState(() {
-                _isPickingImage = true;
-              });
+              _isPickingImage = true;
+              final bloc = context.read<ScannerBloc>();
               final ImagePicker picker = ImagePicker();
               final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-              if (image != null && mounted) {
-                context.read<ScannerBloc>().add(ProcessGalleryImage(image.path));
+              if (image != null) {
+                bloc.add(ProcessGalleryImage(image.path));
               } else {
-                setState(() {
-                  _isPickingImage = false;
-                });
+                _isPickingImage = false;
               }
             },
             backgroundColor: Colors.white,
@@ -881,20 +878,15 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                       child: FloatingActionButton(
                         heroTag: 'open_gallery_fab',
                         onPressed: () async {
-                          setState(() {
-                            _isPickingImage = true;
-                          });
+                          _isPickingImage = true;
+                          final bloc = context.read<ScannerBloc>();
                           final ImagePicker picker = ImagePicker();
                           final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                          if (image != null && mounted) {
-                            context.read<ScannerBloc>().add(ProcessGalleryImage(image.path));
+                          if (image != null) {
+                            bloc.add(ProcessGalleryImage(image.path));
                           } else {
-                            setState(() {
-                              _isPickingImage = false;
-                            });
-                            if (mounted) {
-                              context.read<ScannerBloc>().add(InitializeCamera());
-                            }
+                            _isPickingImage = false;
+                            bloc.add(InitializeCamera());
                           }
                         },
                         backgroundColor: Colors.white.withOpacity(0.92),
