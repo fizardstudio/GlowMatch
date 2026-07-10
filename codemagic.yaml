@@ -1,0 +1,72 @@
+workflows:
+  ios-simulator:
+    name: iOS Simulator Build (untuk Appetize.io)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      xcode: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Flutter get packages
+        script: flutter pub get
+      - name: Build iOS Simulator App
+        script: flutter build ios --debug --simulator --no-codesign -t lib/main.dart
+      - name: Zip Runner.app for simulator
+        script: |
+          cd build/ios/iphonesimulator
+          zip -r Runner.app.zip Runner.app
+    artifacts:
+      - build/ios/iphonesimulator/Runner.app.zip
+
+  ios-device:
+    name: iOS Device Build (IPA untuk Sideloadly)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      xcode: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Flutter get packages
+        script: flutter pub get
+      - name: Build iOS Device App
+        script: flutter build ios --debug --no-codesign -t lib/main.dart
+      - name: Package IPA
+        script: |
+          mkdir -p Payload
+          mv build/ios/iphoneos/Runner.app Payload/
+          zip -r GlowMatch.zip Payload
+          mv GlowMatch.zip GlowMatch.ipa
+    artifacts:
+      - GlowMatch.ipa
+
+  android-debug:
+    name: Android Debug APK
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Flutter get packages
+        script: flutter pub get
+      - name: Build Android APK
+        script: flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
