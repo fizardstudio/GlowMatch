@@ -16,6 +16,8 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Community Offset Delta L** | Kalibrasi otomatis kecerahan formula Delta E menggunakan rata-rata ulasan komunitas agar rekomendasi semakin cerdas. | `lib/features/catalog/data/repositories/shade_matcher_repository_impl.dart` |
 | **[x]** | **Virtual Makeup Pouch** | Pencatatan tanggal buka kosmetik luring, masa kadaluwarsa PAO, notifikasi lokal, dan progress bar gradien. | `lib/features/pouch/presentation/pages/makeup_pouch_page.dart` |
 | **[x]** | **Filter Preferensi Riasan** *(Subjektif)* | Filter khusus pada hasil pemindaian untuk memilih hasil rekomendasi yang murni *Natural*, *Brightening (Tone-Up)*, atau *Sun-Kissed (Tanned)*. | `lib/features/scanner/presentation/pages/results_page.dart` |
+| **[ ]** | **Glow Card Generator** | Membuat kartu persona 12 Musim Warna bergaya glassmorphic estetik untuk dibagikan secara instan ke media sosial. | *Rencana Pengembangan Mendatang* |
+| **[ ]** | **Lighting Inspector** | Deteksi real-time suhu cahaya ruangan (hangat/dingin/netral) agar hasil pindai akurat. | *Rencana Pengembangan Mendatang* |
 
 ---
 
@@ -29,7 +31,10 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Matte & Glossy Overlay** | Riasan bibir presisi 3D Face Mesh dengan finishing Matte dan Glossy (Specular preservation). | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Blush-on Outward Shift** | Rona pipi bergradasi lembut yang terkalibrasi dinamis bergeser keluar 22% ke tulang pipi berdasarkan lebar mata. | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Paywall & Offline Access** | Validasi status langganan premium melalui database Isar dan timer gratis demo 1 menit. | `lib/features/premium_subscription/data/models/app_settings.dart` |
-| **[ ]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | *Rencana Pengembangan Mendatang* |
+| **[x]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | `lib/features/scanner/presentation/pages/results_page.dart` |
+| **[ ]** | **AI Makeup Dupe Finder** | Perhitungan Delta E untuk mencari padanan kosmetik luxury ke brand lokal/murah yang warnanya mirip s.d 99%. | *Rencana Pengembangan Mendatang* |
+| **[ ]** | **Couple Undertone Matcher** | Memindai wajah bersama pacar/teman, menghitung kecocokan undertone, dan merekomendasikan baju senada. | *Rencana Uji Coba Gratis / Premium* |
+| **[ ]** | **Expiry Alert Widget** | Widget minimalis layar utama HP untuk pengingat masa kadaluwarsa produk terdekat dari pouch kosmetik. | *Rencana Pengembangan Mendatang* |
 
 ---
 
