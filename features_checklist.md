@@ -11,13 +11,12 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Basic Undertone Scanner** | Memindai wajah secara real-time lewat kamera depan untuk mendeteksi kecerahan kulit dasar dan undertone (*Warm/Cool/Neutral*). | `lib/features/scanner/presentation/` |
 | **[x]** | **Color Wheel Reference** | Panduan interaktif teknik *color correcting* secara dinamis dan luring. | `lib/features/scanner/presentation/` |
 | **[x]** | **Standard Shade Catalog** | Katalog shade warna standar kosmetik global luring. | `lib/core/data/models/standard_shade.dart` |
-| **[x]** | **Cross-Brand Shade Converter** | Pencarian padanan kosmetik lintas merek komersial dengan kalkulasi jarak warna CIELAB Delta E00 luring. | `lib/features/catalog/presentation/pages/shade_converter_page.dart` |
+| **[x]** | **Cross-Brand Shade Converter** | Pencarian padanan kosmetik lintas merek komersial dengan kalkulasi jarak warna CIELAB Delta E76 luring. | `lib/features/catalog/presentation/pages/shade_converter_page.dart` |
 | **[x]** | **Community Validation Loop** | Fitur voting kecocokan komunitas (*Perfect / Too Dark / Too Light*) yang langsung disimpan luring ke database Isar. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Community Offset Delta L** | Kalibrasi otomatis kecerahan formula Delta E menggunakan rata-rata ulasan komunitas agar rekomendasi semakin cerdas. | `lib/features/catalog/data/repositories/shade_matcher_repository_impl.dart` |
 | **[x]** | **Virtual Makeup Pouch** | Pencatatan tanggal buka kosmetik luring, masa kadaluwarsa PAO, notifikasi lokal, dan progress bar gradien. | `lib/features/pouch/presentation/pages/makeup_pouch_page.dart` |
-| **[x]** | **Filter Preferensi Riasan** *(Subjektif)* | Filter khusus pada hasil pemindaian untuk memilih hasil rekomendasi yang murni *Natural*, *Brightening (Tone-Up)*, atau *Sun-Kissed (Tanned)*. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[x]** | **Glow Card Generator** | Membuat kartu persona 12 Musim Warna bergaya glassmorphic estetik untuk dibagikan secara instan ke media sosial. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[x]** | **Lighting Inspector** | Deteksi real-time suhu cahaya ruangan (hangat/dingin/netral) agar hasil pindai akurat. | `lib/features/scanner/presentation/pages/scanner_page.dart` |
+| **[ ]** | **Gallery Scanner Upload** | Mengunggah foto selfie dari galeri HP untuk dianalisis warna kulit & undertone secara luring tanpa menggunakan kamera live. | *Rencana Pengembangan Mendatang* |
+| **[ ]** | **Filter Preferensi Riasan** *(Subjektif)* | Filter khusus pada hasil pemindaian untuk memilih hasil rekomendasi yang murni *Natural*, *Brightening (Tone-Up)*, atau *Sun-Kissed (Tanned)*. | *Rencana Pengembangan Mendatang* |
 
 ---
 
@@ -25,16 +24,14 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 
 | Status | Fitur | Detail Fungsionalitas | Lokasi Kode / File Utama |
 | :---: | :--- | :--- | :--- |
-| **[x]** | **Advanced Color Mixing** | Simulator pencampuran 2-3 kosmetik cair dengan rasio dinamis di ruang warna linear (HEX Code real-time). | `lib/features/color_mixer/presentation/pages/color_mixer_page.dart` |
+| **[x]** | **Advanced Color Mixing** | Simulator pencampuran 2-3 kosmetik cair dengan rasio dinamis di ruang warna linear (HEX Code real-time). | `lib/features/color_mixer/` |
 | **[x]** | **Brand Matcher & Affiliate** | Pencocokan Delta E otomatis ke database produk komersial nyata lengkap dengan tombol affiliate Tokopedia/Shopee. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[x]** | **Split-Screen AR Try-On** | Kamera depan AR Try-On split-screen dengan divider geser dinamis. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 | **[x]** | **Matte & Glossy Overlay** | Riasan bibir presisi 3D Face Mesh dengan finishing Matte dan Glossy (Specular preservation). | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Blush-on Outward Shift** | Rona pipi bergradasi lembut yang terkalibrasi dinamis bergeser keluar 22% ke tulang pipi berdasarkan lebar mata. | `lib/features/premium_subscription/presentation/widgets/lip_filter_painter.dart` |
 | **[x]** | **Paywall & Offline Access** | Validasi status langganan premium melalui database Isar dan timer gratis demo 1 menit. | `lib/features/premium_subscription/data/models/app_settings.dart` |
-| **[x]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[x]** | **AI Makeup Dupe Finder** | Perhitungan Delta E untuk mencari padanan kosmetik luxury ke brand lokal/murah yang warnanya mirip s.d 99%. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[x]** | **Couple Undertone Matcher** | Memindai wajah bersama pacar/teman, menghitung kecocokan undertone, dan merekomendasikan baju senada. | `lib/features/scanner/presentation/` |
-| **[x]** | **Expiry Alert Widget** | Widget minimalis layar utama HP untuk pengingat masa kadaluwarsa produk terdekat dari pouch kosmetik. | `android/app/src/main/res/` & `lib/core/utils/widget_helper.dart` |
+| **[ ]** | **2D Photo Makeup Try-On** | Uji coba riasan lipstik & blush-on interaktif langsung pada foto statis hasil unggahan menggunakan pemetaan titik Face Mesh. | *Rencana Pengembangan Mendatang* |
+| **[ ]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | *Rencana Pengembangan Mendatang* |
 
 ---
 
