@@ -640,6 +640,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         throw Exception("Gagal mengodekan gambar hasil riasan.");
       }
 
+      if (!Platform.isAndroid) {
+        throw Exception("Penyimpanan galeri luring saat ini hanya didukung di Android.");
+      }
+
       // Gunakan platform channel untuk menyimpan di galeri Android native luring
       const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
       final bool success = await platform.invokeMethod<bool>("saveImageToGallery", {
