@@ -831,13 +831,13 @@ class _ResultsPageState extends State<ResultsPage> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFFE5A99E).withOpacity(0.15)
-                : Colors.transparent,
+                ? const Color(0xFFE5A99E)
+                : const Color(0xFFFCF9F6),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFFE5A99E).withOpacity(0.4)
-                  : Colors.transparent,
+                  ? const Color(0xFFE5A99E)
+                  : const Color(0xFFF2ECE7),
               width: 1,
             ),
           ),
@@ -846,16 +846,16 @@ class _ResultsPageState extends State<ResultsPage> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? const Color(0xFFE5A99E) : Colors.white38,
+                color: isSelected ? Colors.white : const Color(0xFF8E807E),
                 size: 18,
               ),
               const SizedBox(height: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white38,
+                  color: isSelected ? Colors.white : const Color(0xFF3E3635),
                   fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 ),
               ),
             ],
