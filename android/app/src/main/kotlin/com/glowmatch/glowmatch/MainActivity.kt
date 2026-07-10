@@ -11,24 +11,62 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "updateWidgetData") {
-                val productName = call.argument<String>("productName") ?: "Semua produk aman ✨"
-                val status = call.argument<String>("status") ?: "Tidak ada produk yang mendekati PAO."
+            when (call.method) {
+                "updateWidgetData" -> {
+                    val productName = call.argument<String>("productName") ?: "Semua produk aman ✨"
+                    val status = call.argument<String>("status") ?: "Tidak ada produk yang mendekati PAO."
 
-                val prefs = getSharedPreferences("com.glowmatch.glowmatch.widget", Context.MODE_PRIVATE)
-                prefs.edit().apply {
-                    putString("product_name", productName)
-                    putString("status", status)
-                    apply()
+                    val prefs = getSharedPreferences("com.glowmatch.glowmatch.widget", Context.MODE_PRIVATE)
+                    prefs.edit().apply {
+                        putString("product_name", productName)
+                        putString("status", status)
+                        apply()
+                    }
+
+                    // Trigger widget UI update
+                    ExpiryWidgetProvider.updateAllWidgets(this)
+                    result.success(true)
                 }
-
-                // Trigger widget UI update
-                ExpiryWidgetProvider.updateAllWidgets(this)
-
-                result.success(true)
-            } else {
-                result.notImplemented()
+                "saveImageToGallery" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val filename = call.argument<String>("filename") ?: "glowmatch_look_${System.currentTimeMillis()}"
+                    if (bytes != null) {
+                        val success = saveImageToGallery(bytes, filename)
+                        result.success(success)
+                    } else {
+                        result.error("INVALID_ARGS", "Bytes cannot be null", null)
+                    }
+                }
+                else -> {
+                    result.notImplemented()
+                }
             }
+        }
+    }
+
+    private fun saveImageToGallery(bytes: ByteArray, filename: String): Boolean {
+        return try {
+            val contentValues = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$filename.png")
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/GlowMatch")
+            }
+
+            val resolver = contentResolver
+            val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+            if (uri != null) {
+                resolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(bytes)
+                    outputStream.flush()
+                }
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }

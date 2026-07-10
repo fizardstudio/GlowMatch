@@ -12,8 +12,10 @@ import '../../../../core/network/database_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../data/models/app_settings.dart';
 import '../../../../core/data/models/product_shade.dart';
+import '../../../../core/utils/color_calculator.dart';
 import '../widgets/photo_makeup_painter.dart';
 import '../../../../core/utils/widget_helper.dart';
+import 'package:flutter/rendering.dart';
 
 class PhotoTryOnPage extends StatefulWidget {
   final String? initialFilePath;
@@ -26,6 +28,7 @@ class PhotoTryOnPage extends StatefulWidget {
 
 class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObserver {
   final Isar _isar = DatabaseService().isar;
+  final GlobalKey _repaintBoundaryKey = GlobalKey();
   bool _isPremium = false;
   bool _showPaywall = true;
 
@@ -160,11 +163,34 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   }
 
   Map<String, dynamic> _getLookSummaryDetails() {
-    // 1. Foundation
-    final String baseName = _selectedFoundationProduct != null
-        ? '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.productName} (${_selectedFoundationProduct!.shadeName})'
+    // 1. Foundation Recommendation (Cari terdekat jika null dari database Isar)
+    ProductShade? activeFoundationProd = _selectedFoundationProduct;
+    if (activeFoundationProd == null && _dbFoundations.isNotEmpty) {
+      final baseLab = ColorCalculator.rgbToLab(
+        _selectedFoundationColor.red,
+        _selectedFoundationColor.green,
+        _selectedFoundationColor.blue,
+      );
+      
+      double minDelta = double.infinity;
+      ProductShade? closestProd;
+      for (final prod in _dbFoundations) {
+        final double dist = ColorCalculator.deltaE00(
+          baseLab,
+          LabColor(prod.l, prod.a, prod.b),
+        );
+        if (dist < minDelta) {
+          minDelta = dist;
+          closestProd = prod;
+        }
+      }
+      activeFoundationProd = closestProd;
+    }
+
+    final String baseName = activeFoundationProd != null
+        ? '${activeFoundationProd.brand} - ${activeFoundationProd.productName} (${activeFoundationProd.shadeName})'
         : 'Warna Preset Dasar';
-    final String baseAffiliate = _selectedFoundationProduct?.affiliateUrl ?? 'https://shopee.co.id';
+    final String baseAffiliate = activeFoundationProd?.affiliateUrl ?? 'https://shopee.co.id';
 
     // 2. Lipstick Recommendation
     String lipstickProd = 'Tidak Terdeteksi';
@@ -581,8 +607,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     }
   }
 
-  // Fungsi untuk mensimulasikan penyimpanan kombinasi riasan premium
-  void _saveCurrentMakeupLook() {
+  // Fungsi untuk menyimpan gambar hasil riasan langsung ke galeri ponsel
+  Future<void> _saveCurrentMakeupLook() async {
     if (!_isPremium && !_isDemoActive) {
       setState(() {
         _showPaywall = true;
@@ -590,12 +616,69 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Kombinasi riasan Anda sukses disimpan ke Isar Database! 💖'),
-        backgroundColor: Color(0xFFE5A99E),
-      ),
-    );
+    setState(() {
+      _isLoadingImage = true;
+    });
+
+    try {
+      // Tunggu frame selesai dirender sebelum capture
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal mendapatkan rendering area wajah.");
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0); // Kualitas tinggi
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
+
+      if (pngBytes == null) {
+        throw Exception("Gagal mengodekan gambar hasil riasan.");
+      }
+
+      // Gunakan platform channel untuk menyimpan di galeri Android native luring
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("saveImageToGallery", {
+        "bytes": pngBytes,
+        "filename": "glowmatch_look_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        setState(() {
+          _isLoadingImage = false;
+        });
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto hasil riasan berhasil disimpan ke Galeri! 📸💖 (Folder: Pictures/GlowMatch)'),
+              backgroundColor: Color(0xFFE5A99E),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal menyimpan foto ke Galeri.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error saving look to gallery: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingImage = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan ke galeri: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   // Menghitung ukuran Fitted Image (BoxFit.contain)
@@ -778,10 +861,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           }
 
                           return Center(
-                            child: SizedBox(
-                              width: fittedSize.width,
-                              height: fittedSize.height,
-                              child: Stack(
+                            child: RepaintBoundary(
+                              key: _repaintBoundaryKey,
+                              child: SizedBox(
+                                width: fittedSize.width,
+                                height: fittedSize.height,
+                                child: Stack(
                                 children: [
                                   // Foto Asli
                                   Positioned.fill(
@@ -897,9 +982,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                 ],
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
+                    ),
           ),
 
           // 2. Demo Mode Overlay
