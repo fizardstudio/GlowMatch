@@ -23,7 +23,7 @@
         android:layout_alignBottom="@id/widget_logo"
         android:text="GLOWMATCH POUCH ALERT"
         android:textStyle="bold"
-        android:textColor="#E5A93B"
+        android:textColor="#E5A99E"
         android:textSize="10sp"
         android:letterSpacing="0.05" />
 
@@ -34,7 +34,7 @@
         android:layout_below="@id/widget_logo"
         android:layout_marginTop="8dp"
         android:text="Semua produk aman ✨"
-        android:textColor="#FFFFFF"
+        android:textColor="#3E3635"
         android:textStyle="bold"
         android:textSize="13sp"
         android:maxLines="1"
@@ -47,7 +47,7 @@
         android:layout_below="@id/widget_product_name"
         android:layout_marginTop="2dp"
         android:text="Tidak ada produk yang mendekati PAO."
-        android:textColor="#8A8A8A"
+        android:textColor="#8E807E"
         android:textSize="10sp"
         android:maxLines="1"
         android:ellipsize="end" />
