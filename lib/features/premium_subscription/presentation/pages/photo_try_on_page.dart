@@ -44,6 +44,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   // States gambar & analisis
   String? _imagePath;
   bool _isLoadingImage = false;
+  bool _isSavingLook = false;
   Face? _detectedFace;
   int _originalWidth = 0;
   int _originalHeight = 0;
@@ -617,7 +618,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     }
 
     setState(() {
-      _isLoadingImage = true;
+      _isSavingLook = true;
     });
 
     try {
@@ -646,7 +647,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
       if (mounted) {
         setState(() {
-          _isLoadingImage = false;
+          _isSavingLook = false;
         });
 
         if (success) {
@@ -669,7 +670,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       debugPrint("Error saving look to gallery: $e");
       if (mounted) {
         setState(() {
-          _isLoadingImage = false;
+          _isSavingLook = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -860,16 +861,19 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                             _isSliderInitialized = true;
                           }
 
-                          return Center(
-                            child: RepaintBoundary(
-                              key: _repaintBoundaryKey,
-                              child: SizedBox(
-                                width: fittedSize.width,
-                                height: fittedSize.height,
-                                child: Stack(
-                                children: [
-                                  // Foto Asli
-                                  Positioned.fill(
+                          final double topPadding = (constraints.maxHeight - (_showControls ? 230 : 0) - fittedSize.height).clamp(0.0, double.infinity) / 2;
+                          return Align(
+                            alignment: Alignment.topCenter,
+                            child: Padding(
+                              padding: EdgeInsets.only(top: topPadding),
+                              child: RepaintBoundary(
+                                key: _repaintBoundaryKey,
+                                child: SizedBox(
+                                  width: fittedSize.width,
+                                  height: fittedSize.height,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
                                     child: Image.file(
                                       File(_imagePath!),
                                       fit: BoxFit.fill,
@@ -983,9 +987,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  ),
           ),
 
           // 2. Demo Mode Overlay
@@ -1271,6 +1276,27 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       ],
                     ),
                   ],
+                ),
+              ),
+            ),
+
+          // 4.5. Spinner Overlay untuk Menyimpan Gambar ke Galeri
+          if (_isSavingLook)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.4),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E))),
+                      SizedBox(height: 16),
+                      Text(
+                        'Menyimpan Gambar ke Galeri...',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
