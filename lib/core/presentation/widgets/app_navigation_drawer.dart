@@ -9,6 +9,8 @@ import '../../../../features/premium_subscription/presentation/pages/ar_try_on_p
 import '../../../../features/color_mixer/presentation/pages/color_mixer_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/photo_try_on_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/makeup_detector_page.dart';
+import '../../../../features/home/presentation/pages/home_page.dart';
+
 
 class AppNavigationDrawer extends StatelessWidget {
   const AppNavigationDrawer({super.key});
@@ -115,6 +117,22 @@ class AppNavigationDrawer extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
+                      _buildDrawerItem(
+                        context: context,
+                        icon: Icons.dashboard_outlined,
+                        title: 'Dashboard Home',
+                        isActive: context.widget is HomePage,
+                        onTap: () {
+                          Navigator.pop(context); // Tutup drawer
+                          if (context.widget is! HomePage) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomePage()),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       _buildDrawerItem(
                         context: context,
                         icon: Icons.camera_enhance_outlined,

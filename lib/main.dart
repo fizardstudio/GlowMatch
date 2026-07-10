@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/database_service.dart';
 import 'features/catalog/data/repositories/shade_matcher_repository_impl.dart';
 import 'features/scanner/presentation/bloc/scanner_bloc.dart';
-import 'features/scanner/presentation/pages/scanner_page.dart';
+import 'features/home/presentation/pages/home_page.dart';
 
 void main() async {
   // Pastikan binding Flutter terinisialisasi sebelum pengerjaan asinkron
@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const ScannerPage(),
+        home: const HomePage(),
       ),
     );
   }
