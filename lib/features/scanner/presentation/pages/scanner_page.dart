@@ -31,6 +31,7 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   
   bool _isCameraPermissionGranted = false;
   bool _isPermissionChecking = true;
+  bool _isPickingImage = false;
 
   @override
   void initState() {
@@ -46,6 +47,22 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
     setState(() {
       _isPermissionChecking = true;
     });
+
+    // Periksa apakah ada foto galeri yang berhasil dipilih sebelum aplikasi di-kill di background (Android)
+    try {
+      final ImagePicker picker = ImagePicker();
+      final LostDataResponse lostData = await picker.retrieveLostData();
+      if (lostData.file != null && mounted) {
+        setState(() {
+          _isPickingImage = true;
+          _isPermissionChecking = false;
+        });
+        context.read<ScannerBloc>().add(ProcessGalleryImage(lostData.file!.path));
+        return; // Keluar dari alur inisialisasi kamera karena kita sedang memproses foto galeri
+      }
+    } catch (e) {
+      debugPrint("Error retrieving lost data: $e");
+    }
 
     final status = await Permission.camera.status;
     if (status.isGranted) {
@@ -102,7 +119,7 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
           _isCameraDisposed = false;
         });
       }
-      if (_isCameraPermissionGranted) {
+      if (_isCameraPermissionGranted && !_isPickingImage) {
         context.read<ScannerBloc>().add(InitializeCamera());
       }
     }
@@ -224,10 +241,17 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
           child: FloatingActionButton(
             heroTag: 'open_gallery_fab_no_perm',
             onPressed: () async {
+              setState(() {
+                _isPickingImage = true;
+              });
               final ImagePicker picker = ImagePicker();
               final XFile? image = await picker.pickImage(source: ImageSource.gallery);
               if (image != null && mounted) {
                 context.read<ScannerBloc>().add(ProcessGalleryImage(image.path));
+              } else {
+                setState(() {
+                  _isPickingImage = false;
+                });
               }
             },
             backgroundColor: Colors.white,
@@ -316,6 +340,9 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
               : BlocConsumer<ScannerBloc, ScannerState>(
         listener: (context, state) {
           if (state is ScannerSuccess) {
+            setState(() {
+              _isPickingImage = false;
+            });
             // Jika dalam mode Couple dan pengguna bukan premium, tandai trial telah digunakan
             if (state.isCoupleMode && !_isPremium) {
               final isar = DatabaseService().isar;
@@ -356,6 +383,9 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
             });
           }
           if (state is ScannerFailure) {
+            setState(() {
+              _isPickingImage = false;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage),
@@ -851,10 +881,20 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                       child: FloatingActionButton(
                         heroTag: 'open_gallery_fab',
                         onPressed: () async {
+                          setState(() {
+                            _isPickingImage = true;
+                          });
                           final ImagePicker picker = ImagePicker();
                           final XFile? image = await picker.pickImage(source: ImageSource.gallery);
                           if (image != null && mounted) {
                             context.read<ScannerBloc>().add(ProcessGalleryImage(image.path));
+                          } else {
+                            setState(() {
+                              _isPickingImage = false;
+                            });
+                            if (mounted) {
+                              context.read<ScannerBloc>().add(InitializeCamera());
+                            }
                           }
                         },
                         backgroundColor: Colors.white.withOpacity(0.92),
