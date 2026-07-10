@@ -80,6 +80,12 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         controller: _cameraController!,
         lensDirection: _currentLensDirection,
       ));
+    } on CameraException catch (e) {
+      if (e.code == 'CameraAccessDenied') {
+        emit(const ScannerFailure('Izin akses kamera ditolak. Silakan berikan izin kamera di pengaturan HP Anda, lalu ketuk Coba Lagi.'));
+      } else {
+        emit(ScannerFailure('Gagal menginisialisasi kamera: ${e.description ?? e.code}'));
+      }
     } catch (e) {
       emit(ScannerFailure('Gagal menginisialisasi kamera: ${e.toString()}'));
     }
