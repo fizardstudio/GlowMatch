@@ -510,8 +510,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     final camera = _cameraController?.description;
     if (camera == null) return null;
 
-    final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    if (format == null) return null;
+    final format = InputImageFormatValue.fromRawValue(image.format.raw) ?? InputImageFormat.bgra8888;
 
     if (image.planes.isEmpty) return null;
 
