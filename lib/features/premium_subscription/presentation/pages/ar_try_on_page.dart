@@ -378,7 +378,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
         }
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFFFCF9F6),
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: Row(
@@ -386,7 +386,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
             const Text(
               'AR Try-On',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF3E3635),
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.8,
               ),
@@ -396,30 +396,30 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5C185),
+                      color: const Color(0xFFE5A99E),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
                       'PREMIUM',
-                      style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                     ),
                   )
                 : Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: const Color(0xFF8E807E).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
                       'FREE',
-                      style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Color(0xFF8E807E), fontSize: 8, fontWeight: FontWeight.bold),
                     ),
                   ),
           ],
         ),
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: const Color(0xFFFCF9F6),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -515,11 +515,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                       width: 32,
                                       height: 32,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE5C185),
+                                        color: const Color(0xFFE5A99E),
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFF0F0F1A).withOpacity(0.5),
+                                            color: Colors.black.withOpacity(0.15),
                                             blurRadius: 6,
                                             spreadRadius: 1,
                                           ),
@@ -529,7 +529,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                         quarterTurns: 1,
                                         child: Icon(
                                           Icons.unfold_more_rounded,
-                                          color: Color(0xFF0F0F1A),
+                                          color: Colors.white,
                                           size: 18,
                                         ),
                                       ),
@@ -568,13 +568,13 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF16162A).withOpacity(0.85),
+                                      color: Colors.white.withOpacity(0.92),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.4)),
+                                      border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.4)),
                                     ),
                                     child: Text(
                                       'Sisa Waktu: ${_demoSecondsLeft}s',
-                                      style: const TextStyle(color: Color(0xFFE5C185), fontSize: 11, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ],
@@ -585,19 +585,19 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                           if (_showPaywall)
                             Positioned.fill(
                               child: Container(
-                                color: const Color(0xFF0F0F1A).withOpacity(0.8),
+                                color: Colors.white.withOpacity(0.92),
                                 child: Center(
                                   child: SingleChildScrollView(
                                     child: Container(
                                       margin: const EdgeInsets.symmetric(horizontal: 24),
                                       padding: const EdgeInsets.all(24),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF16162A).withOpacity(0.9),
+                                        color: Colors.white,
                                         borderRadius: BorderRadius.circular(28),
-                                        border: Border.all(color: const Color(0xFFE5C185).withOpacity(0.3), width: 1.5),
+                                        border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFE5C185).withOpacity(0.05),
+                                            color: const Color(0xFFE5A99E).withOpacity(0.05),
                                             blurRadius: 20,
                                             spreadRadius: 5,
                                           ),
@@ -609,12 +609,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                           Container(
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFE5C185).withOpacity(0.12),
+                                              color: const Color(0xFFE5A99E).withOpacity(0.12),
                                               shape: BoxShape.circle,
                                             ),
                                             child: const Icon(
                                               Icons.workspace_premium_rounded,
-                                              color: Color(0xFFE5C185),
+                                              color: Color(0xFFE5A99E),
                                               size: 40,
                                             ),
                                           ),
@@ -624,7 +624,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                             style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold,
-                                              color: Color(0xFFE5C185),
+                                              color: Color(0xFFE5A99E),
                                               letterSpacing: 0.5,
                                             ),
                                           ),
@@ -634,7 +634,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.white70,
+                                              color: Color(0xFF8E807E),
                                             ),
                                           ),
                                           const SizedBox(height: 24),
@@ -651,10 +651,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                           // Tombol Beli Premium
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFFE5C185),
-                                              foregroundColor: const Color(0xFF0F0F1A),
+                                              backgroundColor: const Color(0xFFE5A99E),
+                                              foregroundColor: Colors.white,
                                               minimumSize: const Size(double.infinity, 48),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              elevation: 0,
                                             ),
                                             onPressed: _activatePremium,
                                             child: const Text(
@@ -667,8 +668,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                           // Tombol Coba Demo Gratis
                                           OutlinedButton(
                                             style: OutlinedButton.styleFrom(
-                                              foregroundColor: Colors.white,
-                                              side: const BorderSide(color: Colors.white24),
+                                              foregroundColor: const Color(0xFF3E3635),
+                                              side: const BorderSide(color: Color(0xFFF2ECE7)),
                                               minimumSize: const Size(double.infinity, 46),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                             ),
@@ -685,7 +686,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                             onPressed: () => Navigator.pop(context),
                                             child: const Text(
                                               'Kembali',
-                                              style: TextStyle(color: Colors.white38, fontSize: 12),
+                                              style: TextStyle(color: Color(0xFF8E807E), fontSize: 12),
                                             ),
                                           ),
                                         ],
@@ -701,7 +702,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                   )
                 : const Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5C185)),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
                     ),
                   ),
           ),
@@ -718,17 +719,17 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                     _showControls = !_showControls;
                   });
                 },
-                backgroundColor: const Color(0xFF16162A).withOpacity(0.85),
+                backgroundColor: Colors.white.withOpacity(0.92),
                 mini: true,
                 shape: CircleBorder(
                   side: BorderSide(
-                    color: const Color(0xFFE5C185).withOpacity(0.5),
+                    color: const Color(0xFFE5A99E).withOpacity(0.5),
                     width: 1.5,
                   ),
                 ),
                 child: Icon(
                   _showControls ? Icons.keyboard_arrow_down_rounded : Icons.palette_outlined,
-                  color: Colors.white,
+                  color: const Color(0xFF3E3635),
                   size: 20,
                 ),
               ),
@@ -743,13 +744,13 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16162A).withOpacity(0.92),
+                  color: Colors.white.withOpacity(0.95),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
                   border: Border.all(
-                    color: const Color(0xFFE5C185).withOpacity(0.2),
+                    color: const Color(0xFFF2ECE7),
                     width: 1.5,
                   ),
                 ),
@@ -761,7 +762,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F0F1A),
+                        color: const Color(0xFFFCF9F6),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
@@ -770,7 +771,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                             child: GestureDetector(
                               onTap: () {
                                 setState(() {
-                                  _activeCategoryIndex = 0;
+                                    _activeCategoryIndex = 0;
                                 });
                               },
                               child: Container(
@@ -778,7 +779,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
                                   color: _activeCategoryIndex == 0
-                                      ? const Color(0xFFE5C185)
+                                      ? const Color(0xFFE5A99E)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -788,8 +789,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: _activeCategoryIndex == 0
-                                        ? const Color(0xFF0F0F1A)
-                                        : Colors.white54,
+                                        ? Colors.white
+                                        : const Color(0xFF8E807E),
                                   ),
                                 ),
                               ),
@@ -807,7 +808,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
                                   color: _activeCategoryIndex == 1
-                                      ? const Color(0xFFE5C185)
+                                      ? const Color(0xFFE5A99E)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -817,8 +818,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: _activeCategoryIndex == 1
-                                        ? const Color(0xFF0F0F1A)
-                                        : Colors.white54,
+                                        ? Colors.white
+                                        : const Color(0xFF8E807E),
                                   ),
                                 ),
                               ),
@@ -832,22 +833,23 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                     if (_activeCategoryIndex == 0) ...[
                       Row(
                         children: [
-                          const Icon(Icons.brush_rounded, color: Color(0xFFE5C185), size: 18),
+                          const Icon(Icons.brush_rounded, color: Color(0xFFE5A99E), size: 18),
                           const SizedBox(width: 8),
-                          const Text('Tipe Finishing', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const Text('Tipe Finishing', style: TextStyle(color: Color(0xFF3E3635), fontSize: 11)),
                           const Spacer(),
                           GestureDetector(
                             onTap: _showPaywall ? null : () => setState(() => _lipstickFinishing = 'matte'),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _lipstickFinishing == 'matte' ? const Color(0xFFE5C185) : Colors.white10,
+                                color: _lipstickFinishing == 'matte' ? const Color(0xFFE5A99E) : const Color(0xFFFCF9F6),
                                 borderRadius: BorderRadius.circular(20),
+                                border: _lipstickFinishing == 'matte' ? null : Border.all(color: const Color(0xFFF2ECE7)),
                               ),
                               child: Text(
                                 'Matte',
                                 style: TextStyle(
-                                  color: _lipstickFinishing == 'matte' ? const Color(0xFF0F0F1A) : Colors.white70,
+                                  color: _lipstickFinishing == 'matte' ? Colors.white : const Color(0xFF8E807E),
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -860,13 +862,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _lipstickFinishing == 'glossy' ? const Color(0xFFE5C185) : Colors.white10,
+                                color: _lipstickFinishing == 'glossy' ? const Color(0xFFE5A99E) : const Color(0xFFFCF9F6),
                                 borderRadius: BorderRadius.circular(20),
+                                border: _lipstickFinishing == 'glossy' ? null : Border.all(color: const Color(0xFFF2ECE7)),
                               ),
                               child: Text(
                                 'Glossy (Satin)',
                                 style: TextStyle(
-                                  color: _lipstickFinishing == 'glossy' ? const Color(0xFF0F0F1A) : Colors.white70,
+                                  color: _lipstickFinishing == 'glossy' ? Colors.white : const Color(0xFF8E807E),
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -881,16 +884,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                     // 2. Slider Opacity/Ketebalan Kategori yang Aktif
                     Row(
                       children: [
-                        const Icon(Icons.opacity_rounded, color: Color(0xFFE5C185), size: 18),
+                        const Icon(Icons.opacity_rounded, color: Color(0xFFE5A99E), size: 18),
                         const SizedBox(width: 8),
                         Text(
                           _activeCategoryIndex == 0 ? 'Transparansi Lipstik' : 'Transparansi Blush',
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11),
                         ),
                         Expanded(
                           child: Slider(
-                            activeColor: const Color(0xFFE5C185),
-                            inactiveColor: Colors.white10,
+                            activeColor: const Color(0xFFE5A99E),
+                            inactiveColor: const Color(0xFFF2ECE7),
                             value: _activeCategoryIndex == 0 ? _lipstickOpacity : _blushOpacity,
                             min: 0.0,
                             max: 0.8,
@@ -909,7 +912,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                         ),
                         Text(
                           '${((_activeCategoryIndex == 0 ? _lipstickOpacity : _blushOpacity) * 100).round()}%',
-                          style: const TextStyle(color: Colors.white60, fontSize: 11, fontFamily: 'monospace'),
+                          style: const TextStyle(color: Color(0xFF8E807E), fontSize: 11, fontFamily: 'monospace'),
                         ),
                       ],
                     ),
@@ -918,7 +921,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                     // 3. Palet Pemilihan Warna Kategori yang Aktif
                     Text(
                       _activeCategoryIndex == 0 ? 'WARNA LIPSTIK:' : 'WARNA BLUSH-ON:',
-                      style: const TextStyle(color: Colors.white30, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      style: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
@@ -955,7 +958,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
                                 color: colorVal,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isSelected ? const Color(0xFFE5C185) : Colors.white24,
+                                  color: isSelected ? const Color(0xFFE5A99E) : const Color(0xFFF2ECE7),
                                   width: isSelected ? 3 : 1,
                                 ),
                               ),
@@ -982,12 +985,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> {
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded, color: Color(0xFFE5C185), size: 16),
+          const Icon(Icons.check_circle_outline_rounded, color: Color(0xFFE5A99E), size: 16),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: const TextStyle(color: Color(0xFF8E807E), fontSize: 12),
             ),
           ),
         ],

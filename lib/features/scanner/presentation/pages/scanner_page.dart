@@ -442,13 +442,13 @@ class _ScannerPageState extends State<ScannerPage> {
                                       Icon(
                                         Icons.person_outline_rounded,
                                         size: 16,
-                                        color: !_isCoupleMode ? Colors.black : Colors.white70,
+                                        color: !_isCoupleMode ? Colors.white : const Color(0xFF8E807E),
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
                                         'Personal 👤',
                                         style: TextStyle(
-                                          color: !_isCoupleMode ? Colors.black : Colors.white70,
+                                          color: !_isCoupleMode ? Colors.white : const Color(0xFF8E807E),
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -483,7 +483,7 @@ class _ScannerPageState extends State<ScannerPage> {
                                       Icon(
                                         Icons.people_outline_rounded,
                                         size: 16,
-                                        color: _isCoupleMode ? Colors.black : Colors.white70,
+                                        color: _isCoupleMode ? Colors.white : const Color(0xFF8E807E),
                                       ),
                                       const SizedBox(width: 6),
                                       Row(
@@ -492,7 +492,7 @@ class _ScannerPageState extends State<ScannerPage> {
                                           Text(
                                             'Couple 👥',
                                             style: TextStyle(
-                                              color: _isCoupleMode ? Colors.black : Colors.white70,
+                                              color: _isCoupleMode ? Colors.white : const Color(0xFF8E807E),
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
                                             ),
