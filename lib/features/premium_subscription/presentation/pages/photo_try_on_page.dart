@@ -7,9 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../data/models/app_settings.dart';
+import '../../../../core/data/models/product_shade.dart';
 import '../widgets/photo_makeup_painter.dart';
 import '../../../../core/utils/widget_helper.dart';
 
@@ -49,6 +51,13 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   // Filter Parameters - Base Makeup (Foundation)
   Color _selectedFoundationColor = const Color(0xFFF3D3C4); // Fair Nude
   double _foundationOpacity = 0.0; // Default 0% (tidak aktif)
+  
+  // Data foundation dari database Isar luring
+  List<ProductShade> _dbFoundations = [];
+  List<ProductShade> _filteredFoundations = [];
+  List<String> _brands = ['Semua'];
+  String _selectedBrandFilter = 'Semua';
+  ProductShade? _selectedFoundationProduct;
 
   // Filter Parameters - Lipstick (Bibir)
   Color _selectedLipstickColor = const Color(0xFFD81B60); // Cherry Red
@@ -103,11 +112,331 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkPremiumStatus();
+    _loadFoundationsFromDb();
 
     // Muat foto awal jika dilewatkan lewat argumen navigasi
     if (widget.initialFilePath != null) {
       _processImageFile(widget.initialFilePath!);
     }
+  }
+
+  Color _getHexColor(String hex) {
+    final cleanHex = hex.replaceAll('#', '');
+    if (cleanHex.length == 6) {
+      return Color(int.parse('FF$cleanHex', radix: 16));
+    }
+    return Colors.transparent;
+  }
+
+  Future<void> _loadFoundationsFromDb() async {
+    try {
+      final foundations = await _isar.productShades
+          .filter()
+          .categoryEqualTo('Foundation')
+          .findAll();
+      if (mounted) {
+        setState(() {
+          _dbFoundations = foundations;
+          final uniqueBrands = foundations.map((f) => f.brand).toSet().toList();
+          _brands = ['Semua', ...uniqueBrands];
+          _applyFoundationFilter();
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading foundations from Isar: $e");
+    }
+  }
+
+  void _applyFoundationFilter() {
+    setState(() {
+      if (_selectedBrandFilter == 'Semua') {
+        _filteredFoundations = _dbFoundations;
+      } else {
+        _filteredFoundations = _dbFoundations
+            .where((f) => f.brand == _selectedBrandFilter)
+            .toList();
+      }
+    });
+  }
+
+  Map<String, dynamic> _getLookSummaryDetails() {
+    // 1. Foundation
+    final String baseName = _selectedFoundationProduct != null
+        ? '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.productName} (${_selectedFoundationProduct!.shadeName})'
+        : 'Warna Preset Dasar';
+    final String baseAffiliate = _selectedFoundationProduct?.affiliateUrl ?? 'https://shopee.co.id';
+
+    // 2. Lipstick Recommendation
+    String lipstickProd = 'Tidak Terdeteksi';
+    String lipstickUrl = 'https://shopee.co.id';
+    
+    final lColor = _selectedLipstickColor.value;
+    if (lColor == const Color(0xFFD81B60).value) {
+      lipstickProd = 'Wardah Everyday Matte Lip Shot - 05 Classic Red & Maybelline Superstay Matte Ink - 20 Pioneer';
+      lipstickUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (lColor == const Color(0xFFAD1457).value) {
+      lipstickProd = 'Wardah Colorfit Last All Day Lip Paint - 02 Dear Jenny & Make Over Intense Matte Lip Cream - 004 Vanity';
+      lipstickUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (lColor == const Color(0xFFFF7043).value) {
+      lipstickProd = 'Maybelline Sensational Liquid Matte - 06 Best Babe & Wardah Exclusive Matte Lip Cream - 18 Peach Perfect';
+      lipstickUrl = 'https://shopee.co.id/maybellineindonesia';
+    } else if (lColor == const Color(0xFF8E24AA).value) {
+      lipstickProd = 'Make Over Intense Matte Lip Cream - 012 Vampy & Maybelline Superstay Matte Ink - 40 Believer';
+      lipstickUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (lColor == const Color(0xFF8D6E63).value) {
+      lipstickProd = 'Wardah Exclusive Matte Lip Cream - 11 Oh so Nude & Make Over Intense Matte Lip Cream - 011 Pomposity';
+      lipstickUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (lColor == const Color(0xFFB71C1C).value) {
+      lipstickProd = 'Maybelline Superstay Matte Ink - 118 Dancer & Wardah Colorfit Velvet Matte Lip Crayon - 05 Skylines';
+      lipstickUrl = 'https://shopee.co.id/maybellineindonesia';
+    } else {
+      lipstickProd = 'Wardah Colorfit Last All Day Lip Paint';
+      lipstickUrl = 'https://shopee.co.id/wardahofficial';
+    }
+
+    // 3. Blush-On Recommendation
+    String blushProd = 'Tidak Terdeteksi';
+    String blushUrl = 'https://shopee.co.id';
+    
+    final bColor = _selectedBlushColor.value;
+    if (bColor == const Color(0xFFFF8A80).value) {
+      blushProd = 'Wardah Colorfit Cream Blush - 01 Sand Coral & Make Over Multifix Matte Blusher - 02 Coral Flutter';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (bColor == const Color(0xFFFF80AB).value) {
+      blushProd = 'Wardah Exclusive Blush On - 01 Rosy Pink & Maybelline Fit Me Blush - 30 Peach';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (bColor == const Color(0xFFE91E63).value) {
+      blushProd = 'Make Over Cheek Marquee Blush On - 04 Tupper Rose & Wardah Colorfit Cream Blush - 02 Merry Mauve';
+      blushUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (bColor == const Color(0xFFFFB74D).value) {
+      blushProd = 'Wardah Exclusive Blush On - 02 Peach & Make Over Cheek Marquee Blush On - 02 Shimmering Peach';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (bColor == const Color(0xFFFF8F00).value) {
+      blushProd = 'Make Over Cheek Marquee Blush On - 08 Honey Spice & Maybelline Fit Me Blush - 40 Golden';
+      blushUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (bColor == const Color(0xFFBA68C8).value) {
+      blushProd = 'Wardah Exclusive Blush On - 02 Rose Pink & Make Over Cheek Marquee Blush On - 05 Burgundy';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else {
+      blushProd = 'Wardah Colorfit Cream Blush';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    }
+
+    return {
+      'baseName': baseName,
+      'baseAffiliate': baseAffiliate,
+      'lipstickProd': lipstickProd,
+      'lipstickUrl': lipstickUrl,
+      'blushProd': blushProd,
+      'blushUrl': blushUrl,
+    };
+  }
+
+  void _showLookSummarySheet() {
+    if (!_isPremium && !_isDemoActive) {
+      setState(() {
+        _showPaywall = true;
+      });
+      return;
+    }
+
+    final summary = _getLookSummaryDetails();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFCF9F6).withOpacity(0.97),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
+            border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5A99E).withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5A99E).withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFE5A99E), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Rangkuman Riasan & Belanja',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3E3635),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // 1. Dasaran Base (Foundation)
+              _buildSummaryItem(
+                title: 'Dasaran Base (Foundation)',
+                name: _foundationOpacity > 0.0 ? summary['baseName'] : 'Tidak digunakan',
+                color: _foundationOpacity > 0.0 ? _selectedFoundationColor : null,
+                subtitle: _foundationOpacity > 0.0 ? 'Opasitas: ${(_foundationOpacity * 100).round()}%' : null,
+                affiliateUrl: _foundationOpacity > 0.0 ? summary['baseAffiliate'] : null,
+              ),
+
+              const SizedBox(height: 16),
+              
+              // 2. Lipstik (Lips)
+              _buildSummaryItem(
+                title: 'Riasan Bibir (Lipstick)',
+                name: _lipstickOpacity > 0.0 ? 'Preset Warna (${_lipstickFinishing.toUpperCase()})' : 'Tidak digunakan',
+                color: _lipstickOpacity > 0.0 ? _selectedLipstickColor : null,
+                subtitle: _lipstickOpacity > 0.0 
+                    ? 'Rekomendasi Produk:\n${summary['lipstickProd']}' 
+                    : null,
+                affiliateUrl: _lipstickOpacity > 0.0 ? summary['lipstickUrl'] : null,
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3. Rona Pipi (Blush-On)
+              _buildSummaryItem(
+                title: 'Rona Pipi (Blush-On)',
+                name: _blushOpacity > 0.0 ? 'Preset Warna' : 'Tidak digunakan',
+                color: _blushOpacity > 0.0 ? _selectedBlushColor : null,
+                subtitle: _blushOpacity > 0.0 
+                    ? 'Rekomendasi Produk:\n${summary['blushProd']}' 
+                    : null,
+                affiliateUrl: _blushOpacity > 0.0 ? summary['blushUrl'] : null,
+              ),
+
+              const SizedBox(height: 28),
+
+              // Close Button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE5A99E),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 46),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup Rangkuman', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required String title,
+    required String name,
+    Color? color,
+    String? subtitle,
+    String? affiliateUrl,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF2ECE7)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (color != null) ...[
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFC89E88)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  name,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF8E807E), height: 1.4),
+                  ),
+                ],
+                if (affiliateUrl != null) ...[
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () async {
+                      final uri = Uri.parse(affiliateUrl);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.shopping_bag_outlined, size: 12, color: Color(0xFFE5A99E)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Beli Sekarang 🛒',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE5A99E),
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLookSummarySheetWrapper() {
+    _showLookSummarySheet();
   }
 
   @override
@@ -664,24 +993,84 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           _foundationOpacity = val;
                         });
                       }),
-                      const SizedBox(height: 8),
-                      // Palet Warna Foundation
+                      const SizedBox(height: 6),
+                      // Dropdown filter Merek Foundation
+                      Row(
+                        children: [
+                          const Text(
+                            'Merek:',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              height: 32,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFCF9F6),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFF2ECE7)),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedBrandFilter,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.arrow_drop_down, size: 16),
+                                  style: const TextStyle(fontSize: 10, color: Color(0xFF3E3635), fontWeight: FontWeight.bold),
+                                  items: _brands.map((String b) {
+                                    return DropdownMenuItem<String>(
+                                      value: b,
+                                      child: Text(b),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _selectedBrandFilter = val;
+                                        _applyFoundationFilter();
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_selectedFoundationProduct != null && _foundationOpacity > 0) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.shadeName}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFE5A99E)),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Palet Warna Foundation dari DB
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _foundationColors.length,
-                          itemBuilder: (context, index) {
-                            final fColor = _foundationColors[index];
-                            final isSel = _selectedFoundationColor == fColor['color'];
-                            return _buildColorCircle(fColor['color'], fColor['name'], isSel, () {
-                              setState(() {
-                                _selectedFoundationColor = fColor['color'];
-                                if (_foundationOpacity == 0.0) _foundationOpacity = 0.35; // Aktifkan jika masih 0%
-                              });
-                            });
-                          },
-                        ),
+                        child: _filteredFoundations.isEmpty
+                            ? const Center(child: Text('Memuat data...', style: TextStyle(fontSize: 11, color: Colors.grey)))
+                            : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _filteredFoundations.length,
+                                itemBuilder: (context, index) {
+                                  final fProd = _filteredFoundations[index];
+                                  final hexColor = _getHexColor(fProd.hexCode);
+                                  final isSel = _selectedFoundationProduct?.id == fProd.id;
+                                  return _buildColorCircle(hexColor, fProd.shadeName, isSel, () {
+                                    setState(() {
+                                      _selectedFoundationProduct = fProd;
+                                      _selectedFoundationColor = hexColor;
+                                      if (_foundationOpacity == 0.0) _foundationOpacity = 0.35; // Aktifkan ke 35%
+                                    });
+                                  });
+                                },
+                              ),
                       ),
                     ] else if (_activeCategoryIndex == 1) ...[
                       // Opacity Lipstick & Finishing Toggle
@@ -760,18 +1149,40 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                     ],
 
                     const SizedBox(height: 16),
-                    // Action Buttons (Simpan Kombinasi)
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE5A99E),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 44),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.favorite_rounded, size: 18),
-                      label: const Text('Simpan Kombinasi Riasan 💖', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      onPressed: _saveCurrentMakeupLook,
+                    // Action Buttons Row
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFE5A99E),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(0, 44),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                            label: const Text('Detail & Belanja 📃', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            onPressed: _showLookSummarySheet,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF3E3635),
+                              side: const BorderSide(color: Color(0xFFE5A99E)),
+                              minimumSize: const Size(0, 44),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.favorite_rounded, size: 16, color: Color(0xFFE5A99E)),
+                            label: const Text('Simpan Look', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                            onPressed: _saveCurrentMakeupLook,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
