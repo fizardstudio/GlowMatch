@@ -350,9 +350,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Lepas kamera ketika aplikasi diminimize untuk mencegah crash native
+      // Lepas kamera secara sinkron via setState agar widget CameraPreview langsung dicopot dari widget tree
+      if (mounted) {
+        setState(() {
+          _isCameraDisposed = true;
+          _isCameraInitialized = false;
+        });
+      }
       if (_cameraController != null) {
-        _isCameraInitialized = false;
         try {
           if (_cameraController!.value.isStreamingImages) {
             _cameraController!.stopImageStream();
@@ -362,14 +367,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
           _cameraController!.dispose();
         } catch (_) {}
         _cameraController = null;
-        if (mounted) {
-          setState(() {
-            _isCameraInitialized = false;
-          });
-        }
       }
     } else if (state == AppLifecycleState.resumed) {
       // Inisialisasi ulang kamera saat kembali ke foreground
+      if (mounted) {
+        setState(() {
+          _isCameraDisposed = false;
+        });
+      }
       if (!_showPaywall) {
         _initializeCamera();
       }

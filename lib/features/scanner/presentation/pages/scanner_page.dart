@@ -45,10 +45,20 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Lepas kamera saat aplikasi diminimize untuk mencegah crash FlutterJNI
+      // Lepas kamera secara sinkron via setState agar widget CameraPreview langsung dicopot dari widget tree
+      if (mounted) {
+        setState(() {
+          _isCameraDisposed = true;
+        });
+      }
       context.read<ScannerBloc>().add(DisposeCamera());
     } else if (state == AppLifecycleState.resumed) {
       // Inisialisasi ulang kamera saat aplikasi kembali ke foreground
+      if (mounted) {
+        setState(() {
+          _isCameraDisposed = false;
+        });
+      }
       context.read<ScannerBloc>().add(InitializeCamera());
     }
   }
