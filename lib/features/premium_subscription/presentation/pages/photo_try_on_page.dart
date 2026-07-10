@@ -45,6 +45,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   String? _imagePath;
   bool _isLoadingImage = false;
   bool _isSavingLook = false;
+  bool _isCapturing = false;
   Face? _detectedFace;
   int _originalWidth = 0;
   int _originalHeight = 0;
@@ -619,10 +620,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
     setState(() {
       _isSavingLook = true;
+      _isCapturing = true;
     });
 
     try {
-      // Tunggu frame selesai dirender sebelum capture
+      // Tunggu frame selesai dirender tanpa tombol dan garis slider
       await Future.delayed(const Duration(milliseconds: 100));
 
       final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -646,10 +648,6 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       }) ?? false;
 
       if (mounted) {
-        setState(() {
-          _isSavingLook = false;
-        });
-
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -669,15 +667,19 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     } catch (e) {
       debugPrint("Error saving look to gallery: $e");
       if (mounted) {
-        setState(() {
-          _isSavingLook = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal menyimpan ke galeri: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingLook = false;
+          _isCapturing = false;
+        });
       }
     }
   }
@@ -895,13 +897,13 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           lipstickFinishing: _lipstickFinishing,
                                           blushColor: _selectedBlushColor,
                                           blushOpacity: _blushOpacity,
-                                          sliderX: _sliderX,
+                                          sliderX: _isCapturing ? 0.0 : _sliderX,
                                         ),
                                       ),
                                     ),
 
                                   // Slider Garis Pembagi
-                                  if (!_showPaywall)
+                                  if (!_showPaywall && !_isCapturing)
                                     Positioned(
                                       left: _sliderX - 25,
                                       top: 0,
@@ -950,10 +952,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                     ),
 
                                   // Floating Actions Ganti/Ambil Foto di Pojok Kiri Atas
-                                  Positioned(
-                                    top: 16,
-                                    left: 16,
-                                    child: Row(
+                                  if (!_isCapturing)
+                                    Positioned(
+                                      top: 16,
+                                      left: 16,
+                                      child: Row(
                                       children: [
                                         ElevatedButton.icon(
                                           style: ElevatedButton.styleFrom(
