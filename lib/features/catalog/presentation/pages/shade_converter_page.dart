@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
+import '../../../../core/theme/theme_manager.dart';
 import '../../../../core/utils/color_calculator.dart';
 import '../../domain/repositories/shade_matcher_repository.dart';
 
@@ -165,333 +167,328 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6),
-      drawer: const AppNavigationDrawer(),
-      appBar: AppBar(
-        title: const Text(
-          'Shade Converter',
-          style: TextStyle(
-            color: Color(0xFF3E3635),
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-          ),
-        ),
-        backgroundColor: const Color(0xFFFCF9F6),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
+    final isDark = ThemeManager.isDark;
+    final textColor = ThemeManager.textColor;
+    final textMutedColor = ThemeManager.textMutedColor;
+    final primaryColor = ThemeManager.primaryColor;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: ThemeManager.pageGradient,
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Form Card Input
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFF2ECE7),
-                        width: 1,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        drawer: const AppNavigationDrawer(),
+        appBar: AppBar(
+          systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          title: Text(
+            'Shade Converter',
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: textColor),
+        ),
+        body: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                ),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Form Card Input
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: ThemeManager.cardBgColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: ThemeManager.cardBorderColor.withOpacity(0.55),
+                          width: 1.5,
+                        ),
+                        boxShadow: ThemeManager.premiumGlowShadow,
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x055A4A45),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pilih Shade Anda Saat Ini',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          _buildDropdownLabel('Merek Asal'),
+                          _buildDropdown<String>(
+                            value: _selectedSourceBrand,
+                            items: _sourceBrands,
+                            hint: 'Pilih Merek Asal',
+                            onChanged: _onSourceBrandChanged,
+                          ),
+                          const SizedBox(height: 16),
+  
+                          _buildDropdownLabel('Nama Produk'),
+                          _buildDropdown<String>(
+                            value: _selectedSourceProduct,
+                            items: _sourceProducts,
+                            hint: _selectedSourceBrand == null
+                                ? 'Pilih Merek Asal Terlebih Dahulu'
+                                : 'Pilih Produk',
+                            onChanged: _selectedSourceBrand == null ? null : _onSourceProductChanged,
+                          ),
+                          const SizedBox(height: 16),
+  
+                          _buildDropdownLabel('Warna Shade Asal'),
+                          DropdownButtonFormField<ProductShade>(
+                            dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            value: _selectedSourceShade,
+                            decoration: _getDropdownDecoration(
+                              _selectedSourceProduct == null
+                                  ? 'Pilih Produk Terlebih Dahulu'
+                                  : 'Pilih Shade',
+                            ),
+                            style: TextStyle(color: textColor, fontSize: 13),
+                            items: _sourceShades.map((shade) {
+                              return DropdownMenuItem<ProductShade>(
+                                value: shade,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      height: 12,
+                                      width: 12,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Color(int.parse('FF${shade.hexCode.replaceAll('#', '')}', radix: 16)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      shade.shadeName,
+                                      style: TextStyle(color: textColor),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: _selectedSourceProduct == null ? null : _onSourceShadeChanged,
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Pilih Shade Anda Saat Ini',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE5A99E),
+                    const SizedBox(height: 16),
+  
+                    // Target Brand Card
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: ThemeManager.cardBgColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: ThemeManager.cardBorderColor.withOpacity(0.55),
+                          width: 1.5,
+                        ),
+                        boxShadow: ThemeManager.premiumGlowShadow,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Cari Padanan di Merek Lain (Target)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFBF953F) : const Color(0xFFC89E88),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        _buildDropdownLabel('Merek Asal'),
-                        _buildDropdown<String>(
-                          value: _selectedSourceBrand,
-                          items: _sourceBrands,
-                          hint: 'Pilih Merek Asal',
-                          onChanged: _onSourceBrandChanged,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildDropdownLabel('Nama Produk'),
-                        _buildDropdown<String>(
-                          value: _selectedSourceProduct,
-                          items: _sourceProducts,
-                          hint: _selectedSourceBrand == null
-                              ? 'Pilih Merek Asal Terlebih Dahulu'
-                              : 'Pilih Produk',
-                          onChanged: _selectedSourceBrand == null ? null : _onSourceProductChanged,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildDropdownLabel('Warna Shade Asal'),
-                        DropdownButtonFormField<ProductShade>(
-                          dropdownColor: Colors.white,
-                          value: _selectedSourceShade,
-                          decoration: _getDropdownDecoration(
-                            _selectedSourceProduct == null
-                                ? 'Pilih Produk Terlebih Dahulu'
-                                : 'Pilih Shade',
+                          const SizedBox(height: 16),
+                          _buildDropdownLabel('Merek Target (Opsional)'),
+                          _buildDropdown<String>(
+                            value: _selectedTargetBrand,
+                            items: _targetBrands,
+                            hint: 'Cari di Semua Merek Lain',
+                            onChanged: _onTargetBrandChanged,
                           ),
-                          style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
-                          items: _sourceShades.map((shade) {
-                            return DropdownMenuItem<ProductShade>(
-                              value: shade,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+  
+                    // Results Section
+                    if (_selectedSourceShade != null) ...[
+                      Text(
+                        'Rekomendasi Shade Padanan (CIEDE2000):',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_matches.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Tidak ditemukan shade yang cocok dalam toleransi.',
+                              style: TextStyle(color: textMutedColor, fontSize: 13),
+                            ),
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _matches.length,
+                          itemBuilder: (context, index) {
+                            final match = _matches[index];
+                            final ProductShade product = match['product'] as ProductShade;
+                            final double dE = match['deltaE'] as double;
+                            final double pct = match['matchPercentage'] as double;
+  
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: ThemeManager.cardBgColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: ThemeManager.cardBorderColor.withOpacity(0.55),
+                                  width: 1.5,
+                                ),
+                                boxShadow: ThemeManager.premiumGlowShadow,
+                              ),
                               child: Row(
                                 children: [
                                   Container(
-                                    height: 12,
-                                    width: 12,
+                                    height: 38,
+                                    width: 38,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Color(int.parse('FF${shade.hexCode.replaceAll('#', '')}', radix: 16)),
+                                      color: Color(int.parse('FF${product.hexCode.replaceAll('#', '')}', radix: 16)),
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(shade.shadeName),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          product.brand,
+                                          style: TextStyle(
+                                            color: primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        Text(
+                                          product.productName,
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Shade: ${product.shadeName}',
+                                          style: TextStyle(
+                                            color: textMutedColor,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Jarak Warna (Delta E): ${dE.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color: textMutedColor.withOpacity(0.7),
+                                            fontSize: 9.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: _getHighlightBgColor(pct),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '${pct.toStringAsFixed(1)}% Cocok',
+                                          style: TextStyle(
+                                            color: _getMatchPercentageColor(pct),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      if (product.affiliateUrl.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        InkWell(
+                                          onTap: () {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Membuka toko online untuk ${product.shadeName}...'),
+                                                backgroundColor: primaryColor,
+                                              ),
+                                            );
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [primaryColor, isDark ? const Color(0xFFAA771C) : const Color(0xFFC89E88)],
+                                              ),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'Beli',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ],
                               ),
                             );
-                          }).toList(),
-                          onChanged: _selectedSourceProduct == null ? null : _onSourceShadeChanged,
+                          },
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Target Brand Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFF2ECE7),
-                        width: 1,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x055A4A45),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Cari Padanan di Merek Lain (Target)',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFC89E88),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDropdownLabel('Merek Target (Opsional)'),
-                        _buildDropdown<String>(
-                          value: _selectedTargetBrand,
-                          items: _targetBrands,
-                          hint: 'Cari di Semua Merek Lain',
-                          onChanged: _onTargetBrandChanged,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Results Section
-                  if (_selectedSourceShade != null) ...[
-                    Text(
-                      'Rekomendasi Shade Padanan (CIEDE2000):',
-                      style: TextStyle(
-                        color: const Color(0xFF3E3635).withOpacity(0.8),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_matches.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFF2ECE7)),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Tidak ada padanan warna yang cukup dekat (Delta E > 8.0).',
-                            style: TextStyle(color: Color(0xFF8E807E), fontSize: 13),
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _matches.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final match = _matches[index];
-                          final product = match['product'] as ProductShade;
-                          final double pct = match['matchPercentage'] as double;
-                          final double dE = match['deltaE'] as double;
-                          final hexColor = Color(int.parse('FF${product.hexCode.replaceAll('#', '')}', radix: 16));
-
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFFF2ECE7),
-                                width: 1,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x045A4A45),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  height: 48,
-                                  width: 48,
-                                  decoration: BoxDecoration(
-                                    color: hexColor,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                                    boxShadow: [
-                                      BoxShadow(color: hexColor.withOpacity(0.15), blurRadius: 8),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        product.brand,
-                                        style: const TextStyle(
-                                          color: Color(0xFFC89E88),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10.5,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        product.productName,
-                                        style: const TextStyle(
-                                          color: Color(0xFF3E3635),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Shade: ${product.shadeName}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF8E807E),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Jarak Warna (Delta E): ${dE.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          color: const Color(0xFF8E807E).withOpacity(0.6),
-                                          fontSize: 9.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: _getHighlightBgColor(pct),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        '${pct.toStringAsFixed(1)}% Cocok',
-                                        style: TextStyle(
-                                          color: _getMatchPercentageColor(pct),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    if (product.affiliateUrl.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      InkWell(
-                                        onTap: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Membuka toko online untuk ${product.shadeName}...'),
-                                              backgroundColor: const Color(0xFFE5A99E),
-                                            ),
-                                          );
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              colors: [Color(0xFFE5A99E), Color(0xFFC89E88)],
-                                            ),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Text(
-                                            'Beli',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -506,8 +503,8 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFF8E807E),
+        style: TextStyle(
+          color: ThemeManager.textMutedColor,
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
@@ -521,15 +518,19 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
     required String hint,
     required void Function(T?)? onChanged,
   }) {
+    final isDark = ThemeManager.isDark;
     return DropdownButtonFormField<T>(
-      dropdownColor: Colors.white,
+      dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       value: value,
       decoration: _getDropdownDecoration(hint),
-      style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
+      style: TextStyle(color: ThemeManager.textColor, fontSize: 13),
       items: items.map((item) {
         return DropdownMenuItem<T>(
           value: item,
-          child: Text(item.toString()),
+          child: Text(
+            item.toString(),
+            style: TextStyle(color: ThemeManager.textColor),
+          ),
         );
       }).toList(),
       onChanged: onChanged,
@@ -537,19 +538,20 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
   }
 
   InputDecoration _getDropdownDecoration(String hint) {
+    final isDark = ThemeManager.isDark;
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.5), fontSize: 13),
+      hintStyle: TextStyle(color: ThemeManager.textMutedColor.withOpacity(0.5), fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
-      fillColor: const Color(0xFFFCF9F6),
+      fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFFCF9F6),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFF2ECE7)),
+        borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF2ECE7)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5A99E)),
+        borderSide: BorderSide(color: ThemeManager.primaryColor),
       ),
     );
   }

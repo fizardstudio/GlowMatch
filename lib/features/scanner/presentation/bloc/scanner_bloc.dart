@@ -1,4 +1,6 @@
+import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -385,10 +387,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         }
       }
 
-      // Hapus file foto sementara secara asinkron agar tidak membebani memori
-      try {
-        await File(photoFile.path).delete();
-      } catch (_) {}
+      // Simpan file foto agar bisa ditampilkan di GlowCard hasil pemindaian
 
       if (finalRgb[0] == 0 && finalRgb[1] == 0 && finalRgb[2] == 0) {
         emit(const ScannerFailure('Gagal mendeteksi warna kulit wajah pertama.'));
@@ -426,6 +425,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         commercialMatches: commercialMatches,
         coupleExtractedRgb: coupleRgb,
         coupleMatchedStandard: coupleMatchedStandard,
+        galleryFilePath: photoFile.path,
       ));
     } catch (e) {
       emit(ScannerFailure('Gagal memproses gambar: ${e.toString()}'));
@@ -444,21 +444,47 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     final double boxW = (rect.width * 0.14);
     final double boxH = (rect.height * 0.12);
 
-    int cheekLeftX = (leftCheek != null) ? (leftCheek.x - boxW / 2).round() : (rect.left + rect.width * 0.25).round();
-    int cheekLeftY = (leftCheek != null) ? (leftCheek.y - boxW / 2).round() : (rect.top + rect.height * 0.55).round();
-
-    int cheekRightX = (rightCheek != null) ? (rightCheek.x - boxW / 2).round() : (rect.left + rect.width * 0.60).round();
-    int cheekRightY = (rightCheek != null) ? (rightCheek.y - boxW / 2).round() : (rect.top + rect.height * 0.55).round();
-
-    int foreheadX = (rect.left + rect.width * 0.42).round();
-    int foreheadY = (rect.top + rect.height * 0.20).round();
+    int cheekLeftX, cheekLeftY;
+    int cheekRightX, cheekRightY;
+    int foreheadX, foreheadY;
 
     if (leftEye != null && rightEye != null) {
-      final midpointX = (leftEye.x + rightEye.x) / 2;
-      final midpointY = (leftEye.y + rightEye.y) / 2;
-      final double eyeDistance = (leftEye.x - rightEye.x).abs().toDouble();
-      foreheadX = (midpointX - boxW / 2).round();
-      foreheadY = (midpointY - eyeDistance * 0.85 - boxH / 2).round();
+      final double dx = (rightEye.x - leftEye.x).toDouble();
+      final double dy = (rightEye.y - leftEye.y).toDouble();
+      final double eyeDistance = sqrt(dx * dx + dy * dy);
+      
+      final double unitX_x = dx / eyeDistance;
+      final double unitX_y = dy / eyeDistance;
+      double unitY_x = -unitX_y;
+      double unitY_y = unitX_x;
+      
+      // Pastikan unitY selalu mengarah ke bawah (ke arah pipi/dagu, bukan ke dahi/alis)
+      if (unitY_y < 0) {
+        unitY_x = -unitY_x;
+        unitY_y = -unitY_y;
+      }
+      
+      final double midX = (leftEye.x + rightEye.x) / 2.0;
+      final double midY = (leftEye.y + rightEye.y) / 2.0;
+      
+      // Rotated forehead calculation using face axes
+      foreheadX = (midX - unitY_x * (eyeDistance * 0.55) - boxW / 2).round();
+      foreheadY = (midY - unitY_y * (eyeDistance * 0.55) - boxH / 2).round();
+      
+      // Rotated left cheek calculation using face axes
+      cheekLeftX = (leftEye.x + unitY_x * (eyeDistance * 0.45) - unitX_x * (eyeDistance * 0.15) - boxW / 2).round();
+      cheekLeftY = (leftEye.y + unitY_y * (eyeDistance * 0.45) - unitX_y * (eyeDistance * 0.15) - boxW / 2).round();
+      
+      // Rotated right cheek calculation using face axes
+      cheekRightX = (rightEye.x + unitY_x * (eyeDistance * 0.45) + unitX_x * (eyeDistance * 0.15) - boxW / 2).round();
+      cheekRightY = (rightEye.y + unitY_y * (eyeDistance * 0.45) + unitX_y * (eyeDistance * 0.15) - boxW / 2).round();
+    } else {
+      cheekLeftX = (rect.left + rect.width * 0.25).round();
+      cheekLeftY = (rect.top + rect.height * 0.55).round();
+      cheekRightX = (rect.left + rect.width * 0.60).round();
+      cheekRightY = (rect.top + rect.height * 0.55).round();
+      foreheadX = (rect.left + rect.width * 0.42).round();
+      foreheadY = (rect.top + rect.height * 0.20).round();
     }
 
     final regions = [

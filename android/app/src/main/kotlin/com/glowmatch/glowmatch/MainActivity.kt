@@ -37,6 +37,16 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGS", "Bytes cannot be null", null)
                     }
                 }
+                "shareImage" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val filename = call.argument<String>("filename") ?: "glowmatch_share_${System.currentTimeMillis()}"
+                    if (bytes != null) {
+                        val success = shareImage(bytes, filename)
+                        result.success(success)
+                    } else {
+                        result.error("INVALID_ARGS", "Bytes cannot be null", null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -60,6 +70,41 @@ class MainActivity : FlutterActivity() {
                     outputStream.write(bytes)
                     outputStream.flush()
                 }
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private fun shareImage(bytes: ByteArray, filename: String): Boolean {
+        return try {
+            val contentValues = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$filename.png")
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/GlowMatch")
+            }
+
+            val resolver = contentResolver
+            val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+            if (uri != null) {
+                resolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(bytes)
+                    outputStream.flush()
+                }
+                
+                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = android.content.Intent.createChooser(intent, "Bagikan GlowCard")
+                chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(chooser)
                 true
             } else {
                 false

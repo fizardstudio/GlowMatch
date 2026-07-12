@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/database_service.dart';
+import 'core/theme/theme_manager.dart';
 import 'features/catalog/data/repositories/shade_matcher_repository_impl.dart';
 import 'features/scanner/presentation/bloc/scanner_bloc.dart';
 import 'features/home/presentation/pages/home_page.dart';
@@ -8,6 +9,9 @@ import 'features/home/presentation/pages/home_page.dart';
 void main() async {
   // Pastikan binding Flutter terinisialisasi sebelum pengerjaan asinkron
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi pengatur tema dinamis dari berkas lokal
+  await ThemeManager.init();
 
   // Inisialisasi Database Isar lokal dan lakukan seeding data
   final dbService = DatabaseService();
@@ -34,32 +38,38 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ],
-      child: MaterialApp(
-        title: 'GlowMatch',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFFCF9F6),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFE5A99E),
-            brightness: Brightness.light,
-            surface: const Color(0xFFFCF9F6),
-            primary: const Color(0xFFE5A99E),
-            secondary: const Color(0xFFC89E88),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFFCF9F6),
-            elevation: 0,
-            iconTheme: IconThemeData(color: Color(0xFF3E3635)),
-            titleTextStyle: TextStyle(
-              color: Color(0xFF3E3635),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+      child: ValueListenableBuilder<AppThemeType>(
+        valueListenable: ThemeManager.themeNotifier,
+        builder: (context, currentTheme, child) {
+          final isDark = ThemeManager.isDark;
+          return MaterialApp(
+            title: 'GlowMatch',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              useMaterial3: true,
+              brightness: isDark ? Brightness.dark : Brightness.light,
+              scaffoldBackgroundColor: ThemeManager.scaffoldBgColor,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: ThemeManager.primaryColor,
+                brightness: isDark ? Brightness.dark : Brightness.light,
+                surface: ThemeManager.scaffoldBgColor,
+                primary: ThemeManager.primaryColor,
+                secondary: ThemeManager.secondaryColor,
+              ),
+              appBarTheme: AppBarTheme(
+                backgroundColor: ThemeManager.scaffoldBgColor,
+                elevation: 0,
+                iconTheme: IconThemeData(color: ThemeManager.textColor),
+                titleTextStyle: TextStyle(
+                  color: ThemeManager.textColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
-          ),
-        ),
-        home: const HomePage(),
+            home: const HomePage(),
+          );
+        },
       ),
     );
   }

@@ -1,3 +1,4 @@
+import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -38,8 +39,9 @@ class LipFilterPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (face == null || imageWidth == 0 || imageHeight == 0) return;
 
-    final double scaleX = size.width / imageHeight;
-    final double scaleY = size.height / imageWidth;
+    final bool isLandscape = size.width > size.height;
+    final double scaleX = isLandscape ? size.width / imageWidth : size.width / imageHeight;
+    final double scaleY = isLandscape ? size.height / imageHeight : size.height / imageWidth;
 
     Offset mapPoint(Point<int> point) {
       final double mappedX = lensDirection == CameraLensDirection.front
@@ -74,51 +76,11 @@ class LipFilterPainter extends CustomPainter {
     Offset? estimatedLeftCheek;
     Offset? estimatedRightCheek;
 
-    final leftEyeContours = face!.contours[FaceContourType.leftEye]?.points;
-    final rightEyeContours = face!.contours[FaceContourType.rightEye]?.points;
-    final noseBridgeContours = face!.contours[FaceContourType.noseBridge]?.points;
 
-    if (leftEyeContours != null && leftEyeContours.isNotEmpty &&
-        rightEyeContours != null && rightEyeContours.isNotEmpty &&
-        noseBridgeContours != null && noseBridgeContours.isNotEmpty) {
-      
-      // Hitung pusat mata kiri
-      double sumLeftX = 0;
-      double sumLeftY = 0;
-      for (var p in leftEyeContours) {
-        sumLeftX += p.x;
-        sumLeftY += p.y;
-      }
-      final leftEyeCenter = mapPoint(Point((sumLeftX / leftEyeContours.length).round(), (sumLeftY / leftEyeContours.length).round()));
 
-      // Hitung pusat mata kanan
-      double sumRightX = 0;
-      double sumRightY = 0;
-      for (var p in rightEyeContours) {
-        sumRightX += p.x;
-        sumRightY += p.y;
-      }
-      final rightEyeCenter = mapPoint(Point((sumRightX / rightEyeContours.length).round(), (sumRightY / rightEyeContours.length).round()));
-
-      // Ambil ujung hidung (titik terakhir dari batang hidung)
-      final noseTip = mapPoint(Point(noseBridgeContours.last.x, noseBridgeContours.last.y));
-
-      // Menggeser posisi blush-on lebih ke samping luar (tulang pipi/apples of the cheeks) secara dinamis
-      // Menggunakan jarak antar mata (vektor horizontal) untuk menentukan lebar pergeseran
-      final double shiftX = (rightEyeCenter.dx - leftEyeCenter.dx) * 0.22;
-
-      // Pipi kiri berada di bawah mata kiri, digeser ke luar (dx - shiftX)
-      estimatedLeftCheek = Offset(
-        leftEyeCenter.dx - shiftX,
-        leftEyeCenter.dy + (noseTip.dy - leftEyeCenter.dy) * 0.65,
-      );
-
-      // Pipi kanan berada di bawah mata kanan, digeser ke luar (dx + shiftX)
-      estimatedRightCheek = Offset(
-        rightEyeCenter.dx + shiftX,
-        rightEyeCenter.dy + (noseTip.dy - rightEyeCenter.dy) * 0.65,
-      );
-    }
+    final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
+    estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
+    estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
     // 1. GAMBAR FILTER LIPSTIK (BIBIR)
     if (lipstickColor != null && lipstickOpacity > 0.0) {
@@ -170,16 +132,30 @@ class LipFilterPainter extends CustomPainter {
       canvas.drawPath(lowerLipPath, paintLip);
     }
 
-    // 2. GAMBAR FILTER BLUSH-ON (PIPI)
+    // 2. GAMBAR FILTER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
 
-      void drawCheekBlush(Offset center) {
-        final Rect bounds = Rect.fromCircle(center: center, radius: blushRadius);
+      void drawCheekBlush(Offset center, bool isLeft) {
+        final double rollAngle = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
+        
+        canvas.save();
+        canvas.translate(center.dx, center.dy);
+        canvas.rotate(rollAngle);
+        
+        final double width = blushRadius * 2.2;
+        final double height = blushRadius * 1.3;
+        
+        final double offsetX = isLeft ? -width * 0.1 : width * 0.1;
+        final Rect bounds = Rect.fromCenter(
+          center: Offset(offsetX, 0),
+          width: width,
+          height: height,
+        );
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0) // Feathering effect
+          ..imageFilter = ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
@@ -187,14 +163,15 @@ class LipFilterPainter extends CustomPainter {
             ],
           ).createShader(bounds);
 
-        canvas.drawCircle(center, blushRadius, paintCheek);
+        canvas.drawOval(bounds, paintCheek);
+        canvas.restore();
       }
 
       if (estimatedLeftCheek != null) {
-        drawCheekBlush(estimatedLeftCheek);
+        drawCheekBlush(estimatedLeftCheek, true);
       }
       if (estimatedRightCheek != null) {
-        drawCheekBlush(estimatedRightCheek);
+        drawCheekBlush(estimatedRightCheek, false);
       }
     }
 

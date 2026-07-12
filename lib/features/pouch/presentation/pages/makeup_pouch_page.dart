@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
+import '../../../../core/theme/theme_manager.dart';
 import '../../../../core/utils/widget_helper.dart';
 import '../../data/models/pouch_item.dart';
 
@@ -53,32 +55,38 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
       showDialog(
         context: context,
         builder: (context) {
+          final isDark = ThemeManager.isDark;
+          final textColor = ThemeManager.textColor;
+          final textMutedColor = ThemeManager.textMutedColor;
+          final primaryColor = ThemeManager.primaryColor;
+          final cardBgColor = ThemeManager.cardBgColor;
+          final cardBorderColor = ThemeManager.cardBorderColor;
           return AlertDialog(
-            backgroundColor: Colors.white,
+            backgroundColor: cardBgColor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(color: Colors.redAccent.withOpacity(0.3), width: 1.5),
             ),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
-                SizedBox(width: 12),
+                const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+                const SizedBox(width: 12),
                 Text(
                   'Perhatian Medis!',
-                  style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ],
             ),
             content: Text(
               'Terdeteksi $expiredCount produk kosmetik di Pouch Anda telah melewati masa kedaluwarsa PAO (Period After Opening).\n\nPenggunaan kosmetik kedaluwarsa dapat memicu iritasi kulit, jerawat, atau reaksi alergi. Disarankan untuk segera menggantinya.',
-              style: const TextStyle(color: Color(0xFF8E807E), fontSize: 13, height: 1.5),
+              style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.5),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Mengerti',
-                  style: TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold),
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -123,7 +131,7 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${item.productName} berhasil dihapus.'),
-          backgroundColor: const Color(0xFFE5A99E),
+          backgroundColor: ThemeManager.primaryColor,
         ),
       );
       _loadPouchItems();
@@ -137,7 +145,7 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: ThemeManager.cardBgColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -171,215 +179,224 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final isDark = ThemeManager.isDark;
+    final textColor = ThemeManager.textColor;
+    final textMutedColor = ThemeManager.textMutedColor;
+    final primaryColor = ThemeManager.primaryColor;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6),
-      drawer: const AppNavigationDrawer(),
-      appBar: AppBar(
-        title: const Text(
-          'Virtual Makeup Pouch',
-          style: TextStyle(
-            color: Color(0xFF3E3635),
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-          ),
-        ),
-        backgroundColor: const Color(0xFFFCF9F6),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: ThemeManager.pageGradient,
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
-              ),
-            )
-          : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Judul Pengantar
-                  const Text(
-                    'Pouch kosmetik luring Anda. Pantau masa kedaluwarsa PAO (Period After Opening) agar kulit tetap sehat.',
-                    style: TextStyle(color: Color(0xFF8E807E), fontSize: 12, height: 1.4),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Daftar Produk Kosmetik
-                  Expanded(
-                    child: _pouchItems.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.separated(
-                            itemCount: _pouchItems.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final item = _pouchItems[index];
-                              final expirationDate = item.openedDate.add(Duration(days: item.paoMonths * 30));
-                              final daysRemaining = expirationDate.difference(now).inDays;
-                              final isExpired = now.isAfter(expirationDate);
-
-                              // Hitung presentase progres sisa hari pakai
-                              final totalPaoDays = item.paoMonths * 30;
-                              final double progress = isExpired
-                                  ? 0.0
-                                  : (daysRemaining / totalPaoDays).clamp(0.0, 1.0);
-
-                              final hexColor = Color(int.parse('FF${item.hexCode.replaceAll('#', '')}', radix: 16));
-
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isExpired
-                                        ? Colors.redAccent.withOpacity(0.2)
-                                        : const Color(0xFFF2ECE7),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x045A4A45),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 4),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        drawer: const AppNavigationDrawer(),
+        appBar: AppBar(
+          systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          title: Text(
+            'Virtual Makeup Pouch',
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: textColor),
+        ),
+        body: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Judul Pengantar
+                    Text(
+                      'Pouch kosmetik luring Anda. Pantau masa kedaluwarsa PAO (Period After Opening) agar kulit tetap sehat.',
+                      style: TextStyle(color: textMutedColor, fontSize: 12, height: 1.4),
+                    ),
+                    const SizedBox(height: 16),
+  
+                    // Daftar Produk Kosmetik
+                    Expanded(
+                      child: _pouchItems.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.separated(
+                              itemCount: _pouchItems.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final item = _pouchItems[index];
+                                final expirationDate = item.openedDate.add(Duration(days: item.paoMonths * 30));
+                                final daysRemaining = expirationDate.difference(now).inDays;
+                                final isExpired = now.isAfter(expirationDate);
+  
+                                // Hitung presentase progres sisa hari pakai
+                                final totalPaoDays = item.paoMonths * 30;
+                                final double progress = isExpired
+                                    ? 0.0
+                                    : (daysRemaining / totalPaoDays).clamp(0.0, 1.0);
+  
+                                final hexColor = Color(int.parse('FF${item.hexCode.replaceAll('#', '')}', radix: 16));
+  
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isExpired
+                                          ? Colors.redAccent.withOpacity(0.3)
+                                          : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF2ECE7)),
+                                      width: 1.5,
                                     ),
-                                  ],
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          // Swatch Bulat Warna Kosmetik
-                                          Container(
-                                            height: 36,
-                                            width: 36,
-                                            decoration: BoxDecoration(
-                                              color: hexColor,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                                    boxShadow: ThemeManager.premiumGlowShadow,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            // Swatch Bulat Warna Kosmetik
+                                            Container(
+                                              height: 36,
+                                              width: 36,
+                                              decoration: BoxDecoration(
+                                                color: hexColor,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: ThemeManager.goldBorderColor.withOpacity(0.55), width: 1.5),
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 14),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  item.brand.toUpperCase(),
-                                                  style: const TextStyle(
-                                                    color: Color(0xFFC89E88),
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 0.5,
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item.brand.toUpperCase(),
+                                                    style: TextStyle(
+                                                      color: isDark ? const Color(0xFFE5C185) : const Color(0xFFC89E88),
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: 0.5,
+                                                    ),
                                                   ),
-                                                ),
-                                                Text(
-                                                  item.productName,
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF3E3635),
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
+                                                  Text(
+                                                    item.productName,
+                                                    style: TextStyle(
+                                                      color: textColor,
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
                                                   ),
-                                                ),
-                                                Text(
-                                                  'Shade: ${item.shadeName} (${item.category})',
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF8E807E),
-                                                    fontSize: 11.5,
+                                                  Text(
+                                                    'Shade: ${item.shadeName} (${item.category})',
+                                                    style: TextStyle(
+                                                      color: textMutedColor,
+                                                      fontSize: 11.5,
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                          // Tombol Hapus
-                                          IconButton(
-                                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                            onPressed: () => _deleteItem(item),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16),
-
-                                      // Progress Bar sisa PAO
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: SizedBox(
-                                          height: 8,
-                                          child: LinearProgressIndicator(
-                                            value: progress,
-                                            backgroundColor: const Color(0xFFF2ECE7),
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              isExpired
-                                                  ? Colors.redAccent
-                                                  : daysRemaining < 30
-                                                      ? Colors.orangeAccent
-                                                      : const Color(0xFFE5A99E),
+                                            // Tombol Hapus
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                              onPressed: () => _deleteItem(item),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+  
+                                        // Progress Bar sisa PAO
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: SizedBox(
+                                            height: 8,
+                                            child: LinearProgressIndicator(
+                                              value: progress,
+                                              backgroundColor: ThemeManager.cardBorderColor,
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                isExpired
+                                                    ? Colors.redAccent
+                                                    : daysRemaining < 30
+                                                        ? Colors.orangeAccent
+                                                        : primaryColor,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 10),
-
-                                      // Label Tanggal Expiry
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Dibuka: ${item.openedDate.day}/${item.openedDate.month}/${item.openedDate.year}',
-                                            style: const TextStyle(color: Color(0xFF8E807E), fontSize: 10.5),
-                                          ),
-                                          Text(
-                                            isExpired
-                                                ? '🚨 KEDALUWARSA!'
-                                                : '$daysRemaining hari tersisa (${item.paoMonths}M PAO)',
-                                            style: TextStyle(
-                                              color: isExpired
-                                                  ? Colors.redAccent
-                                                  : daysRemaining < 30
-                                                      ? Colors.orangeAccent
-                                                      : const Color(0xFFC89E88),
-                                              fontSize: 10.5,
-                                              fontWeight: FontWeight.bold,
+                                        const SizedBox(height: 10),
+  
+                                        // Label Tanggal Expiry
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Dibuka: ${item.openedDate.day}/${item.openedDate.month}/${item.openedDate.year}',
+                                              style: TextStyle(color: textMutedColor, fontSize: 10.5),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                            Text(
+                                              isExpired
+                                                  ? '🚨 KEDALUWARSA!'
+                                                  : '$daysRemaining hari tersisa (${item.paoMonths}M PAO)',
+                                              style: TextStyle(
+                                                color: isExpired
+                                                    ? Colors.redAccent
+                                                    : daysRemaining < 30
+                                                        ? Colors.orangeAccent
+                                                        : (isDark ? const Color(0xFFE5C185) : primaryColor),
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Tombol Tambah Produk Baru
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE5A99E),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
+                                );
+                              },
+                            ),
                     ),
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                    label: const Text(
-                      'Tambah Kosmetik ke Pouch',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+  
+                    const SizedBox(height: 12),
+  
+                    // Tombol Tambah Produk Baru
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text(
+                        'Tambah Kosmetik ke Pouch',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: _showAddProductDialog,
                     ),
-                    onPressed: _showAddProductDialog,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
   Widget _buildEmptyState() {
+    final textColor = ThemeManager.textColor;
+    final textMutedColor = ThemeManager.textMutedColor;
+    final primaryColor = ThemeManager.primaryColor;
+    final cardBgColor = ThemeManager.cardBgColor;
+    final cardBorderColor = ThemeManager.cardBorderColor;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -387,22 +404,22 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBgColor,
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFF2ECE7)),
+              border: Border.all(color: cardBorderColor),
             ),
-            child: const Icon(Icons.storefront_outlined, size: 52, color: Color(0xFFE5A99E)),
+            child: Icon(Icons.storefront_outlined, size: 52, color: primaryColor),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Pouch Anda Masih Kosong',
-            style: TextStyle(color: Color(0xFF3E3635), fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Mulai catat kosmetik Anda untuk memantau masa kedaluwarsa PAO luring.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF8E807E), fontSize: 12),
+            style: TextStyle(color: textMutedColor, fontSize: 12),
           ),
         ],
       ),
@@ -480,6 +497,13 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDark;
+    final textColor = ThemeManager.textColor;
+    final textMutedColor = ThemeManager.textMutedColor;
+    final primaryColor = ThemeManager.primaryColor;
+    final cardBgColor = ThemeManager.cardBgColor;
+    final cardBorderColor = ThemeManager.cardBorderColor;
+
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -495,16 +519,16 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Tambah Kosmetik Baru',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFE5A99E),
+                  color: primaryColor,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Color(0xFF8E807E)),
+                icon: Icon(Icons.close_rounded, color: textMutedColor),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: () => Navigator.pop(context),
@@ -536,12 +560,13 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
           // Dropdown 3: Shade
           _buildLabel('Shade Warna'),
           DropdownButtonFormField<ProductShade>(
-            dropdownColor: Colors.white,
+            dropdownColor: cardBgColor,
             value: _selectedShade,
             decoration: _getDropdownDecoration(
               _selectedProduct == null ? 'Pilih Produk Dahulu' : 'Pilih Shade',
+              cardBgColor, cardBorderColor, textMutedColor, primaryColor
             ),
-            style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
+            style: TextStyle(color: textColor, fontSize: 13),
             items: _shades.map((shade) {
               return DropdownMenuItem<ProductShade>(
                 value: shade,
@@ -553,7 +578,7 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
                       decoration: BoxDecoration(
                         color: Color(int.parse('FF${shade.hexCode.replaceAll('#', '')}', radix: 16)),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFF2ECE7)),
+                        border: Border.all(color: cardBorderColor),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -584,10 +609,11 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
                 builder: (context, child) {
                   return Theme(
                     data: Theme.of(context).copyWith(
-                      colorScheme: const ColorScheme.light(
-                        primary: Color(0xFFE5A99E),
-                        onPrimary: Colors.white,
-                        surface: Colors.white,
+                      colorScheme: ColorScheme.light(
+                        primary: primaryColor,
+                        onPrimary: isDark ? Colors.black : Colors.white,
+                        surface: cardBgColor,
+                        onSurface: textColor,
                       ),
                     ),
                     child: child!,
@@ -603,18 +629,18 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFCF9F6),
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFF2ECE7)),
+                border: Border.all(color: cardBorderColor),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
+                    style: TextStyle(color: textColor, fontSize: 13),
                   ),
-                  const Icon(Icons.calendar_today_rounded, color: Color(0xFFE5A99E), size: 18),
+                  Icon(Icons.calendar_today_rounded, color: primaryColor, size: 18),
                 ],
               ),
             ),
@@ -624,10 +650,10 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
           // Dropdown 5: PAO Months
           _buildLabel('Masa Kedaluwarsa PAO (Bulan)'),
           DropdownButtonFormField<int>(
-            dropdownColor: Colors.white,
+            dropdownColor: cardBgColor,
             value: _selectedPao,
-            decoration: _getDropdownDecoration('Pilih PAO'),
-            style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
+            decoration: _getDropdownDecoration('Pilih PAO', cardBgColor, cardBorderColor, textMutedColor, primaryColor),
+            style: TextStyle(color: textColor, fontSize: 13),
             items: _paoOptions.map((pao) {
               return DropdownMenuItem<int>(
                 value: pao,
@@ -647,7 +673,7 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
           // Tombol Simpan
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE5A99E),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -682,8 +708,8 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFF8E807E),
+        style: TextStyle(
+          color: ThemeManager.textMutedColor,
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
@@ -697,11 +723,16 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
     required String hint,
     required void Function(T?)? onChanged,
   }) {
+    final textColor = ThemeManager.textColor;
+    final textMutedColor = ThemeManager.textMutedColor;
+    final primaryColor = ThemeManager.primaryColor;
+    final cardBgColor = ThemeManager.cardBgColor;
+    final cardBorderColor = ThemeManager.cardBorderColor;
     return DropdownButtonFormField<T>(
-      dropdownColor: Colors.white,
+      dropdownColor: cardBgColor,
       value: value,
-      decoration: _getDropdownDecoration(hint),
-      style: const TextStyle(color: Color(0xFF3E3635), fontSize: 13),
+      decoration: _getDropdownDecoration(hint, cardBgColor, cardBorderColor, textMutedColor, primaryColor),
+      style: TextStyle(color: textColor, fontSize: 13),
       items: items.map((item) {
         return DropdownMenuItem<T>(
           value: item,
@@ -712,20 +743,20 @@ class _AddPouchItemSheetState extends State<_AddPouchItemSheet> {
     );
   }
 
-  InputDecoration _getDropdownDecoration(String hint) {
+  InputDecoration _getDropdownDecoration(String hint, Color cardBgColor, Color cardBorderColor, Color textMutedColor, Color primaryColor) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.5), fontSize: 13),
+      hintStyle: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
-      fillColor: const Color(0xFFFCF9F6),
+      fillColor: cardBgColor,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFF2ECE7)),
+        borderSide: BorderSide(color: cardBorderColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5A99E)),
+        borderSide: BorderSide(color: primaryColor),
       ),
     );
   }

@@ -1,9 +1,11 @@
+import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:glowmatch/core/theme/theme_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -27,6 +29,12 @@ class MakeupDetectorPage extends StatefulWidget {
 }
 
 class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBindingObserver {
+  bool get isDark => ThemeManager.isDark;
+  Color get textColor => ThemeManager.textColor;
+  Color get textMutedColor => ThemeManager.textMutedColor;
+  Color get cardBgColor => ThemeManager.cardBgColor;
+  Color get cardBorderColor => ThemeManager.cardBorderColor;
+  Color get primaryColor => ThemeManager.primaryColor;
   final Isar _isar = DatabaseService().isar;
   bool _isPremium = false;
   bool _showPaywall = true;
@@ -343,13 +351,12 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
     );
   }
 
-  // Mengambil sampel warna pipi
+  // Mengambil sampel warna pipi (menggunakan kalkulasi terputar sumbu wajah)
   List<int> _extractBlushColor(img.Image imgData, Face face) {
     final leftEye = face.contours[FaceContourType.leftEye]?.points;
     final rightEye = face.contours[FaceContourType.rightEye]?.points;
-    final noseTip = face.contours[FaceContourType.noseBridge]?.points;
 
-    if (leftEye == null || rightEye == null || noseTip == null || noseTip.isEmpty) {
+    if (leftEye == null || leftEye.isEmpty || rightEye == null || rightEye.isEmpty) {
       return [230, 140, 140];
     }
 
@@ -358,10 +365,18 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
     double rex = rightEye.map((p) => p.x).reduce((a, b) => a + b) / rightEye.length;
     double rey = rightEye.map((p) => p.y).reduce((a, b) => a + b) / rightEye.length;
 
-    final nTip = noseTip.last;
-    final double shiftX = (rex - leftEye.first.x) * 0.15;
-    final int cx = (rex + shiftX).round();
-    final int cy = (rey + (nTip.y - rey) * 0.65).round();
+    final double dx = rex - lex;
+    final double dy = rey - ley;
+    final double eyeDistance = sqrt(dx * dx + dy * dy);
+    
+    final double unitX_x = dx / eyeDistance;
+    final double unitX_y = dy / eyeDistance;
+    final double unitY_x = -unitX_y;
+    final double unitY_y = unitX_x;
+
+    // Pipi kanan: digeser ke bawah along unitY, dan ke luar along unitX
+    final int cx = (rex + unitY_x * (eyeDistance * 0.45) + unitX_x * (eyeDistance * 0.15)).round();
+    final int cy = (rey + unitY_y * (eyeDistance * 0.45) + unitX_y * (eyeDistance * 0.15)).round();
 
     return ImageProcessor.calculateAverageRgb(
       imgData,
@@ -372,11 +387,36 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
     );
   }
 
-  // Mengambil sampel warna kulit (dahi)
+  // Mengambil sampel warna kulit (dahi - terputar mengikuti arah rotasi mata)
   List<int> _extractSkinColor(img.Image imgData, Face face) {
-    final rect = face.boundingBox;
-    final int fx = (rect.left + rect.width / 2).round();
-    final int fy = (rect.top + rect.height * 0.15).round();
+    final leftEye = face.contours[FaceContourType.leftEye]?.points;
+    final rightEye = face.contours[FaceContourType.rightEye]?.points;
+
+    if (leftEye == null || leftEye.isEmpty || rightEye == null || rightEye.isEmpty) {
+      final rect = face.boundingBox;
+      final int fx = (rect.left + rect.width / 2).round();
+      final int fy = (rect.top + rect.height * 0.15).round();
+      return ImageProcessor.calculateAverageRgb(imgData, startX: fx - 12, startY: fy - 12, width: 24, height: 24);
+    }
+
+    double lex = leftEye.map((p) => p.x).reduce((a, b) => a + b) / leftEye.length;
+    double ley = leftEye.map((p) => p.y).reduce((a, b) => a + b) / leftEye.length;
+    double rex = rightEye.map((p) => p.x).reduce((a, b) => a + b) / rightEye.length;
+    double rey = rightEye.map((p) => p.y).reduce((a, b) => a + b) / rightEye.length;
+
+    final double dx = rex - lex;
+    final double dy = rey - ley;
+    final double eyeDistance = sqrt(dx * dx + dy * dy);
+    
+    final double unitX_x = dx / eyeDistance;
+    final double unitX_y = dy / eyeDistance;
+    final double unitY_x = -unitX_y;
+    final double unitY_y = unitX_x;
+
+    final double midX = (lex + rex) / 2.0;
+    final double midY = (ley + rey) / 2.0;
+    final int fx = (midX - unitY_x * (eyeDistance * 0.55)).round();
+    final int fy = (midY - unitY_y * (eyeDistance * 0.55)).round();
 
     return ImageProcessor.calculateAverageRgb(
       imgData,
@@ -410,16 +450,16 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6),
+      backgroundColor: cardBgColor,
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
-        title: const Text(
+        title:  Text(
           'AI Makeup Detector',
-          style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold, letterSpacing: 0.8),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, letterSpacing: 0.8),
         ),
-        backgroundColor: const Color(0xFFFCF9F6),
+        backgroundColor: cardBgColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
+        iconTheme:  IconThemeData(color: textColor),
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -436,21 +476,21 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                           Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE5A99E).withOpacity(0.12),
+                              color: primaryColor.withOpacity(0.12),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.photo_camera_rounded, size: 72, color: Color(0xFFE5A99E)),
+                            child:  Icon(Icons.photo_camera_rounded, size: 72, color: primaryColor),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                           Text(
                             'Deteksi Kosmetik Wajah',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                           Text(
                             'Unggah foto wajah bermakeup dari galeri atau potret langsung untuk memindai lipstik, blush-on, dan foundation yang sedang dipakai.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Color(0xFF8E807E), height: 1.5),
+                            style: TextStyle(fontSize: 13, color: textMutedColor, height: 1.5),
                           ),
                           const SizedBox(height: 32),
                           Row(
@@ -458,7 +498,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                             children: [
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE5A99E),
+                                  backgroundColor: primaryColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -470,8 +510,8 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                               const SizedBox(width: 16),
                               OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF3E3635),
-                                  side: const BorderSide(color: Color(0xFFE5A99E)),
+                                  foregroundColor: textColor,
+                                  side:  BorderSide(color: primaryColor),
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
@@ -486,13 +526,13 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                     ),
                   )
                 : _isLoading
-                    ? const Center(
+                    ?  Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E))),
+                            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(primaryColor)),
                             const SizedBox(height: 16),
-                            Text('Menganalisis Riasan Wajah secara Luring...', style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold)),
+                            Text('Menganalisis Riasan Wajah secara Luring...', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       )
@@ -523,23 +563,16 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                               lipOffset = _mapPointToScreen(pt.x, pt.y, fittedSize);
                             }
 
-                            // Blush (pipi kanan)
-                            final rightEye = _detectedFace!.contours[FaceContourType.rightEye]?.points;
-                            final noseTip = _detectedFace!.contours[FaceContourType.noseBridge]?.points;
-                            if (rightEye != null && rightEye.isNotEmpty && noseTip != null && noseTip.isNotEmpty) {
-                              double rex = rightEye.map((p) => p.x).reduce((a, b) => a + b) / rightEye.length;
-                              double rey = rightEye.map((p) => p.y).reduce((a, b) => a + b) / rightEye.length;
-                              final nTip = noseTip.last;
-                              final double shiftX = (rex - (_detectedFace!.contours[FaceContourType.leftEye]!.points.first.x)) * 0.15;
-                              final int cx = (rex + shiftX).round();
-                              final int cy = (rey + (nTip.y - rey) * 0.65).round();
-                              blushOffset = _mapPointToScreen(cx, cy, fittedSize);
-                            }
+                            // Blush (pipi kanan) & Kulit (Dahi) menggunakan FaceGeometryHelper
+                            final cheeks = FaceGeometryHelper.getCheekCoordinates(_detectedFace!);
+                            final forehead = FaceGeometryHelper.getForeheadCoordinate(_detectedFace!);
 
-                            // Kulit (Dahi)
-                            final rect = _detectedFace!.boundingBox;
-                            final int fx = (rect.left + rect.width / 2).round();
-                            final int fy = (rect.top + rect.height * 0.15).round();
+                            final int cx = cheeks['right']!.x.round();
+                            final int cy = cheeks['right']!.y.round();
+                            blushOffset = _mapPointToScreen(cx, cy, fittedSize);
+
+                            final int fx = forehead.x.round();
+                            final int fy = forehead.y.round();
                             skinOffset = _mapPointToScreen(fx, fy, fittedSize);
                           }
 
@@ -602,9 +635,9 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                                       top: 16,
                                       left: 16,
                                       child: CircleAvatar(
-                                        backgroundColor: Colors.white.withOpacity(0.9),
+                                        backgroundColor: cardBgColor.withOpacity(0.9),
                                         child: IconButton(
-                                          icon: const Icon(Icons.arrow_back, color: Color(0xFF3E3635)),
+                                          icon:  Icon(Icons.arrow_back, color: textColor),
                                           onPressed: () {
                                             setState(() {
                                               _imagePath = null;
@@ -632,9 +665,9 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
               height: 230,
               child: Container(
                 padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                   boxShadow: [
                     BoxShadow(color: Colors.black12, blurRadius: 16, spreadRadius: 4),
                   ],
@@ -670,13 +703,13 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: cardBgColor.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.5)),
+                  border: Border.all(color: primaryColor.withOpacity(0.5)),
                 ),
                 child: Text(
                   'Demo: ${_demoSecondsLeft}s',
-                  style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
+                  style:  TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -685,19 +718,19 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
           if (_showPaywall)
             Positioned.fill(
               child: Container(
-                color: Colors.white.withOpacity(0.94),
+                color: cardBgColor.withOpacity(0.96),
                 child: Center(
                   child: SingleChildScrollView(
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 24),
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardBgColor,
                         borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                        border: Border.all(color: cardBorderColor, width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE5A99E).withOpacity(0.06),
+                            color: primaryColor.withOpacity(0.06),
                             blurRadius: 20,
                             spreadRadius: 4,
                           ),
@@ -709,25 +742,25 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE5A99E).withOpacity(0.12),
+                              color: primaryColor.withOpacity(0.12),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child:  Icon(
                               Icons.camera_enhance_outlined,
-                              color: Color(0xFFE5A99E),
+                              color: primaryColor,
                               size: 40,
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                           Text(
                             'AI Makeup Detector',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                           Text(
                             'Unggah foto apa saja (dari medsos, internet, dll) untuk memindai jenis lipstik, blush-on, atau foundation yang sedang dikenakan dan beli produknya secara luring!',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Color(0xFF8E807E), height: 1.5),
+                            style: TextStyle(fontSize: 13, color: textMutedColor, height: 1.5),
                           ),
                           const SizedBox(height: 24),
                           // Benefits
@@ -737,7 +770,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                           const SizedBox(height: 28),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5A99E),
+                              backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               minimumSize: const Size(double.infinity, 48),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -749,8 +782,8 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                           const SizedBox(height: 12),
                           OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF8E807E),
-                              side: const BorderSide(color: Color(0xFFF2ECE7)),
+                              foregroundColor: textMutedColor,
+                              side:  BorderSide(color: cardBorderColor),
                               minimumSize: const Size(double.infinity, 44),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
@@ -774,9 +807,9 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded, color: Color(0xFFE5A99E), size: 16),
+           Icon(Icons.check_circle_rounded, color: primaryColor, size: 16),
           const SizedBox(width: 8),
-          Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFF3E3635), fontWeight: FontWeight.w500)),
+          Text(text, style:  TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -818,8 +851,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
               color: color,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 1.5),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 4, spreadRadius: 1),
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, spreadRadius: 1),
               ],
             ),
           ),
@@ -842,10 +874,10 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
           padding: const EdgeInsets.symmetric(vertical: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE5A99E).withOpacity(0.12) : Colors.transparent,
+            color: isSelected ? primaryColor.withOpacity(0.12) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? const Color(0xFFE5A99E).withOpacity(0.3) : Colors.transparent,
+              color: isSelected ? primaryColor.withOpacity(0.3) : Colors.transparent,
             ),
           ),
           child: Text(
@@ -853,7 +885,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: isSelected ? const Color(0xFFE5A99E) : const Color(0xFF8E807E),
+              color: isSelected ? primaryColor : textMutedColor,
             ),
           ),
         ),
@@ -900,21 +932,20 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
               decoration: BoxDecoration(
                 color: detColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFF2ECE7), width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                border: Border.all(color: cardBorderColor, width: 2),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
                 ],
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '#${detColor.value.toRadixString(16).substring(2).toUpperCase()}',
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF8E807E)),
+              style:  TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textMutedColor),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(fontSize: 9, color: Color(0xFF3E3635)),
+              style:  TextStyle(fontSize: 9, color: textColor),
               textAlign: TextAlign.center,
             ),
           ],
@@ -923,10 +954,10 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
         // Rincian produk tercocok
         Expanded(
           child: prod == null
-              ? const Center(
+              ?  Center(
                   child: Text(
                     'Tidak ada produk kosmetik yang cukup identik di database Isar.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF8E807E)),
+                    style: TextStyle(fontSize: 12, color: textMutedColor),
                   ),
                 )
               : Column(
@@ -940,18 +971,18 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                           children: [
                             Text(
                               prod.brand,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFE5A99E)),
+                              style:  TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor),
                             ),
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE5A99E).withOpacity(0.12),
+                                color: primaryColor.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${matchPercent.toStringAsFixed(0)}% Match',
-                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFE5A99E)),
+                                style:  TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: primaryColor),
                               ),
                             ),
                           ],
@@ -959,20 +990,20 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                         const SizedBox(height: 4),
                         Text(
                           prod.productName,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                          style:  TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Shade: ${prod.shadeName}',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF8E807E)),
+                          style:  TextStyle(fontSize: 12, color: textMutedColor),
                         ),
                       ],
                     ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE5A99E),
+                        backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 38),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

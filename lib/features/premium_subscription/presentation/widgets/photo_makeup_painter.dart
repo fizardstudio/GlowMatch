@@ -1,3 +1,4 @@
+import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -77,6 +78,16 @@ class PhotoMakeupPainter extends CustomPainter {
       if (faceContourPoints != null && faceContourPoints.isNotEmpty) {
         final Path facePath = Path();
         final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+        
+        // Perluas dahi (forehead extension) ke arah hairline menggunakan FaceGeometryHelper
+        final leftEyePt = face!.landmarks[FaceLandmarkType.leftEye]?.position;
+        final rightEyePt = face!.landmarks[FaceLandmarkType.rightEye]?.position;
+        if (leftEyePt != null && rightEyePt != null) {
+          final hairlinePts = FaceGeometryHelper.getHairlinePoints(face!);
+          faceOffsets.add(mapPoint(Point(hairlinePts[0].x.round(), hairlinePts[0].y.round())));
+          faceOffsets.add(mapPoint(Point(hairlinePts[1].x.round(), hairlinePts[1].y.round())));
+          faceOffsets.add(mapPoint(Point(hairlinePts[2].x.round(), hairlinePts[2].y.round())));
+        }
         buildSmoothPath(facePath, faceOffsets);
         facePath.close();
 
@@ -165,45 +176,11 @@ class PhotoMakeupPainter extends CustomPainter {
     Offset? estimatedLeftCheek;
     Offset? estimatedRightCheek;
 
-    final leftEyeContours = face!.contours[FaceContourType.leftEye]?.points;
-    final rightEyeContours = face!.contours[FaceContourType.rightEye]?.points;
-    final noseBridgeContours = face!.contours[FaceContourType.noseBridge]?.points;
 
-    if (leftEyeContours != null && leftEyeContours.isNotEmpty &&
-        rightEyeContours != null && rightEyeContours.isNotEmpty &&
-        noseBridgeContours != null && noseBridgeContours.isNotEmpty) {
-      
-      double sumLeftX = 0;
-      double sumLeftY = 0;
-      for (var p in leftEyeContours) {
-        sumLeftX += p.x;
-        sumLeftY += p.y;
-      }
-      final leftEyeCenter = mapPoint(Point((sumLeftX / leftEyeContours.length).round(), (sumLeftY / leftEyeContours.length).round()));
 
-      double sumRightX = 0;
-      double sumRightY = 0;
-      for (var p in rightEyeContours) {
-        sumRightX += p.x;
-        sumRightY += p.y;
-      }
-      final rightEyeCenter = mapPoint(Point((sumRightX / rightEyeContours.length).round(), (sumRightY / rightEyeContours.length).round()));
-
-      final noseTip = mapPoint(Point(noseBridgeContours.last.x, noseBridgeContours.last.y));
-
-      // Hitung pergeseran blush-on ke luar (apples of cheeks / tulang pipi)
-      final double shiftX = (rightEyeCenter.dx - leftEyeCenter.dx) * 0.22;
-
-      estimatedLeftCheek = Offset(
-        leftEyeCenter.dx - shiftX,
-        leftEyeCenter.dy + (noseTip.dy - leftEyeCenter.dy) * 0.65,
-      );
-
-      estimatedRightCheek = Offset(
-        rightEyeCenter.dx + shiftX,
-        rightEyeCenter.dy + (noseTip.dy - rightEyeCenter.dy) * 0.65,
-      );
-    }
+    final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
+    estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
+    estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
     // 2. RENDER LIPSTIK (BIBIR)
     if (lipstickColor != null && lipstickOpacity > 0.0) {
@@ -249,16 +226,31 @@ class PhotoMakeupPainter extends CustomPainter {
       canvas.drawPath(lowerLipPath, paintLip);
     }
 
-    // 3. RENDER BLUSH-ON (PIPI)
+    // 3. RENDER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
 
-      void drawCheekBlush(Offset center) {
-        final Rect bounds = Rect.fromCircle(center: center, radius: blushRadius);
+      void drawCheekBlush(Offset center, bool isLeft) {
+        final double rollAngle = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
+        
+        canvas.save();
+        canvas.translate(center.dx, center.dy);
+        canvas.rotate(rollAngle);
+        
+        final double width = blushRadius * 2.2;
+        final double height = blushRadius * 1.3;
+        
+        // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar
+        final double offsetX = isLeft ? -width * 0.1 : width * 0.1;
+        final Rect bounds = Rect.fromCenter(
+          center: Offset(offsetX, 0),
+          width: width,
+          height: height,
+        );
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0)
+          ..imageFilter = ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
@@ -266,14 +258,15 @@ class PhotoMakeupPainter extends CustomPainter {
             ],
           ).createShader(bounds);
 
-        canvas.drawCircle(center, blushRadius, paintCheek);
+        canvas.drawOval(bounds, paintCheek);
+        canvas.restore();
       }
 
       if (estimatedLeftCheek != null) {
-        drawCheekBlush(estimatedLeftCheek);
+        drawCheekBlush(estimatedLeftCheek, true);
       }
       if (estimatedRightCheek != null) {
-        drawCheekBlush(estimatedRightCheek);
+        drawCheekBlush(estimatedRightCheek, false);
       }
     }
 

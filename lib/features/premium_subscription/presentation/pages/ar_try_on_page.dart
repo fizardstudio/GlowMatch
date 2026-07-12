@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:glowmatch/core/theme/theme_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import 'package:camera/camera.dart';
@@ -21,6 +22,12 @@ class ArTryOnPage extends StatefulWidget {
 }
 
 class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
+  bool get isDark => ThemeManager.isDark;
+  Color get textColor => ThemeManager.textColor;
+  Color get textMutedColor => ThemeManager.textMutedColor;
+  Color get cardBgColor => ThemeManager.cardBgColor;
+  Color get cardBorderColor => ThemeManager.cardBorderColor;
+  Color get primaryColor => ThemeManager.primaryColor;
   final Isar _isar = DatabaseService().isar;
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
@@ -423,15 +430,15 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         }
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6),
+      backgroundColor: cardBgColor,
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
+             Text(
               'AR Try-On',
               style: TextStyle(
-                color: Color(0xFF3E3635),
+                color: textColor,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.8,
               ),
@@ -441,7 +448,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5A99E),
+                      color: primaryColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
@@ -452,19 +459,19 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                 : Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF8E807E).withOpacity(0.12),
+                      color: textMutedColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text(
+                    child:  Text(
                       'FREE',
-                      style: TextStyle(color: Color(0xFF8E807E), fontSize: 8, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: textMutedColor, fontSize: 8, fontWeight: FontWeight.bold),
                     ),
                   ),
           ],
         ),
-        backgroundColor: const Color(0xFFFCF9F6),
+        backgroundColor: cardBgColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
+        iconTheme:  IconThemeData(color: textColor),
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -560,7 +567,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                       width: 32,
                                       height: 32,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE5A99E),
+                                        color: primaryColor,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
@@ -613,13 +620,13 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.92),
+                                      color: cardBgColor.withOpacity(0.95),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.4)),
+                                      border: Border.all(color: primaryColor.withOpacity(0.4)),
                                     ),
                                     child: Text(
                                       'Sisa Waktu: ${_demoSecondsLeft}s',
-                                      style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
+                                      style:  TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ],
@@ -630,7 +637,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                           if (_showPaywall)
                             Positioned.fill(
                               child: Container(
-                                color: Colors.white.withOpacity(0.92),
+                                color: cardBgColor.withOpacity(0.95),
                                 child: Center(
                                   child: SingleChildScrollView(
                                     child: Container(
@@ -639,10 +646,10 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(28),
-                                        border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                                        border: Border.all(color: cardBorderColor, width: 1.5),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFE5A99E).withOpacity(0.05),
+                                            color: primaryColor.withOpacity(0.05),
                                             blurRadius: 20,
                                             spreadRadius: 5,
                                           ),
@@ -654,32 +661,32 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                           Container(
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFE5A99E).withOpacity(0.12),
+                                              color: primaryColor.withOpacity(0.12),
                                               shape: BoxShape.circle,
                                             ),
-                                            child: const Icon(
+                                            child:  Icon(
                                               Icons.workspace_premium_rounded,
-                                              color: Color(0xFFE5A99E),
+                                              color: primaryColor,
                                               size: 40,
                                             ),
                                           ),
                                           const SizedBox(height: 16),
-                                          const Text(
+                                           Text(
                                             'GlowMatch Premium',
                                             style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold,
-                                              color: Color(0xFFE5A99E),
+                                              color: primaryColor,
                                               letterSpacing: 0.5,
                                             ),
                                           ),
                                           const SizedBox(height: 8),
-                                          const Text(
+                                           Text(
                                             'Uji Coba Filter Make-Up AR Real-Time',
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Color(0xFF8E807E),
+                                              color: textMutedColor,
                                             ),
                                           ),
                                           const SizedBox(height: 24),
@@ -696,7 +703,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                           // Tombol Beli Premium
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFFE5A99E),
+                                              backgroundColor: primaryColor,
                                               foregroundColor: Colors.white,
                                               minimumSize: const Size(double.infinity, 48),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -713,8 +720,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                           // Tombol Coba Demo Gratis
                                           OutlinedButton(
                                             style: OutlinedButton.styleFrom(
-                                              foregroundColor: const Color(0xFF3E3635),
-                                              side: const BorderSide(color: Color(0xFFF2ECE7)),
+                                              foregroundColor: textColor,
+                                              side:  BorderSide(color: cardBorderColor),
                                               minimumSize: const Size(double.infinity, 46),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                             ),
@@ -729,9 +736,9 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                           // Tombol Batal / Keluar
                                           TextButton(
                                             onPressed: () => Navigator.pop(context),
-                                            child: const Text(
+                                            child:  Text(
                                               'Kembali',
-                                              style: TextStyle(color: Color(0xFF8E807E), fontSize: 12),
+                                              style: TextStyle(color: textMutedColor, fontSize: 12),
                                             ),
                                           ),
                                         ],
@@ -745,9 +752,9 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       );
                     },
                   )
-                : const Center(
+                :  Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E)),
+                      valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                     ),
                   ),
           ),
@@ -764,17 +771,17 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                     _showControls = !_showControls;
                   });
                 },
-                backgroundColor: Colors.white.withOpacity(0.92),
+                backgroundColor: cardBgColor.withOpacity(0.95),
                 mini: true,
                 shape: CircleBorder(
                   side: BorderSide(
-                    color: const Color(0xFFE5A99E).withOpacity(0.5),
+                    color: primaryColor.withOpacity(0.5),
                     width: 1.5,
                   ),
                 ),
                 child: Icon(
                   _showControls ? Icons.keyboard_arrow_down_rounded : Icons.palette_outlined,
-                  color: const Color(0xFF3E3635),
+                  color: textColor,
                   size: 20,
                 ),
               ),
@@ -789,13 +796,13 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: cardBgColor.withOpacity(0.95),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
                   border: Border.all(
-                    color: const Color(0xFFF2ECE7),
+                    color: cardBorderColor,
                     width: 1.5,
                   ),
                 ),
@@ -807,7 +814,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFCF9F6),
+                        color: cardBgColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
@@ -824,7 +831,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
                                   color: _activeCategoryIndex == 0
-                                      ? const Color(0xFFE5A99E)
+                                      ? primaryColor
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -835,7 +842,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                     fontWeight: FontWeight.bold,
                                     color: _activeCategoryIndex == 0
                                         ? Colors.white
-                                        : const Color(0xFF8E807E),
+                                        : textMutedColor,
                                   ),
                                 ),
                               ),
@@ -853,7 +860,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
                                   color: _activeCategoryIndex == 1
-                                      ? const Color(0xFFE5A99E)
+                                      ? primaryColor
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -864,7 +871,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                     fontWeight: FontWeight.bold,
                                     color: _activeCategoryIndex == 1
                                         ? Colors.white
-                                        : const Color(0xFF8E807E),
+                                        : textMutedColor,
                                   ),
                                 ),
                               ),
@@ -878,23 +885,23 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                     if (_activeCategoryIndex == 0) ...[
                       Row(
                         children: [
-                          const Icon(Icons.brush_rounded, color: Color(0xFFE5A99E), size: 18),
+                           Icon(Icons.brush_rounded, color: primaryColor, size: 18),
                           const SizedBox(width: 8),
-                          const Text('Tipe Finishing', style: TextStyle(color: Color(0xFF3E3635), fontSize: 11)),
+                           Text('Tipe Finishing', style: TextStyle(color: textColor, fontSize: 11)),
                           const Spacer(),
                           GestureDetector(
                             onTap: _showPaywall ? null : () => setState(() => _lipstickFinishing = 'matte'),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _lipstickFinishing == 'matte' ? const Color(0xFFE5A99E) : const Color(0xFFFCF9F6),
+                                color: _lipstickFinishing == 'matte' ? primaryColor : cardBgColor,
                                 borderRadius: BorderRadius.circular(20),
-                                border: _lipstickFinishing == 'matte' ? null : Border.all(color: const Color(0xFFF2ECE7)),
+                                border: _lipstickFinishing == 'matte' ? null : Border.all(color: cardBorderColor),
                               ),
                               child: Text(
                                 'Matte',
                                 style: TextStyle(
-                                  color: _lipstickFinishing == 'matte' ? Colors.white : const Color(0xFF8E807E),
+                                  color: _lipstickFinishing == 'matte' ? Colors.white : textMutedColor,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -907,14 +914,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _lipstickFinishing == 'glossy' ? const Color(0xFFE5A99E) : const Color(0xFFFCF9F6),
+                                color: _lipstickFinishing == 'glossy' ? primaryColor : cardBgColor,
                                 borderRadius: BorderRadius.circular(20),
-                                border: _lipstickFinishing == 'glossy' ? null : Border.all(color: const Color(0xFFF2ECE7)),
+                                border: _lipstickFinishing == 'glossy' ? null : Border.all(color: cardBorderColor),
                               ),
                               child: Text(
                                 'Glossy (Satin)',
                                 style: TextStyle(
-                                  color: _lipstickFinishing == 'glossy' ? Colors.white : const Color(0xFF8E807E),
+                                  color: _lipstickFinishing == 'glossy' ? Colors.white : textMutedColor,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -929,16 +936,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                     // 2. Slider Opacity/Ketebalan Kategori yang Aktif
                     Row(
                       children: [
-                        const Icon(Icons.opacity_rounded, color: Color(0xFFE5A99E), size: 18),
+                         Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
                         const SizedBox(width: 8),
                         Text(
                           _activeCategoryIndex == 0 ? 'Transparansi Lipstik' : 'Transparansi Blush',
-                          style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11),
+                          style:  TextStyle(color: textColor, fontSize: 11),
                         ),
                         Expanded(
                           child: Slider(
-                            activeColor: const Color(0xFFE5A99E),
-                            inactiveColor: const Color(0xFFF2ECE7),
+                            activeColor: primaryColor,
+                            inactiveColor: cardBorderColor,
                             value: _activeCategoryIndex == 0 ? _lipstickOpacity : _blushOpacity,
                             min: 0.0,
                             max: 0.8,
@@ -957,7 +964,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                         ),
                         Text(
                           '${((_activeCategoryIndex == 0 ? _lipstickOpacity : _blushOpacity) * 100).round()}%',
-                          style: const TextStyle(color: Color(0xFF8E807E), fontSize: 11, fontFamily: 'monospace'),
+                          style:  TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
                         ),
                       ],
                     ),
@@ -966,7 +973,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                     // 3. Palet Pemilihan Warna Kategori yang Aktif
                     Text(
                       _activeCategoryIndex == 0 ? 'WARNA LIPSTIK:' : 'WARNA BLUSH-ON:',
-                      style: TextStyle(color: const Color(0xFF8E807E).withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
@@ -1003,7 +1010,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                 color: colorVal,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isSelected ? const Color(0xFFE5A99E) : const Color(0xFFF2ECE7),
+                                  color: isSelected ? primaryColor : cardBorderColor,
                                   width: isSelected ? 3 : 1,
                                 ),
                               ),
@@ -1030,12 +1037,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded, color: Color(0xFFE5A99E), size: 16),
+           Icon(Icons.check_circle_outline_rounded, color: primaryColor, size: 16),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Color(0xFF8E807E), fontSize: 12),
+              style:  TextStyle(color: textMutedColor, fontSize: 12),
             ),
           ),
         ],

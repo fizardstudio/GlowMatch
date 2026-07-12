@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:glowmatch/core/theme/theme_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -27,6 +28,12 @@ class PhotoTryOnPage extends StatefulWidget {
 }
 
 class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObserver {
+  bool get isDark => ThemeManager.isDark;
+  Color get textColor => ThemeManager.textColor;
+  Color get textMutedColor => ThemeManager.textMutedColor;
+  Color get cardBgColor => ThemeManager.cardBgColor;
+  Color get cardBorderColor => ThemeManager.cardBorderColor;
+  Color get primaryColor => ThemeManager.primaryColor;
   final Isar _isar = DatabaseService().isar;
   final GlobalKey _repaintBoundaryKey = GlobalKey();
   bool _isPremium = false;
@@ -277,12 +284,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       builder: (BuildContext context) {
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFFCF9F6).withOpacity(0.97),
+            color: cardBgColor.withOpacity(0.97),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(28),
               topRight: Radius.circular(28),
             ),
-            border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+            border: Border.all(color: cardBorderColor, width: 1.5),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
@@ -294,7 +301,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE5A99E).withOpacity(0.4),
+                    color: primaryColor.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -305,18 +312,18 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5A99E).withOpacity(0.12),
+                      color: primaryColor.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFE5A99E), size: 24),
+                    child:  Icon(Icons.receipt_long_rounded, color: primaryColor, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                   Text(
                     'Rangkuman Riasan & Belanja',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF3E3635),
+                      color: textColor,
                     ),
                   ),
                 ],
@@ -363,7 +370,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
               // Close Button
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE5A99E),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 46),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -389,9 +396,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF2ECE7)),
+        border: Border.all(color: cardBorderColor),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +410,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                border: Border.all(color: cardBorderColor, width: 1.5),
               ),
             ),
             const SizedBox(width: 12),
@@ -419,13 +426,13 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                 const SizedBox(height: 4),
                 Text(
                   name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                  style:  TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF8E807E), height: 1.4),
+                    style:  TextStyle(fontSize: 11, color: textMutedColor, height: 1.4),
                   ),
                 ],
                 if (affiliateUrl != null) ...[
@@ -439,15 +446,15 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.shopping_bag_outlined, size: 12, color: Color(0xFFE5A99E)),
+                      children:  [
+                        Icon(Icons.shopping_bag_outlined, size: 12, color: primaryColor),
                         SizedBox(width: 4),
                         Text(
                           'Beli Sekarang 🛒',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFE5A99E),
+                            color: primaryColor,
                             decoration: TextDecoration.underline,
                           ),
                         ),
@@ -654,9 +661,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+             SnackBar(
               content: Text('Foto hasil riasan berhasil disimpan ke Galeri! 📸💖 (Folder: Pictures/GlowMatch)'),
-              backgroundColor: Color(0xFFE5A99E),
+              backgroundColor: primaryColor,
             ),
           );
         } else {
@@ -718,15 +725,15 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     final Size screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6),
+      backgroundColor: cardBgColor,
       drawer: const AppNavigationDrawer(),
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
+             Text(
               'Uji Riasan 2D Foto',
               style: TextStyle(
-                color: Color(0xFF3E3635),
+                color: textColor,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.8,
               ),
@@ -736,7 +743,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5A99E),
+                      color: primaryColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
@@ -747,19 +754,19 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                 : Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF8E807E).withOpacity(0.12),
+                      color: textMutedColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text(
+                    child:  Text(
                       'FREE',
-                      style: TextStyle(color: Color(0xFF8E807E), fontSize: 8, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: textMutedColor, fontSize: 8, fontWeight: FontWeight.bold),
                     ),
                   ),
           ],
         ),
-        backgroundColor: const Color(0xFFFCF9F6),
+        backgroundColor: cardBgColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF3E3635)),
+        iconTheme:  IconThemeData(color: textColor),
         actions: [
           if (_imagePath != null)
             IconButton(
@@ -790,21 +797,21 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE5A99E).withOpacity(0.12),
+                              color: primaryColor.withOpacity(0.12),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.add_photo_alternate_rounded, size: 72, color: Color(0xFFE5A99E)),
+                            child:  Icon(Icons.add_photo_alternate_rounded, size: 72, color: primaryColor),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                           Text(
                             'Belum Ada Foto Terpilih',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                           Text(
                             'Ambil foto selfie baru menggunakan kamera ponsel atau unggah foto dari galeri untuk memulai simulasi riasan statis.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Color(0xFF8E807E), height: 1.5),
+                            style: TextStyle(fontSize: 13, color: textMutedColor, height: 1.5),
                           ),
                           const SizedBox(height: 32),
                           Row(
@@ -812,7 +819,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                             children: [
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE5A99E),
+                                  backgroundColor: primaryColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -824,8 +831,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                               const SizedBox(width: 16),
                               OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF3E3635),
-                                  side: const BorderSide(color: Color(0xFFE5A99E)),
+                                  foregroundColor: textColor,
+                                  side:  BorderSide(color: primaryColor),
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
@@ -840,13 +847,13 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                     ),
                   )
                 : _isLoadingImage
-                    ? const Center(
+                    ?  Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E))),
+                            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(primaryColor)),
                             SizedBox(height: 16),
-                            Text('Menganalisis Face Mesh Foto...', style: TextStyle(color: Color(0xFF3E3635), fontWeight: FontWeight.bold)),
+                            Text('Menganalisis Face Mesh Foto...', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       )
@@ -931,7 +938,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                               width: 30,
                                               height: 30,
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFFE5A99E),
+                                                color: primaryColor,
                                                 shape: BoxShape.circle,
                                                 boxShadow: [
                                                   BoxShadow(
@@ -964,8 +971,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                       children: [
                                         ElevatedButton.icon(
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white.withOpacity(0.9),
-                                            foregroundColor: const Color(0xFF3E3635),
+                                            backgroundColor: cardBgColor.withOpacity(0.9),
+                                            foregroundColor: textColor,
                                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                             elevation: 2,
@@ -977,8 +984,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                         const SizedBox(width: 8),
                                         ElevatedButton.icon(
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white.withOpacity(0.9),
-                                            foregroundColor: const Color(0xFF3E3635),
+                                            backgroundColor: cardBgColor.withOpacity(0.9),
+                                            foregroundColor: textColor,
                                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                             elevation: 2,
@@ -1008,13 +1015,13 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: cardBgColor.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.5)),
+                  border: Border.all(color: primaryColor.withOpacity(0.5)),
                 ),
                 child: Text(
                   'Demo: ${_demoSecondsLeft}s',
-                  style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
+                  style:  TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1031,17 +1038,17 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                     _showControls = !_showControls;
                   });
                 },
-                backgroundColor: Colors.white.withOpacity(0.92),
+                backgroundColor: cardBgColor.withOpacity(0.95),
                 mini: true,
                 shape: CircleBorder(
                   side: BorderSide(
-                    color: const Color(0xFFE5A99E).withOpacity(0.5),
+                    color: primaryColor.withOpacity(0.5),
                     width: 1.5,
                   ),
                 ),
                 child: Icon(
                   _showControls ? Icons.keyboard_arrow_down_rounded : Icons.tune_rounded,
-                  color: const Color(0xFF3E3635),
+                  color: textColor,
                   size: 20,
                 ),
               ),
@@ -1056,12 +1063,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.96),
+                  color: cardBgColor.withOpacity(0.95),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                  border: Border.all(color: cardBorderColor, width: 1.5),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1071,7 +1078,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFCF9F6),
+                        color: cardBgColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -1095,9 +1102,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       // Dropdown filter Merek Foundation
                       Row(
                         children: [
-                          const Text(
+                           Text(
                             'Merek:',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF3E3635)),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -1105,16 +1112,16 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                               height: 32,
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFCF9F6),
+                                color: cardBgColor,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFF2ECE7)),
+                                border: Border.all(color: cardBorderColor),
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
                                   value: _selectedBrandFilter,
                                   isExpanded: true,
                                   icon: const Icon(Icons.arrow_drop_down, size: 16),
-                                  style: const TextStyle(fontSize: 10, color: Color(0xFF3E3635), fontWeight: FontWeight.bold),
+                                  style:  TextStyle(fontSize: 10, color: textColor, fontWeight: FontWeight.bold),
                                   items: _brands.map((String b) {
                                     return DropdownMenuItem<String>(
                                       value: b,
@@ -1141,7 +1148,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                 '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.shadeName}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFE5A99E)),
+                                style:  TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: primaryColor),
                               ),
                             ),
                           ],
@@ -1186,9 +1193,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFCF9F6),
+                              color: cardBgColor,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFF2ECE7)),
+                              border: Border.all(color: cardBorderColor),
                             ),
                             child: Row(
                               children: [
@@ -1254,7 +1261,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           flex: 3,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5A99E),
+                              backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               minimumSize: const Size(0, 44),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1270,12 +1277,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           flex: 2,
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF3E3635),
-                              side: const BorderSide(color: Color(0xFFE5A99E)),
+                              foregroundColor: textColor,
+                              side:  BorderSide(color: primaryColor),
                               minimumSize: const Size(0, 44),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            icon: const Icon(Icons.favorite_rounded, size: 16, color: Color(0xFFE5A99E)),
+                            icon:  Icon(Icons.favorite_rounded, size: 16, color: primaryColor),
                             label: const Text('Simpan Look', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                             onPressed: _saveCurrentMakeupLook,
                           ),
@@ -1292,11 +1299,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.4),
-                child: const Center(
+                child:  Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE5A99E))),
+                      CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(primaryColor)),
                       SizedBox(height: 16),
                       Text(
                         'Menyimpan Gambar ke Galeri...',
@@ -1312,7 +1319,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           if (_showPaywall)
             Positioned.fill(
               child: Container(
-                color: Colors.white.withOpacity(0.94),
+                color: cardBgColor.withOpacity(0.94),
                 child: Center(
                   child: SingleChildScrollView(
                     child: Container(
@@ -1321,10 +1328,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                        border: Border.all(color: cardBorderColor, width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE5A99E).withOpacity(0.06),
+                            color: primaryColor.withOpacity(0.06),
                             blurRadius: 20,
                             spreadRadius: 4,
                           ),
@@ -1336,32 +1343,32 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE5A99E).withOpacity(0.12),
+                              color: primaryColor.withOpacity(0.12),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child:  Icon(
                               Icons.face_retouching_natural_rounded,
-                              color: Color(0xFFE5A99E),
+                              color: primaryColor,
                               size: 40,
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                           Text(
                             'Uji Riasan 2D Statis',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFE5A99E),
+                              color: primaryColor,
                               letterSpacing: 0.5,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                           Text(
                             'Eksperimen shade dasar makeup, lipstick, dan blush-on interaktif langsung pada foto selfie Anda!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF8E807E),
+                              color: textMutedColor,
                               height: 1.4,
                             ),
                           ),
@@ -1379,7 +1386,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           // Beli Premium
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5A99E),
+                              backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               minimumSize: const Size(double.infinity, 48),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1396,8 +1403,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           // Demo Gratis
                           OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF3E3635),
-                              side: const BorderSide(color: Color(0xFFF2ECE7)),
+                              foregroundColor: textColor,
+                              side:  BorderSide(color: cardBorderColor),
                               minimumSize: const Size(double.infinity, 46),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
@@ -1412,9 +1419,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           // Tombol Kembali
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text(
+                            child:  Text(
                               'Kembali',
-                              style: TextStyle(color: Color(0xFF8E807E), fontSize: 12),
+                              style: TextStyle(color: textMutedColor, fontSize: 12),
                             ),
                           ),
                         ],
@@ -1441,7 +1448,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isAct ? const Color(0xFFE5A99E) : Colors.transparent,
+            color: isAct ? primaryColor : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -1450,7 +1457,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
             style: TextStyle(
               fontSize: 12,
               fontWeight: isAct ? FontWeight.bold : FontWeight.normal,
-              color: isAct ? Colors.white : const Color(0xFF8E807E),
+              color: isAct ? Colors.white : textMutedColor,
             ),
           ),
         ),
@@ -1468,7 +1475,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSel ? const Color(0xFFE5A99E) : Colors.transparent,
+          color: isSel ? primaryColor : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
@@ -1476,7 +1483,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: isSel ? Colors.white : const Color(0xFF3E3635),
+            color: isSel ? Colors.white : textColor,
           ),
         ),
       ),
@@ -1490,15 +1497,15 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           width: 80,
           child: Text(
             label,
-            style: const TextStyle(color: Color(0xFF3E3635), fontSize: 11, fontWeight: FontWeight.bold),
+            style:  TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: const Color(0xFFE5A99E),
-              inactiveTrackColor: const Color(0xFFF2ECE7),
-              thumbColor: const Color(0xFFE5A99E),
+              activeTrackColor: primaryColor,
+              inactiveTrackColor: cardBorderColor,
+              thumbColor: primaryColor,
               trackHeight: 3,
             ),
             child: Slider(
@@ -1514,7 +1521,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           child: Text(
             '${(val * 100).round()}%',
             textAlign: TextAlign.right,
-            style: const TextStyle(color: Color(0xFF8E807E), fontSize: 11, fontWeight: FontWeight.bold),
+            style:  TextStyle(color: textMutedColor, fontSize: 11, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -1532,7 +1539,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           color: color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSel ? const Color(0xFF3E3635) : Colors.transparent,
+            color: isSel ? textColor : Colors.transparent,
             width: 2.5,
           ),
           boxShadow: [
@@ -1552,11 +1559,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded, color: Color(0xFFE5A99E), size: 16),
+           Icon(Icons.check_circle_rounded, color: primaryColor, size: 16),
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(color: Color(0xFF8E807E), fontSize: 12),
+            style:  TextStyle(color: textMutedColor, fontSize: 12),
           ),
         ],
       ),

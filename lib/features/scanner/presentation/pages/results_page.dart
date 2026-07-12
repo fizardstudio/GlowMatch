@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:glowmatch/core/theme/theme_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
@@ -37,6 +41,83 @@ class ResultsPage extends StatefulWidget {
 }
 
 class _ResultsPageState extends State<ResultsPage> {
+  final GlobalKey _singleGlowCardKey = GlobalKey();
+  final GlobalKey _coupleGlowCardKey = GlobalKey();
+  bool _isSavingCard = false;
+
+  Future<void> _saveOrShareGlowCard(GlobalKey key, bool isShare) async {
+    if (_isSavingCard) return;
+    setState(() {
+      _isSavingCard = true;
+    });
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      final RenderRepaintBoundary? boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal mendapatkan area kartu.");
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
+
+      if (pngBytes == null) {
+        throw Exception("Gagal membuat gambar kartu.");
+      }
+
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final String methodName = isShare ? "shareImage" : "saveImageToGallery";
+      
+      final bool success = await platform.invokeMethod<bool>(methodName, {
+        "bytes": pngBytes,
+        "filename": "glowmatch_card_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isShare 
+                  ? 'GlowCard siap dibagikan! 📲' 
+                  : 'GlowCard berhasil disimpan ke Galeri! 📸💖 (Folder: Pictures/GlowMatch)'),
+              backgroundColor: ThemeManager.primaryColor,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isShare ? 'Gagal membagikan GlowCard.' : 'Gagal menyimpan GlowCard ke Galeri.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error saving/sharing card: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingCard = false;
+        });
+      }
+    }
+  }
+  bool get isDark => ThemeManager.isDark;
+  Color get textColor => ThemeManager.textColor;
+  Color get textMutedColor => ThemeManager.textMutedColor;
+  Color get cardBgColor => ThemeManager.cardBgColor;
+  Color get cardBorderColor => ThemeManager.cardBorderColor;
+  Color get primaryColor => ThemeManager.primaryColor;
   String _selectedFilter = 'natural'; // 'natural', 'brightening', 'sunkissed'
   bool _isPremium = false;
 
@@ -75,9 +156,9 @@ class _ResultsPageState extends State<ResultsPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+         SnackBar(
           content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
-          backgroundColor: Color(0xFFE5A99E),
+          backgroundColor: primaryColor,
         ),
       );
     }
@@ -87,13 +168,13 @@ class _ResultsPageState extends State<ResultsPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: cardBgColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.2)),
+            border: Border.all(color: primaryColor.withOpacity(0.2)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -101,27 +182,27 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5A99E).withOpacity(0.1),
+                  color: primaryColor.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.stars_rounded, color: Color(0xFFE5A99E), size: 40),
+                child:  Icon(Icons.stars_rounded, color: primaryColor, size: 40),
               ),
               const SizedBox(height: 16),
-              const Text(
+               Text(
                 'Buka Fitur Premium',
-                style: TextStyle(color: const Color(0xFF3E3635), fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold),
                ),
               const SizedBox(height: 8),
-              const Text(
+               Text(
                 'Dapatkan analisis mendalam 12 Musim Warna (Seasonal Color) dan rekomendasi warna Hijab komersial tercocok dengan kulit Anda!',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: const Color(0xFF8E807E), fontSize: 13, height: 1.4),
+                style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE5A99E),
-                  foregroundColor: const Color(0xFFFCF9F6),
+                  backgroundColor: primaryColor,
+                  foregroundColor: cardBgColor,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -277,9 +358,9 @@ class _ResultsPageState extends State<ResultsPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+           SnackBar(
             content: Text('Terima kasih atas ulasan kecocokan Anda!'),
-            backgroundColor: Color(0xFFE5A99E),
+            backgroundColor: primaryColor,
             duration: Duration(milliseconds: 800),
           ),
         );
@@ -314,17 +395,22 @@ class _ResultsPageState extends State<ResultsPage> {
     );
     final filteredMatches = _getFilteredMatches(targetLab);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6), // Dark premium color
-      appBar: AppBar(
-        title: const Text(
-          'Hasil Pemindaian',
-          style: TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFFFFFFFF),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: ThemeManager.pageGradient,
       ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          title: Text(
+            'Hasil Pemindaian',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: textColor),
+        ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -335,10 +421,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: cardBorderColor, width: 1.5),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Row(
                   children: [
@@ -356,7 +442,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             spreadRadius: 2,
                           ),
                         ],
-                        border: Border.all(color: const Color(0xFF3E3635), width: 2),
+                        border: Border.all(color: textColor, width: 2),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -366,8 +452,8 @@ class _ResultsPageState extends State<ResultsPage> {
                         children: [
                           Text(
                             widget.matchedStandard.name,
-                            style: const TextStyle(
-                              color: Color(0xFFE5A99E),
+                            style:  TextStyle(
+                              color: primaryColor,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -392,7 +478,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             'HEX: #${widget.extractedRgb[0].toRadixString(16).padLeft(2, '0').toUpperCase()}'
                             '${widget.extractedRgb[1].toRadixString(16).padLeft(2, '0').toUpperCase()}'
                             '${widget.extractedRgb[2].toRadixString(16).padLeft(2, '0').toUpperCase()}',
-                            style: const TextStyle(color: const Color(0xFF8E807E), fontSize: 13, fontFamily: 'monospace'),
+                            style:  TextStyle(color: textMutedColor, fontSize: 13, fontFamily: 'monospace'),
                           ),
                           const SizedBox(height: 10),
                           InkWell(
@@ -401,19 +487,19 @@ class _ResultsPageState extends State<ResultsPage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE5A99E).withOpacity(0.12),
+                                color: primaryColor.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.3)),
+                                border: Border.all(color: primaryColor.withOpacity(0.3)),
                               ),
-                              child: const Row(
+                              child:  Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.qr_code_2_rounded, color: Color(0xFFE5A99E), size: 14),
+                                  Icon(Icons.qr_code_2_rounded, color: primaryColor, size: 14),
                                   SizedBox(width: 6),
                                   Text(
                                     'Glow Card 📸',
                                     style: TextStyle(
-                                      color: Color(0xFFE5A99E),
+                                      color: primaryColor,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -433,15 +519,15 @@ class _ResultsPageState extends State<ResultsPage> {
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFE5A99E), Color(0xFFC89E88)],
+                    gradient:  LinearGradient(
+                      colors: [primaryColor, Color(0xFFC89E88)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFE5A99E).withOpacity(0.3),
+                        color: primaryColor.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -481,12 +567,14 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E38).withOpacity(0.5),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorderColor, width: 1.2),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Text(
                   _getUndertoneExplanation(widget.matchedStandard.undertone),
-                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 13, height: 1.5),
+                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 13, height: 1.5),
                 ),
               ),
               const SizedBox(height: 20),
@@ -499,7 +587,7 @@ class _ResultsPageState extends State<ResultsPage> {
               Text(
                 'Preferensi Tampilan Riasan',
                 style: TextStyle(
-                  color: Color(0xFF3E3635).withOpacity(0.8),
+                  color: textColor.withOpacity(0.8),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -509,10 +597,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: cardBorderColor, width: 1.5),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Row(
                   children: [
@@ -528,10 +616,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                   Text(
                     'Rekomendasi Produk Cocok',
                     style: TextStyle(
-                      color: const Color(0xFF3E3635),
+                      color: textColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -539,7 +627,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   Text(
                     '${filteredMatches.length} Produk',
                     style: TextStyle(
-                      color: Color(0xFF8E807E).withOpacity(0.5),
+                      color: textMutedColor.withOpacity(0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -567,13 +655,15 @@ class _ResultsPageState extends State<ResultsPage> {
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFFFF),
+                            color: cardBgColor,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: index == 0
-                                  ? const Color(0xFFE5A99E).withOpacity(0.3)
-                                  : Colors.white.withOpacity(0.05),
+                                  ? primaryColor.withOpacity(0.4)
+                                  : cardBorderColor.withOpacity(0.45),
+                              width: 1.5,
                             ),
+                            boxShadow: ThemeManager.premiumGlowShadow,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,7 +678,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                     decoration: BoxDecoration(
                                       color: productShadeColor,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                                      border: Border.all(color: cardBorderColor.withOpacity(0.35)),
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -598,8 +688,8 @@ class _ResultsPageState extends State<ResultsPage> {
                                       children: [
                                         Text(
                                           product.brand,
-                                          style: const TextStyle(
-                                            color: Color(0xFFE5A99E),
+                                          style:  TextStyle(
+                                            color: primaryColor,
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             letterSpacing: 0.5,
@@ -608,8 +698,8 @@ class _ResultsPageState extends State<ResultsPage> {
                                         const SizedBox(height: 2),
                                         Text(
                                           product.productName,
-                                          style: const TextStyle(
-                                            color: const Color(0xFF3E3635),
+                                          style:  TextStyle(
+                                            color: textColor,
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -618,7 +708,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         Text(
                                           'Shade: ${product.shadeName}',
                                           style: TextStyle(
-                                            color: Color(0xFF3E3635).withOpacity(0.8),
+                                            color: textColor.withOpacity(0.8),
                                             fontSize: 12,
                                           ),
                                         ),
@@ -632,14 +722,14 @@ class _ResultsPageState extends State<ResultsPage> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFE5A99E).withOpacity(0.15),
+                                          color: primaryColor.withOpacity(0.15),
                                           borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.4)),
+                                          border: Border.all(color: primaryColor.withOpacity(0.4)),
                                         ),
                                         child: Text(
                                           '${matchPercentage.toStringAsFixed(0)}% Cocok',
-                                          style: const TextStyle(
-                                            color: Color(0xFFE5A99E),
+                                          style:  TextStyle(
+                                            color: primaryColor,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -649,7 +739,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                       Text(
                                         'Jarak: ${deltaE.toStringAsFixed(1)} ΔE',
                                         style: TextStyle(
-                                          color: Color(0xFF8E807E).withOpacity(0.5),
+                                          color: textMutedColor.withOpacity(0.5),
                                           fontSize: 10,
                                         ),
                                       ),
@@ -660,7 +750,7 @@ class _ResultsPageState extends State<ResultsPage> {
                               const SizedBox(height: 14),
 
                               // Umpan Balik / Community Validation Loop
-                              const Divider(color: Colors.white10, height: 1),
+                              Divider(color: cardBorderColor.withOpacity(0.15), height: 1),
                               const SizedBox(height: 10),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -671,13 +761,13 @@ class _ResultsPageState extends State<ResultsPage> {
                                     children: [
                                       Text(
                                         'ULASAN KECOCOKAN KOMUNITAS:',
-                                        style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold),
                                       ),
                                       const SizedBox(height: 4),
                                       totalFeedback == 0
-                                          ? const Text(
+                                          ?  Text(
                                               'Belum ada ulasan',
-                                              style: TextStyle(color: const Color(0xFF8E807E), fontSize: 10, fontStyle: FontStyle.italic),
+                                              style: TextStyle(color: textMutedColor, fontSize: 10, fontStyle: FontStyle.italic),
                                             )
                                           : Row(
                                               children: [
@@ -685,21 +775,21 @@ class _ResultsPageState extends State<ResultsPage> {
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   '${product.perfectCount}',
-                                                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 const Icon(Icons.dark_mode_rounded, color: Colors.amberAccent, size: 10),
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   '${product.tooDarkCount}',
-                                                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 const Icon(Icons.light_mode_rounded, color: Colors.orangeAccent, size: 10),
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   '${product.tooLightCount}',
-                                                  style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                                 ),
                                               ],
                                             ),
@@ -763,9 +853,9 @@ class _ResultsPageState extends State<ResultsPage> {
                                   Expanded(
                                     child: ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFE5A99E).withOpacity(0.12),
-                                        foregroundColor: const Color(0xFFE5A99E),
-                                        side: BorderSide(color: const Color(0xFFE5A99E).withOpacity(0.3)),
+                                        backgroundColor: primaryColor.withOpacity(0.12),
+                                        foregroundColor: primaryColor,
+                                        side: BorderSide(color: primaryColor.withOpacity(0.3)),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
                                         ),
@@ -794,6 +884,7 @@ class _ResultsPageState extends State<ResultsPage> {
           ),
         ),
       ),
+     ),
     );
   }
 
@@ -845,22 +936,22 @@ class _ResultsPageState extends State<ResultsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: [
-          Icon(Icons.sentiment_dissatisfied_outlined, color: Color(0xFF8E807E).withOpacity(0.5), size: 48),
+          Icon(Icons.sentiment_dissatisfied_outlined, color: textMutedColor.withOpacity(0.5), size: 48),
           SizedBox(height: 12),
           Text(
             'Tidak ada kosmetik yang sangat pas.',
-            style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontWeight: FontWeight.bold),
+            style: TextStyle(color: textColor.withOpacity(0.8), fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 6),
           Text(
             'Coba pindai wajah lagi di bawah pencahayaan berbeda atau hapus filter kosmetik Anda.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 12),
+            style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 12),
           ),
         ],
       ),
@@ -881,13 +972,13 @@ class _ResultsPageState extends State<ResultsPage> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFFE5A99E)
-                : const Color(0xFFFCF9F6),
+                ? primaryColor
+                : cardBgColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFFE5A99E)
-                  : const Color(0xFFF2ECE7),
+                  ? primaryColor
+                  : cardBorderColor,
               width: 1,
             ),
           ),
@@ -896,14 +987,14 @@ class _ResultsPageState extends State<ResultsPage> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : const Color(0xFF8E807E),
+                color: isSelected ? Colors.white : textMutedColor,
                 size: 18,
               ),
               const SizedBox(height: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF3E3635),
+                  color: isSelected ? Colors.white : textColor,
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 ),
@@ -927,13 +1018,13 @@ class _ResultsPageState extends State<ResultsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: _isPremium 
-              ? const Color(0xFFE5A99E).withOpacity(0.2) 
-              : Colors.white.withOpacity(0.05),
+          color: cardBorderColor.withOpacity(0.55),
+          width: 1.5,
         ),
+        boxShadow: ThemeManager.premiumGlowShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -942,14 +1033,14 @@ class _ResultsPageState extends State<ResultsPage> {
             children: [
               Icon(
                 Icons.palette_rounded, 
-                color: _isPremium ? const Color(0xFFE5A99E) : Colors.white38,
+                color: _isPremium ? primaryColor : Colors.white38,
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Text(
+               Text(
                 'Seasonal Color & Hijab (Premium)',
                 style: TextStyle(
-                  color: const Color(0xFF3E3635),
+                  color: textColor,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -959,16 +1050,16 @@ class _ResultsPageState extends State<ResultsPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE5A99E).withOpacity(0.15),
+                    color: primaryColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child:  Row(
                     children: [
-                      Icon(Icons.lock_rounded, color: Color(0xFFE5A99E), size: 12),
+                      Icon(Icons.lock_rounded, color: primaryColor, size: 12),
                       SizedBox(width: 4),
                       Text(
                         'Locked',
-                        style: TextStyle(color: Color(0xFFE5A99E), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -985,12 +1076,12 @@ class _ResultsPageState extends State<ResultsPage> {
                   children: [
                     Text(
                       'Tipe Musim Warna Anda: ?????',
-                      style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Analisis dinamis warna kulit Anda berdasarkan temperatur, saturasi, dan tingkat kecerahan untuk mencarikan kecocokan palet warna.',
-                      style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.6), fontSize: 12, height: 1.4),
+                      style: TextStyle(color: textMutedColor.withOpacity(0.6), fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -1008,15 +1099,15 @@ class _ResultsPageState extends State<ResultsPage> {
                 ),
                 Positioned.fill(
                   child: Container(
-                    color: const Color(0xFFFFFFFF).withOpacity(0.7),
+                    color: cardBgColor.withOpacity(0.7),
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5A99E),
-                              foregroundColor: const Color(0xFFFCF9F6),
+                              backgroundColor: primaryColor,
+                              foregroundColor: cardBgColor,
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
@@ -1035,8 +1126,8 @@ class _ResultsPageState extends State<ResultsPage> {
             // Tampilan Premium Terbuka
             Text(
               'Tipe Musim Warna Anda: $season',
-              style: const TextStyle(
-                color: Color(0xFFE5A99E),
+              style:  TextStyle(
+                color: primaryColor,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -1044,12 +1135,12 @@ class _ResultsPageState extends State<ResultsPage> {
             const SizedBox(height: 8),
             Text(
               description,
-              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 12, height: 1.4),
+              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 12, height: 1.4),
             ),
             const SizedBox(height: 16),
             Text(
               'Palet Warna Kosmetik Rekomendasi:',
-              style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(color: textMutedColor.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Row(
@@ -1062,7 +1153,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: color,
-                    border: Border.all(color: Color(0xFF8E807E).withOpacity(0.4), width: 1),
+                    border: Border.all(color: textMutedColor.withOpacity(0.4), width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: color.withOpacity(0.4),
@@ -1075,11 +1166,11 @@ class _ResultsPageState extends State<ResultsPage> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            const Divider(color: Colors.white10),
+            Divider(color: cardBorderColor.withOpacity(0.15)),
             const SizedBox(height: 12),
-            const Text(
+             Text(
               'Warna Hijab Terbaik untuk Kulit Anda:',
-              style: TextStyle(color: const Color(0xFF3E3635), fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -1092,10 +1183,10 @@ class _ResultsPageState extends State<ResultsPage> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.03),
+                    color: cardBgColor,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                    border: Border.all(color: cardBorderColor, width: 1.2),
+                    boxShadow: ThemeManager.premiumGlowShadow,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1111,7 +1202,7 @@ class _ResultsPageState extends State<ResultsPage> {
                       const SizedBox(width: 8),
                       Text(
                         name,
-                        style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11),
+                        style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 11),
                       ),
                     ],
                   ),
@@ -1176,250 +1267,288 @@ class _ResultsPageState extends State<ResultsPage> {
           body: Center(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Area Kartu yang akan di-screenshot oleh user (Rasio ~9:16)
-                    Container(
+                    // Area Kartu (Rasio 9:16 vertikal penuh)
+                    RepaintBoundary(
+                      key: _singleGlowCardKey,
+                      child: Container(
+                        width: MediaQuery.of(context).size.width * 0.9,
+                        constraints: const BoxConstraints(maxWidth: 360, maxHeight: 600),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(34),
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFBF953F), // Dark Gold
-                            Color(0xFFFCF6BA), // Light Gold
-                            Color(0xFFB38728), // Dark Gold
-                            Color(0xFFFBF5B7), // Light Gold
-                            Color(0xFFAA771C), // Gold
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: const Color(0xFFBF953F), // Selalu emas berkilau
+                          width: 2.0,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFB38728).withOpacity(0.55),
+                            color: const Color(0xFFBF953F).withOpacity(0.45),
                             blurRadius: 32,
-                            spreadRadius: 4,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(2), // Gold sparkling border
-                      child: Container(
-                        width: double.infinity,
-                        constraints: const BoxConstraints(maxWidth: 360),
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF0F0F1A), // Premium Dark Velvet
-                              Color(0xFF1C1B2E), // Premium Night Sky
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(32),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: Stack(
+                          fit: StackFit.expand,
                           children: [
-                            // Header Kartu
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Text(
-                                          'GLOW CARD',
-                                          style: TextStyle(
-                                            color: Color(0xFFFCF6BA),
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 2,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const Icon(
-                                          Icons.auto_awesome,
-                                          color: Color(0xFFFCF6BA),
-                                          size: 16,
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      'Kecocokan Warna Kulit Persona',
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.5),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
+                            // Latar belakang foto asli pengguna
+                            widget.galleryFilePath != null && File(widget.galleryFilePath!).existsSync()
+                                ? Image.file(
+                                    File(widget.galleryFilePath!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Color(0xFF0F0F1A), Color(0xFF1E1E2F)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
                                       ),
                                     ),
+                                  ),
+                            // Overlay Gelap Gradien untuk Kontras Tulisan Emas
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.65),
+                                    Colors.black.withOpacity(0.1),
+                                    Colors.black.withOpacity(0.75),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt_rounded,
-                                    color: Color(0xFFFCF6BA),
-                                    size: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 28),
-
-                            // Lingkaran Swatch Warna Kulit Pengguna
-                            Container(
-                              height: 100,
-                              width: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]),
-                                border: Border.all(color: const Color(0xFFFCF6BA), width: 3),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]).withOpacity(0.6),
-                                    blurRadius: 24,
-                                    spreadRadius: 4,
-                                  ),
-                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              widget.matchedStandard.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              skinHex,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Baris Badge Karakteristik Warna
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _buildCardBadge(widget.matchedStandard.skinTone, Colors.blueAccent),
-                                const SizedBox(width: 8),
-                                _buildCardBadge('${widget.matchedStandard.undertone} Undertone', const Color(0xFFE5A99E)),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCardBadge('Musim Warna: $season', Colors.tealAccent),
-                            const SizedBox(height: 24),
-
-                            // Grid Palet Rekomendasi
-                            Text(
-                              'Palet Kosmetik Musiman Terbaik',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.6),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: paletteColors.map((hex) {
-                                final color = _getHexColor(hex);
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                                  height: 26,
-                                  width: 26,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: color,
-                                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Selebriti Kembar
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.04),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFBF953F).withOpacity(0.3), width: 1.2),
-                                boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
-                              ),
+                            // Konten Informasi GlowCard
+                            Padding(
+                              padding: const EdgeInsets.all(20.0),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    'Selebriti Kembaran Warna Kulit:',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
+                                  // Header Kartu melayang (Emas)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'GLOW CARD',
+                                            style: TextStyle(
+                                              color: Color(0xFFFCF6BA), // Emas
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 2,
+                                            ),
+                                          ),
+                                          Text(
+                                            'ANALISIS RONA KULIT AI',
+                                            style: TextStyle(
+                                              color: Color(0xFFFCF6BA),
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFBF953F).withOpacity(0.2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.auto_awesome,
+                                          color: Color(0xFFFCF6BA), // Emas
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  // Panel Kaca Info Utama (Glassmorphism sangat transparan)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: BackdropFilter(
+                                      filter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Blur tipis agar transparan jernih
+                                      child: Container(
+                                        padding: const EdgeInsets.all(18),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0F0F1A).withOpacity(0.02), // Sangat transparan (2%)
+                                          borderRadius: BorderRadius.circular(24),
+                                          border: Border.all(
+                                            color: const Color(0xFFBF953F).withOpacity(0.4),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                // Bulatan warna hasil deteksi
+                                                Container(
+                                                  height: 48,
+                                                  width: 48,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: Color.fromARGB(
+                                                      255,
+                                                      widget.extractedRgb[0],
+                                                      widget.extractedRgb[1],
+                                                      widget.extractedRgb[2],
+                                                    ),
+                                                    border: Border.all(
+                                                      color: const Color(0xFFFCF6BA), // Emas
+                                                      width: 2.5,
+                                                    ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Color.fromARGB(
+                                                          255,
+                                                          widget.extractedRgb[0],
+                                                          widget.extractedRgb[1],
+                                                          widget.extractedRgb[2],
+                                                        ).withOpacity(0.4),
+                                                        blurRadius: 10,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 14),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        widget.matchedStandard.name,
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        '${widget.matchedStandard.undertone} Undertone • ${widget.matchedStandard.skinTone}',
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 10.5,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const Divider(height: 20, color: Color(0xFFBF953F)),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                const Text(
+                                                  'Musim Warna:',
+                                                  style: TextStyle(
+                                                    color: Color(0xFFFCF6BA), // Emas
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFBF953F).withOpacity(0.2),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    season,
+                                                    style: const TextStyle(
+                                                      color: Color(0xFFFCF6BA), // Emas
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                const Text(
+                                                  'Selebriti Kembar:',
+                                                  style: TextStyle(
+                                                    color: Color(0xFFFCF6BA), // Emas
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  celebMatch,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFFFCF6BA), // Emas
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    celebMatch,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFFFCF6BA),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                  const SizedBox(height: 16),
+                                  // Watermark di bagian paling bawah kartu (Emas)
+                                  const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        color: Color(0xFFFCF6BA),
+                                        size: 11,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Dibuat di GlowMatch AI Skin Scanner',
+                                        style: TextStyle(
+                                          color: Color(0xFFFCF6BA),
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-
-                            // Footer Promosi
-                            Text(
-                              'Dibuat Gratis di GlowMatch App',
-                              style: TextStyle(
-                                color: const Color(0xFFFCF6BA).withOpacity(0.8),
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-
+                    ),
                     const SizedBox(height: 24),
-
-                    // Kontrol Aksi di Bawah Kartu
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Tombol Aksi di Bawah Kartu
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
                       children: [
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white.withOpacity(0.1),
                             foregroundColor: Colors.white,
                             side: const BorderSide(color: Colors.white24),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          icon: const Icon(Icons.copy_all_rounded, size: 18),
-                          label: const Text('Salin Info Kartu 📋', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          icon: const Icon(Icons.copy_all_rounded, size: 16),
+                          label: const Text('Salin Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(
                               text: '✨ GlowMatch Skin Profile ✨\n'
@@ -1430,25 +1559,47 @@ class _ResultsPageState extends State<ResultsPage> {
                                   'Cari tahu kecocokan warna kulitmu gratis di aplikasi GlowMatch!',
                             ));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Info profil berhasil disalin ke clipboard!'),
-                                backgroundColor: Color(0xFFE5A99E),
+                              SnackBar(
+                                content: const Text('Info profil berhasil disalin ke clipboard!'),
+                                backgroundColor: primaryColor,
                               ),
                             );
                           },
                         ),
-                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.1),
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.download_rounded, size: 16),
+                          label: const Text('Simpan Foto', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          onPressed: () => _saveOrShareGlowCard(_singleGlowCardKey, false),
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.share_rounded, size: 16),
+                          label: const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          onPressed: () => _saveOrShareGlowCard(_singleGlowCardKey, true),
+                        ),
                         IconButton(
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.redAccent.withOpacity(0.15),
                             foregroundColor: Colors.redAccent,
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(10),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                               side: const BorderSide(color: Colors.redAccent, width: 0.5),
                             ),
                           ),
-                          icon: const Icon(Icons.close_rounded, size: 20),
+                          icon: const Icon(Icons.close_rounded, size: 18),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -1456,7 +1607,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const SizedBox(height: 12),
                     Text(
                       '💡 Tips: Silakan screenshot kartu di atas untuk dibagikan!',
-                      style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 11),
+                      style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 11),
                     ),
                   ],
                 ),
@@ -1465,15 +1616,8 @@ class _ResultsPageState extends State<ResultsPage> {
           ),
         );
       },
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          child: child,
-        );
-      },
     );
   }
-
   Widget _buildCardBadge(String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1550,16 +1694,10 @@ class _ResultsPageState extends State<ResultsPage> {
       builder: (context) {
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFFCF9F6),
+            color: ThemeManager.scaffoldBgColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFE5A99E).withOpacity(0.08),
-                blurRadius: 24,
-                spreadRadius: 2,
-              ),
-            ],
+            border: Border.all(color: cardBorderColor.withOpacity(0.4), width: 1.5),
+            boxShadow: ThemeManager.premiumGlowShadow,
           ),
           padding: const EdgeInsets.only(top: 12, left: 24, right: 24, bottom: 24),
           child: Column(
@@ -1571,7 +1709,7 @@ class _ResultsPageState extends State<ResultsPage> {
                   height: 4,
                   width: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: cardBorderColor.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1583,21 +1721,21 @@ class _ResultsPageState extends State<ResultsPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5A99E).withOpacity(0.15),
+                      color: primaryColor.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child:  Icon(
                       Icons.discount_rounded,
-                      color: Color(0xFFE5A99E),
+                      color: primaryColor,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                   Expanded(
                     child: Text(
                       'AI Makeup Dupe Finder 🏷️',
                       style: TextStyle(
-                        color: const Color(0xFF3E3635),
+                        color: textColor,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1608,21 +1746,21 @@ class _ResultsPageState extends State<ResultsPage> {
               const SizedBox(height: 12),
               RichText(
                 text: TextSpan(
-                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11.5, height: 1.5),
+                  style: TextStyle(color: textMutedColor.withOpacity(0.85), fontSize: 11.5, height: 1.5),
                   children: [
                     const TextSpan(text: 'Padanan alternatif warna terdekat untuk:\n'),
                     TextSpan(
                       text: '${sourceProduct.brand} - ${sourceProduct.productName}',
-                      style: const TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold),
+                      style:  TextStyle(color: textColor, fontWeight: FontWeight.bold),
                     ),
                     TextSpan(
                       text: ' (${sourceProduct.shadeName})',
-                      style: const TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold),
+                      style:  TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
-              const Divider(color: Colors.white10, height: 28),
+              Divider(color: cardBorderColor.withOpacity(0.25), height: 28),
 
               ConstrainedBox(
                 constraints: BoxConstraints(
@@ -1633,7 +1771,11 @@ class _ResultsPageState extends State<ResultsPage> {
                     : ListView.separated(
                         shrinkWrap: true,
                         itemCount: dupes.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => Divider(
+                              color: cardBorderColor.withOpacity(0.45),
+                              height: 20,
+                              thickness: 1.2,
+                            ),
                         itemBuilder: (context, index) {
                           final item = dupes[index];
                           final ProductShade dupe = item['product'] as ProductShade;
@@ -1652,11 +1794,9 @@ class _ResultsPageState extends State<ResultsPage> {
                           }
 
                           return Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.02),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white.withOpacity(0.04)),
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: const BoxDecoration(
+                              color: Colors.transparent,
                             ),
                             child: Row(
                               children: [
@@ -1666,7 +1806,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                   decoration: BoxDecoration(
                                     color: dupeColor,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                                    border: Border.all(color: cardBorderColor, width: 1.5),
                                     boxShadow: [
                                       BoxShadow(
                                         color: dupeColor.withOpacity(0.4),
@@ -1683,8 +1823,8 @@ class _ResultsPageState extends State<ResultsPage> {
                                     children: [
                                       Text(
                                         dupe.brand,
-                                        style: const TextStyle(
-                                          color: Color(0xFFE5A99E),
+                                        style:  TextStyle(
+                                          color: primaryColor,
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.5,
@@ -1695,8 +1835,8 @@ class _ResultsPageState extends State<ResultsPage> {
                                         dupe.productName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: const Color(0xFF3E3635),
+                                        style:  TextStyle(
+                                          color: textColor,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -1706,7 +1846,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                         children: [
                                           Text(
                                             'Shade: ${dupe.shadeName}',
-                                            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                                            style: TextStyle(color: textMutedColor.withOpacity(0.85), fontSize: 11),
                                           ),
                                           const SizedBox(width: 8),
                                           Container(
@@ -1731,8 +1871,8 @@ class _ResultsPageState extends State<ResultsPage> {
                                   children: [
                                     Text(
                                       '${matchPercentage.toStringAsFixed(1)}%',
-                                      style: const TextStyle(
-                                        color: Color(0xFFE5A99E),
+                                      style:  TextStyle(
+                                        color: primaryColor,
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -1744,18 +1884,18 @@ class _ResultsPageState extends State<ResultsPage> {
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.05),
+                                          color: cardBgColor,
                                           borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                                          border: Border.all(color: cardBorderColor.withOpacity(0.5), width: 1.0),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.shopping_bag_outlined, color: Color(0xFF3E3635).withOpacity(0.8), size: 10),
+                                            Icon(Icons.shopping_bag_outlined, color: textColor.withOpacity(0.8), size: 10),
                                             SizedBox(width: 4),
                                             Text(
                                               'Beli 🛒',
-                                              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                                              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
                                             ),
                                           ],
                                         ),
@@ -1773,7 +1913,7 @@ class _ResultsPageState extends State<ResultsPage> {
               Center(
                 child: Text(
                   '💡 Keakuratan warna dihitung luring berdasarkan data CIEDE2000.',
-                  style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 9.5),
+                  style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9.5),
                 ),
               ),
             ],
@@ -1790,17 +1930,17 @@ class _ResultsPageState extends State<ResultsPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.layers_clear_outlined, color: Colors.white.withOpacity(0.15), size: 48),
+          Icon(Icons.layers_clear_outlined, color: textMutedColor.withOpacity(0.35), size: 48),
           const SizedBox(height: 12),
           Text(
             'Tidak ditemukan dupe alternatif',
-            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
             'Belum ada produk dari brand lain dengan toleransi warna mendekati.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 10.5),
+            style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 10.5),
           ),
         ],
       ),
@@ -1859,17 +1999,22 @@ class _ResultsPageState extends State<ResultsPage> {
       compatibilityDesc = 'Rona undertone kalian saling melengkapi satu sama lain! Kombinasi yang unik antara kehangatan (Warm) dan kesegaran (Cool) membuat kalian saling menyempurnakan.';
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F6),
-      appBar: AppBar(
-        title: const Text(
-          'Couple & Bestie Matcher 👥',
-          style: TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        backgroundColor: const Color(0xFFFFFFFF),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: ThemeManager.pageGradient,
       ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          title: Text(
+            'Couple & Bestie Matcher 👥',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: textColor),
+        ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -1879,10 +2024,10 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: cardBorderColor, width: 1.5),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Column(
                   children: [
@@ -1893,7 +2038,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               Text(
                                 'Kamu 👤',
-                                style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 10),
                               Container(
@@ -1908,17 +2053,17 @@ class _ResultsPageState extends State<ResultsPage> {
                                       blurRadius: 12,
                                     ),
                                   ],
-                                  border: Border.all(color: const Color(0xFF3E3635), width: 2),
+                                  border: Border.all(color: textColor, width: 2),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 shade1.undertone,
-                                style: const TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold, fontSize: 13),
+                                style:  TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                               Text(
                                 shade1.name,
-                                style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11),
+                                style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 11),
                               ),
                             ],
                           ),
@@ -1933,7 +2078,7 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               Text(
                                 'Partner / Bestie 👥',
-                                style: TextStyle(color: Color(0xFF8E807E).withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 10),
                               Container(
@@ -1948,17 +2093,17 @@ class _ResultsPageState extends State<ResultsPage> {
                                       blurRadius: 12,
                                     ),
                                   ],
-                                  border: Border.all(color: const Color(0xFF3E3635), width: 2),
+                                  border: Border.all(color: textColor, width: 2),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 shade2.undertone,
-                                style: const TextStyle(color: Color(0xFFE5A99E), fontWeight: FontWeight.bold, fontSize: 13),
+                                style:  TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                               Text(
                                 shade2.name,
-                                style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11),
+                                style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 11),
                               ),
                             ],
                           ),
@@ -1970,8 +2115,8 @@ class _ResultsPageState extends State<ResultsPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE5A99E),
-                          foregroundColor: const Color(0xFFFCF9F6),
+                          backgroundColor: primaryColor,
+                          foregroundColor: cardBgColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -2000,18 +2145,18 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: cardBorderColor, width: 1.5),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                     Text(
                       'UNDERTONE COMPATIBILITY INDEX 🔬',
                       style: TextStyle(
-                        color: Color(0xFFE5A99E),
+                        color: primaryColor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,
@@ -2023,13 +2168,13 @@ class _ResultsPageState extends State<ResultsPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE5A99E).withOpacity(0.15),
+                            color: primaryColor.withOpacity(0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Text(
                             '$compatibilityScore%',
-                            style: const TextStyle(
-                              color: Color(0xFFE5A99E),
+                            style:  TextStyle(
+                              color: primaryColor,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2042,12 +2187,12 @@ class _ResultsPageState extends State<ResultsPage> {
                             children: [
                               Text(
                                 compatibilityTitle,
-                                style: const TextStyle(color: const Color(0xFF3E3635), fontWeight: FontWeight.bold, fontSize: 14),
+                                style:  TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 compatibilityDesc,
-                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11.5, height: 1.4),
+                                style: TextStyle(color: textMutedColor.withOpacity(0.85), fontSize: 11.5, height: 1.4),
                               ),
                             ],
                           ),
@@ -2062,18 +2207,18 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: cardBorderColor, width: 1.5),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                     Text(
                       'HARMONIOUS COUPLE OUTFIT COLORS 👗👔',
                       style: TextStyle(
-                        color: Color(0xFFE5A99E),
+                        color: primaryColor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,
@@ -2082,7 +2227,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     const SizedBox(height: 6),
                     Text(
                       'Warna pakaian yang direkomendasikan saat kalian berfoto atau hangout bersama agar terlihat kompak dan saling bersinar:',
-                      style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                      style: TextStyle(color: textMutedColor.withOpacity(0.85), fontSize: 11),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -2099,7 +2244,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                 decoration: BoxDecoration(
                                   color: color,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
+                                  border: Border.all(color: cardBorderColor, width: 1.5),
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -2107,7 +2252,7 @@ class _ResultsPageState extends State<ResultsPage> {
                                 name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 9.5, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 9.5, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -2122,18 +2267,18 @@ class _ResultsPageState extends State<ResultsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: cardBorderColor, width: 1.5),
+                  boxShadow: ThemeManager.premiumGlowShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                     Text(
                       'CELEBRITY COUPLE INSPIRATION 🌟',
                       style: TextStyle(
-                        color: Color(0xFFE5A99E),
+                        color: primaryColor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,
@@ -2142,12 +2287,12 @@ class _ResultsPageState extends State<ResultsPage> {
                     const SizedBox(height: 12),
                     Text(
                       _getCoupleCelebrityInspiration(undertone1, undertone2),
-                      style: const TextStyle(color: const Color(0xFF3E3635), fontSize: 13, fontWeight: FontWeight.bold),
+                      style:  TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Mereka adalah contoh selebriti dengan kecocokan rona warna kulit serupa dengan kalian berdua.',
-                      style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                      style: TextStyle(color: textMutedColor.withOpacity(0.4), fontSize: 11),
                     ),
                   ],
                 ),
@@ -2156,6 +2301,7 @@ class _ResultsPageState extends State<ResultsPage> {
           ),
         ),
       ),
+     ),
     );
   }
 
@@ -2182,263 +2328,383 @@ class _ResultsPageState extends State<ResultsPage> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Couple Glow Card',
+      barrierColor: Colors.black.withOpacity(0.85),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.85,
-              height: MediaQuery.of(context).size.height * 0.75,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFBF953F), // Dark Gold
-                    Color(0xFFFCF6BA), // Light Gold
-                    Color(0xFFB38728), // Dark Gold
-                    Color(0xFFFBF5B7), // Light Gold
-                    Color(0xFFAA771C), // Gold
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFB38728).withOpacity(0.55),
-                    blurRadius: 32,
-                    spreadRadius: 4,
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(2), // Gold sparkling border
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF0F0F1A), // Premium Dark Velvet
-                      Color(0xFF1C1B2E), // Premium Night Sky
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                padding: const EdgeInsets.all(24),
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              'GLOW CARD',
-                              style: TextStyle(
-                                color: Color(0xFFFCF6BA),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.auto_awesome, color: Color(0xFFFCF6BA), size: 13),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFCF6BA).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'COUPLE MODE',
-                            style: TextStyle(color: Color(0xFFFCF6BA), fontSize: 9, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-
-                    const Text(
-                      'Dual Skin Harmony ✨',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Pencocokan undertone & rona kulit presisi tinggi',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11),
-                    ),
-                    const Spacer(),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Container(
-                                height: 70,
-                                width: 70,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: color1,
-                                  border: Border.all(color: const Color(0xFFFCF6BA), width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: color1.withOpacity(0.4),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Kamu 👤',
-                                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                shade1.undertone,
-                                style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '#${color1.value.toRadixString(16).substring(2).toUpperCase()}',
-                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE5A99E).withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.favorite, color: Color(0xFFE5A99E), size: 18),
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Container(
-                                height: 70,
-                                width: 70,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: color2,
-                                  border: Border.all(color: const Color(0xFFFCF6BA), width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: color2.withOpacity(0.4),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Bestie 👥',
-                                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                shade2.undertone,
-                                style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '#${color2.value.toRadixString(16).substring(2).toUpperCase()}',
-                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
+                    // Area Kartu (Rasio 9:16 vertikal penuh)
+                    RepaintBoundary(
+                      key: _singleGlowCardKey,
+                      child: Container(
+                        width: MediaQuery.of(context).size.width * 0.9,
+                        constraints: const BoxConstraints(maxWidth: 360, maxHeight: 600),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFBF953F).withOpacity(0.3)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Text(
-                            'Scan Undertone & Rona Kulit Aslimu',
-                            style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Download GlowMatch di PlayStore sekarang 📱',
-                            style: TextStyle(color: Color(0xFFFCF6BA), fontSize: 9.5, fontWeight: FontWeight.bold),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: const Color(0xFFBF953F), // Selalu emas berkilau
+                          width: 2.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFBF953F).withOpacity(0.45),
+                            blurRadius: 32,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
-                    ),
-                    const Spacer(),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.05),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: Colors.white12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              elevation: 0,
-                            ),
-                            onPressed: () {
-                              final text = 'GlowCard Couple Mode matched! Rona saya: ${shade1.name} (${shade1.undertone}) & Partner saya: ${shade2.name} (${shade2.undertone}). Cek warna kulitmu di GlowMatch!';
-                              Clipboard.setData(ClipboardData(text: text));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Info profil disalin ke clipboard 📋'),
-                                  backgroundColor: Color(0xFFE5A99E),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Latar belakang foto asli pengguna (jepretan berdua)
+                            widget.galleryFilePath != null && File(widget.galleryFilePath!).existsSync()
+                                ? Image.file(
+                                    File(widget.galleryFilePath!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Color(0xFF0F0F1A), Color(0xFF1E1E2F)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                  ),
+                            // Overlay Gelap Gradien untuk Kontras Tulisan
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.65),
+                                    Colors.black.withOpacity(0.1),
+                                    Colors.black.withOpacity(0.75),
+                                  ],
                                 ),
-                              );
-                            },
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.copy, size: 14),
-                                SizedBox(width: 6),
-                                Text('Salin Text', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                              ],
+                              ),
                             ),
-                          ),
+                            // Konten Informasi Couple GlowCard
+                            Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Header Kartu melayang (Emas)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'GLOW CARD',
+                                            style: TextStyle(
+                                              color: Color(0xFFFCF6BA), // Emas
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 2,
+                                            ),
+                                          ),
+                                          Text(
+                                            'ANALISIS HARMONI COUPLE',
+                                            style: TextStyle(
+                                              color: Color(0xFFFCF6BA),
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFBF953F).withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Text(
+                                          'COUPLE MODE',
+                                          style: TextStyle(
+                                            color: Color(0xFFFCF6BA), // Emas
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  // Panel Kaca Info Utama (Glassmorphism sangat transparan)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: BackdropFilter(
+                                      filter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Blur tipis agar transparan jernih
+                                      child: Container(
+                                        padding: const EdgeInsets.all(18),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0F0F1A).withOpacity(0.02), // Sangat transparan (2%)
+                                          borderRadius: BorderRadius.circular(24),
+                                          border: Border.all(
+                                            color: const Color(0xFFBF953F).withOpacity(0.4),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Text(
+                                              'Dual Skin Harmony ✨',
+                                              style: TextStyle(
+                                                color: Color(0xFFFCF6BA), // Emas
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 14),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                // Kolom Kiri - Kamu
+                                                Expanded(
+                                                  child: Column(
+                                                    children: [
+                                                      Container(
+                                                        height: 54,
+                                                        width: 54,
+                                                        decoration: BoxDecoration(
+                                                          shape: BoxShape.circle,
+                                                          color: color1,
+                                                          border: Border.all(
+                                                            color: const Color(0xFFFCF6BA), // Emas
+                                                            width: 2.0,
+                                                          ),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: color1.withOpacity(0.4),
+                                                              blurRadius: 10,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      const Text(
+                                                        'Kamu 👤',
+                                                        style: TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 11.5,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        shade1.undertone,
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '#${color1.value.toRadixString(16).substring(2).toUpperCase()}',
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 9,
+                                                          fontFamily: 'monospace',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // Ikon Hati di Tengah
+                                                Container(
+                                                  padding: const EdgeInsets.all(8),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFBF953F).withOpacity(0.2),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.favorite_rounded,
+                                                    color: Color(0xFFFCF6BA), // Emas
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                                // Kolom Kanan - Partner
+                                                Expanded(
+                                                  child: Column(
+                                                    children: [
+                                                      Container(
+                                                        height: 54,
+                                                        width: 54,
+                                                        decoration: BoxDecoration(
+                                                          shape: BoxShape.circle,
+                                                          color: color2,
+                                                          border: Border.all(
+                                                            color: const Color(0xFFFCF6BA), // Emas
+                                                            width: 2.0,
+                                                          ),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: color2.withOpacity(0.4),
+                                                              blurRadius: 10,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      const Text(
+                                                        'Partner 👥',
+                                                        style: TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 11.5,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        shade2.undertone,
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '#${color2.value.toRadixString(16).substring(2).toUpperCase()}',
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFFCF6BA), // Emas
+                                                          fontSize: 9,
+                                                          fontFamily: 'monospace',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const Divider(height: 24, color: Color(0xFFBF953F)),
+                                            const Text(
+                                              'Kecocokan Harmoni: 96% ✨',
+                                              style: TextStyle(
+                                                color: Color(0xFFFCF6BA), // Emas
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Watermark (Emas)
+                                  const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        color: Color(0xFFFCF6BA),
+                                        size: 11,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Dibuat di GlowMatch Couple Scanner',
+                                        style: TextStyle(
+                                          color: Color(0xFFFCF6BA),
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5A99E),
-                              foregroundColor: const Color(0xFFFCF9F6),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              elevation: 0,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Tutup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Tombol Aksi di Bawah
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.1),
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
+                          icon: const Icon(Icons.copy_all_rounded, size: 16),
+                          label: const Text('Salin Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          onPressed: () {
+                            final text = 'GlowCard Couple Mode matched! Rona saya: ${shade1.name} (${shade1.undertone}) & Partner saya: ${shade2.name} (${shade2.undertone}). Cek warna kulitmu di GlowMatch!';
+                            Clipboard.setData(ClipboardData(text: text));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Info profil disalin ke clipboard 📋'),
+                                backgroundColor: primaryColor,
+                              ),
+                            );
+                          },
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.1),
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.download_rounded, size: 16),
+                          label: const Text('Simpan Foto', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          onPressed: () => _saveOrShareGlowCard(_coupleGlowCardKey, false),
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.share_rounded, size: 16),
+                          label: const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          onPressed: () => _saveOrShareGlowCard(_coupleGlowCardKey, true),
+                        ),
+                        IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.redAccent.withOpacity(0.15),
+                            foregroundColor: Colors.redAccent,
+                            padding: const EdgeInsets.all(10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: Colors.redAccent, width: 0.5),
+                            ),
+                          ),
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       '📸 Screenshot layar ini untuk dibagikan ke IG/TikTok!',
-                      style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 9.5),
+                      style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 11),
                     ),
                   ],
                 ),
@@ -2450,3 +2716,4 @@ class _ResultsPageState extends State<ResultsPage> {
     );
   }
 }
+
