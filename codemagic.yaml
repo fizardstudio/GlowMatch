@@ -41,7 +41,7 @@ workflows:
       - name: Flutter get packages
         script: flutter pub get
       - name: Build iOS Device App
-        script: flutter build ios --debug --no-codesign -t lib/main.dart
+        script: flutter build ios --release --no-codesign -t lib/main.dart
       - name: Package IPA
         script: |
           mkdir -p Payload
