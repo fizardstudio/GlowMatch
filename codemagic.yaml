@@ -51,8 +51,8 @@ workflows:
     artifacts:
       - GlowMatch.ipa
 
-  android-debug:
-    name: Android Debug APK
+  android-release:
+    name: Android Release APK
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
@@ -67,6 +67,7 @@ workflows:
       - name: Flutter get packages
         script: flutter pub get
       - name: Build Android APK
-        script: flutter build apk --debug
+        script: flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/app/outputs/flutter-apk/app-release.apk
+
