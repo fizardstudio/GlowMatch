@@ -1182,204 +1182,228 @@ class _ResultsPageState extends State<ResultsPage> {
                   children: [
                     // Area Kartu yang akan di-screenshot oleh user (Rasio ~9:16)
                     Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(maxWidth: 360),
-                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(34),
                         gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFBF953F), // Dark Gold
+                            Color(0xFFFCF6BA), // Light Gold
+                            Color(0xFFB38728), // Dark Gold
+                            Color(0xFFFBF5B7), // Light Gold
+                            Color(0xFFAA771C), // Gold
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF1E1E38),
-                            Color(0xFFFCF9F6),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: const Color(0xFFE5A99E).withOpacity(0.3),
-                          width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE5A99E).withOpacity(0.1),
-                            blurRadius: 30,
-                            spreadRadius: 2,
+                            color: const Color(0xFFB38728).withOpacity(0.55),
+                            blurRadius: 32,
+                            spreadRadius: 4,
                           ),
                         ],
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Header Kartu
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'GLOW CARD',
-                                    style: TextStyle(
-                                      color: Color(0xFFE5A99E),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 2,
+                      padding: const EdgeInsets.all(2), // Gold sparkling border
+                      child: Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF0F0F1A), // Premium Dark Velvet
+                              Color(0xFF1C1B2E), // Premium Night Sky
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Header Kartu
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'GLOW CARD',
+                                          style: TextStyle(
+                                            color: Color(0xFFFCF6BA),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Icon(
+                                          Icons.auto_awesome,
+                                          color: Color(0xFFFCF6BA),
+                                          size: 16,
+                                        ),
+                                      ],
                                     ),
+                                    Text(
+                                      'Kecocokan Warna Kulit Persona',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    shape: BoxShape.circle,
                                   ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Color(0xFFFCF6BA),
+                                    size: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+
+                            // Lingkaran Swatch Warna Kulit Pengguna
+                            Container(
+                              height: 100,
+                              width: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]),
+                                border: Border.all(color: const Color(0xFFFCF6BA), width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]).withOpacity(0.6),
+                                    blurRadius: 24,
+                                    spreadRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              widget.matchedStandard.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              skinHex,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Baris Badge Karakteristik Warna
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildCardBadge(widget.matchedStandard.skinTone, Colors.blueAccent),
+                                const SizedBox(width: 8),
+                                _buildCardBadge('${widget.matchedStandard.undertone} Undertone', const Color(0xFFE5A99E)),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildCardBadge('Musim Warna: $season', Colors.tealAccent),
+                            const SizedBox(height: 24),
+
+                            // Grid Palet Rekomendasi
+                            Text(
+                              'Palet Kosmetik Musiman Terbaik',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.6),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: paletteColors.map((hex) {
+                                final color = _getHexColor(hex);
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 5),
+                                  height: 26,
+                                  width: 26,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: color,
+                                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Selebriti Kembar
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.04),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFBF953F).withOpacity(0.3), width: 1.2),
+                                boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
+                              ),
+                              child: Column(
+                                children: [
                                   Text(
-                                    'Kecocokan Warna Kulit Persona',
+                                    'Selebriti Kembaran Warna Kulit:',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
+                                      color: Colors.white.withOpacity(0.5),
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    celebMatch,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFFFCF6BA),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_rounded,
-                                  color: Color(0xFFE5A99E),
-                                  size: 16,
-                                ),
+                            ),
+                            const SizedBox(height: 28),
+
+                            // Footer Promosi
+                            Text(
+                              'Dibuat Gratis di GlowMatch App',
+                              style: TextStyle(
+                                color: const Color(0xFFFCF6BA).withOpacity(0.8),
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Lingkaran Swatch Warna Kulit Pengguna
-                          Container(
-                            height: 100,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]),
-                              border: Border.all(color: const Color(0xFF3E3635), width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color.fromARGB(255, widget.extractedRgb[0], widget.extractedRgb[1], widget.extractedRgb[2]).withOpacity(0.6),
-                                  blurRadius: 24,
-                                  spreadRadius: 4,
-                                ),
-                              ],
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            widget.matchedStandard.name,
-                            style: const TextStyle(
-                              color: const Color(0xFF3E3635),
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            skinHex,
-                            style: TextStyle(
-                              color: Color(0xFF8E807E).withOpacity(0.6),
-                              fontSize: 12,
-                              fontFamily: 'monospace',
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Baris Badge Karakteristik Warna
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildCardBadge(widget.matchedStandard.skinTone, Colors.blueAccent),
-                              const SizedBox(width: 8),
-                              _buildCardBadge('${widget.matchedStandard.undertone} Undertone', const Color(0xFFE5A99E)),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildCardBadge('Musim Warna: $season', Colors.tealAccent),
-                          const SizedBox(height: 24),
-
-                          // Grid Palet Rekomendasi
-                          const Text(
-                            'Palet Kosmetik Musiman Terbaik',
-                            style: TextStyle(
-                              color: const Color(0xFF8E807E),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: paletteColors.map((hex) {
-                              final color = _getHexColor(hex);
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 5),
-                                height: 26,
-                                width: 26,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: color,
-                                  border: Border.all(color: Color(0xFF8E807E).withOpacity(0.5), width: 1),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Selebriti Kembar
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.03),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFF2ECE7), width: 1.5),
-                  boxShadow: const [BoxShadow(color: Color(0x045A4A45), blurRadius: 10, offset: Offset(0, 4))],
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Selebriti Kembaran Warna Kulit:',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.3),
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  celebMatch,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: const Color(0xFF3E3635),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Footer Promosi
-                          Text(
-                            'Dibuat Gratis di GlowMatch App',
-                            style: TextStyle(
-                              color: const Color(0xFFE5A99E).withOpacity(0.6),
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
 
                     // Kontrol Aksi di Bawah Kartu
@@ -2169,231 +2193,255 @@ class _ResultsPageState extends State<ResultsPage> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFCF9F6), Color(0xFF1E1E38)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFBF953F), // Dark Gold
+                    Color(0xFFFCF6BA), // Light Gold
+                    Color(0xFFB38728), // Dark Gold
+                    Color(0xFFFBF5B7), // Light Gold
+                    Color(0xFFAA771C), // Gold
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: const Color(0xFFE5A99E).withOpacity(0.3), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFE5A99E).withOpacity(0.12),
-                    blurRadius: 30,
-                    spreadRadius: 2,
+                    color: const Color(0xFFB38728).withOpacity(0.55),
+                    blurRadius: 32,
+                    spreadRadius: 4,
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'GLOW CARD',
-                        style: TextStyle(
-                          color: Color(0xFFE5A99E),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5A99E).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'COUPLE MODE',
-                          style: TextStyle(color: Color(0xFFE5A99E), fontSize: 9, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+              padding: const EdgeInsets.all(2), // Gold sparkling border
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF0F0F1A), // Premium Dark Velvet
+                      Color(0xFF1C1B2E), // Premium Night Sky
                     ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  const Spacer(),
-
-                  const Text(
-                    'Dual Skin Harmony ✨',
-                    style: TextStyle(
-                      color: const Color(0xFF3E3635),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Pencocokan undertone & rona kulit presisi tinggi',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
-                  ),
-                  const Spacer(),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 70,
-                              width: 70,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: color1,
-                                border: Border.all(color: const Color(0xFF3E3635), width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: color1.withOpacity(0.4),
-                                    blurRadius: 10,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Kamu 👤',
-                              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              shade1.undertone,
-                              style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '#${color1.value.toRadixString(16).substring(2).toUpperCase()}',
-                              style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5A99E).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.favorite, color: Color(0xFFE5A99E), size: 18),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 70,
-                              width: 70,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: color2,
-                                border: Border.all(color: const Color(0xFF3E3635), width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: color2.withOpacity(0.4),
-                                    blurRadius: 10,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Bestie 👥',
-                              style: TextStyle(color: Color(0xFF3E3635).withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              shade2.undertone,
-                              style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '#${color2.value.toRadixString(16).substring(2).toUpperCase()}',
-                              style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.04)),
-                    ),
-                    child: const Column(
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Scan Undertone & Rona Kulit Aslimu',
-                          style: TextStyle(color: const Color(0xFF8E807E), fontSize: 10.5, fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            const Text(
+                              'GLOW CARD',
+                              style: TextStyle(
+                                color: Color(0xFFFCF6BA),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.auto_awesome, color: Color(0xFFFCF6BA), size: 13),
+                          ],
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Download GlowMatch di PlayStore sekarang 📱',
-                          style: TextStyle(color: Color(0xFFE5A99E), fontSize: 9.5, fontWeight: FontWeight.bold),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFCF6BA).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'COUPLE MODE',
+                            style: TextStyle(color: Color(0xFFFCF6BA), fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const Spacer(),
+                    const Spacer(),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.05),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(color: Colors.white12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            elevation: 0,
-                          ),
-                          onPressed: () {
-                            final text = 'GlowCard Couple Mode matched! Rona saya: ${shade1.name} (${shade1.undertone}) & Partner saya: ${shade2.name} (${shade2.undertone}). Cek warna kulitmu di GlowMatch!';
-                            Clipboard.setData(ClipboardData(text: text));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Info profil disalin ke clipboard 📋'),
-                                backgroundColor: Color(0xFFE5A99E),
-                              ),
-                            );
-                          },
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                    const Text(
+                      'Dual Skin Harmony ✨',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Pencocokan undertone & rona kulit presisi tinggi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11),
+                    ),
+                    const Spacer(),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
                             children: [
-                              Icon(Icons.copy, size: 14),
-                              SizedBox(width: 6),
-                              Text('Salin Text', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Container(
+                                height: 70,
+                                width: 70,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: color1,
+                                  border: Border.all(color: const Color(0xFFFCF6BA), width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color1.withOpacity(0.4),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Kamu 👤',
+                                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                shade1.undertone,
+                                style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '#${color1.value.toRadixString(16).substring(2).toUpperCase()}',
+                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE5A99E),
-                            foregroundColor: const Color(0xFFFCF9F6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            elevation: 0,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE5A99E).withOpacity(0.1),
+                            shape: BoxShape.circle,
                           ),
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Tutup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          child: const Icon(Icons.favorite, color: Color(0xFFE5A99E), size: 18),
                         ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Container(
+                                height: 70,
+                                width: 70,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: color2,
+                                  border: Border.all(color: const Color(0xFFFCF6BA), width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color2.withOpacity(0.4),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Bestie 👥',
+                                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                shade2.undertone,
+                                style: const TextStyle(color: Color(0xFFE5A99E), fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '#${color2.value.toRadixString(16).substring(2).toUpperCase()}',
+                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFBF953F).withOpacity(0.3)),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '📸 Screenshot layar ini untuk dibagikan ke IG/TikTok!',
-                    style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9.5),
-                  ),
-                ],
+                      child: const Column(
+                        children: [
+                          Text(
+                            'Scan Undertone & Rona Kulit Aslimu',
+                            style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Download GlowMatch di PlayStore sekarang 📱',
+                            style: TextStyle(color: Color(0xFFFCF6BA), fontSize: 9.5, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white.withOpacity(0.05),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: Colors.white12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              final text = 'GlowCard Couple Mode matched! Rona saya: ${shade1.name} (${shade1.undertone}) & Partner saya: ${shade2.name} (${shade2.undertone}). Cek warna kulitmu di GlowMatch!';
+                              Clipboard.setData(ClipboardData(text: text));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Info profil disalin ke clipboard 📋'),
+                                  backgroundColor: Color(0xFFE5A99E),
+                                ),
+                              );
+                            },
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.copy, size: 14),
+                                SizedBox(width: 6),
+                                Text('Salin Text', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFE5A99E),
+                              foregroundColor: const Color(0xFFFCF9F6),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Tutup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '📸 Screenshot layar ini untuk dibagikan ke IG/TikTok!',
+                      style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 9.5),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
