@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
 /// Kelas pembantu untuk pemrosesan citra digital (image processing) wajah.
@@ -72,6 +74,63 @@ class ImageProcessor {
     List<Map<String, int>> regions,
   ) {
     if (regions.isEmpty) return [0, 0, 0];
+
+    // Jika region ada 3 (pipi kiri, pipi kanan, dahi), lakukan validasi dahi (rambut/poni)
+    if (regions.length == 3) {
+      final leftCheekRgb = calculateAverageRgb(
+        srcImage,
+        startX: regions[0]['x'] ?? 0,
+        startY: regions[0]['y'] ?? 0,
+        width: regions[0]['w'] ?? 10,
+        height: regions[0]['h'] ?? 10,
+      );
+
+      final rightCheekRgb = calculateAverageRgb(
+        srcImage,
+        startX: regions[1]['x'] ?? 0,
+        startY: regions[1]['y'] ?? 0,
+        width: regions[1]['w'] ?? 10,
+        height: regions[1]['h'] ?? 10,
+      );
+
+      final foreheadRgb = calculateAverageRgb(
+        srcImage,
+        startX: regions[2]['x'] ?? 0,
+        startY: regions[2]['y'] ?? 0,
+        width: regions[2]['w'] ?? 10,
+        height: regions[2]['h'] ?? 10,
+      );
+
+      // Hitung rata-rata warna pipi (yang posisinya presisi karena terdeteksi oleh landmark ML Kit)
+      final double cheekAvgR = (leftCheekRgb[0] + rightCheekRgb[0]) / 2.0;
+      final double cheekAvgG = (leftCheekRgb[1] + rightCheekRgb[1]) / 2.0;
+      final double cheekAvgB = (leftCheekRgb[2] + rightCheekRgb[2]) / 2.0;
+
+      // Hitung jarak Euclidean RGB antara dahi dan rata-rata pipi
+      final double dist = sqrt(
+        pow(foreheadRgb[0] - cheekAvgR, 2) +
+        pow(foreheadRgb[1] - cheekAvgG, 2) +
+        pow(foreheadRgb[2] - cheekAvgB, 2)
+      );
+
+      // Jika jarak terlalu besar (threshold > 45), dahi kemungkinan tertutup rambut, poni, atau bayangan gelap.
+      // Kita abaikan dahi dan gunakan rata-rata pipi saja.
+      if (dist > 45.0) {
+        debugPrint("DEBUG_SCANNER: Forehead color too different from cheeks (dist: ${dist.toStringAsFixed(1)}). Ignoring forehead to prevent hair/bangs contamination.");
+        return [
+          cheekAvgR.round(),
+          cheekAvgG.round(),
+          cheekAvgB.round(),
+        ];
+      }
+
+      // Jika dahi aman (kulit bersih), gabungkan ketiganya
+      return [
+        ((leftCheekRgb[0] + rightCheekRgb[0] + foreheadRgb[0]) / 3.0).round(),
+        ((leftCheekRgb[1] + rightCheekRgb[1] + foreheadRgb[1]) / 3.0).round(),
+        ((leftCheekRgb[2] + rightCheekRgb[2] + foreheadRgb[2]) / 3.0).round(),
+      ];
+    }
 
     int totalR = 0;
     int totalG = 0;
