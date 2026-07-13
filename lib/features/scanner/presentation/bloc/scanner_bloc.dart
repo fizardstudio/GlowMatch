@@ -28,6 +28,8 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
   bool _isDetecting = false;
   CameraLensDirection _currentLensDirection = CameraLensDirection.front;
+  InputImageRotation? _activeRotation;
+  int _consecutiveFailureCount = 0;
 
   ScannerBloc({
     required ShadeMatcherRepository shadeMatcherRepository,
@@ -524,15 +526,96 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
   Future<List<Face>?> _processCameraImage(CameraImage image) async {
     try {
-      final inputImage = _inputImageFromCameraImage(image);
+      final camera = _cameraController?.description;
+      if (camera == null) return null;
+
+      // Tentukan rotasi awal jika belum ada
+      if (_activeRotation == null) {
+        final deviceOrientation = _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp;
+        final int deviceDegrees = _deviceOrientationToDegrees(deviceOrientation);
+        final int sensorOrientation = camera.sensorOrientation;
+        int rotationDegrees;
+        if (camera.lensDirection == CameraLensDirection.front) {
+          rotationDegrees = (sensorOrientation + deviceDegrees) % 360;
+        } else {
+          rotationDegrees = (sensorOrientation - deviceDegrees + 360) % 360;
+        }
+        
+        switch (rotationDegrees) {
+          case 0:
+            _activeRotation = InputImageRotation.rotation0deg;
+            break;
+          case 90:
+            _activeRotation = InputImageRotation.rotation90deg;
+            break;
+          case 180:
+            _activeRotation = InputImageRotation.rotation180deg;
+            break;
+          case 270:
+            _activeRotation = InputImageRotation.rotation270deg;
+            break;
+          default:
+            _activeRotation = InputImageRotation.rotation270deg;
+        }
+      }
+
+      final inputImage = _inputImageFromCameraImage(image, _activeRotation!);
       if (inputImage == null) return null;
-      return await _faceDetector.processImage(inputImage);
+
+      List<Face> faces = await _faceDetector.processImage(inputImage);
+      
+      if (faces.isNotEmpty) {
+        _consecutiveFailureCount = 0;
+        return faces;
+      } else {
+        _consecutiveFailureCount++;
+        // Jika gagal mendeteksi wajah selama 5 frame berturut-turut,
+        // cari rotasi alternatif secara dinamis (mungkin HP sedang diputar fisik).
+        if (_consecutiveFailureCount >= 5) {
+          final format = InputImageFormatValue.fromRawValue(image.format.raw);
+          if (format != null && image.planes.isNotEmpty) {
+            final bytes = image.planes.length > 1 ? _combineYuvPlanes(image) : image.planes.first.bytes;
+            final rotationsToTry = [
+              InputImageRotation.rotation0deg,
+              InputImageRotation.rotation90deg,
+              InputImageRotation.rotation180deg,
+              InputImageRotation.rotation270deg
+            ];
+            
+            for (final rot in rotationsToTry) {
+              if (rot == _activeRotation) continue;
+              
+              final testImage = InputImage.fromBytes(
+                bytes: bytes,
+                metadata: InputImageMetadata(
+                  size: Size(image.width.toDouble(), image.height.toDouble()),
+                  rotation: rot,
+                  format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
+                  bytesPerRow: image.planes.first.bytesPerRow,
+                ),
+              );
+              
+              final testFaces = await _faceDetector.processImage(testImage);
+              if (testFaces.isNotEmpty) {
+                debugPrint("DEBUG_SCANNER: SUCCESS! Rotated face detected! Switching active rotation to: ${rot.rawValue}");
+                _activeRotation = rot;
+                _consecutiveFailureCount = 0;
+                return testFaces;
+              }
+            }
+          }
+          if (faces.isEmpty) {
+            _consecutiveFailureCount = 0;
+          }
+        }
+        return faces;
+      }
     } catch (_) {
       return null;
     }
   }
 
-  InputImage? _inputImageFromCameraImage(CameraImage image) {
+  InputImage? _inputImageFromCameraImage(CameraImage image, InputImageRotation rotation) {
     final camera = _cameraController?.description;
     if (camera == null) return null;
 
@@ -547,41 +630,11 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       bytes = image.planes.first.bytes;
     }
 
-    // Hitung rotasi dinamis berdasarkan orientasi fisik ponsel
-    final deviceOrientation = _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp;
-    final int deviceDegrees = _deviceOrientationToDegrees(deviceOrientation);
-    final int sensorOrientation = camera.sensorOrientation;
-    
-    int rotationDegrees;
-    if (camera.lensDirection == CameraLensDirection.front) {
-      rotationDegrees = (sensorOrientation + deviceDegrees) % 360;
-    } else {
-      rotationDegrees = (sensorOrientation - deviceDegrees + 360) % 360;
-    }
-    
-    InputImageRotation imageRotation;
-    switch (rotationDegrees) {
-      case 0:
-        imageRotation = InputImageRotation.rotation0deg;
-        break;
-      case 90:
-        imageRotation = InputImageRotation.rotation90deg;
-        break;
-      case 180:
-        imageRotation = InputImageRotation.rotation180deg;
-        break;
-      case 270:
-        imageRotation = InputImageRotation.rotation270deg;
-        break;
-      default:
-        imageRotation = InputImageRotation.rotation0deg;
-    }
-
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: imageRotation,
+        rotation: rotation,
         format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
         bytesPerRow: image.planes.first.bytesPerRow,
       ),

@@ -106,6 +106,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   bool _isExportingBoomerang = false;
   double _exportProgress = 0.0;
   DateTime? _lastWinkTime;
+  InputImageRotation? _activeRotation;
+  int _consecutiveFailureCount = 0;
 
   // Preset Looks List
   final List<Map<String, dynamic>> _presetLooks = [
@@ -1286,35 +1288,93 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     }
 
     try {
-      final inputImage = _inputImageFromCameraImage(image);
+      final camera = _cameraController?.description;
+      if (camera == null) {
+        _isProcessingFrame = false;
+        return;
+      }
+
+      // Tentukan rotasi awal jika belum ada
+      if (_activeRotation == null) {
+        final deviceOrientation = _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp;
+        final int deviceDegrees = _deviceOrientationToDegrees(deviceOrientation);
+        final int sensorOrientation = camera.sensorOrientation;
+        int rotationDegrees;
+        if (camera.lensDirection == CameraLensDirection.front) {
+          rotationDegrees = (sensorOrientation + deviceDegrees) % 360;
+        } else {
+          rotationDegrees = (sensorOrientation - deviceDegrees + 360) % 360;
+        }
+        
+        switch (rotationDegrees) {
+          case 0:
+            _activeRotation = InputImageRotation.rotation0deg;
+            break;
+          case 90:
+            _activeRotation = InputImageRotation.rotation90deg;
+            break;
+          case 180:
+            _activeRotation = InputImageRotation.rotation180deg;
+            break;
+          case 270:
+            _activeRotation = InputImageRotation.rotation270deg;
+            break;
+          default:
+            _activeRotation = InputImageRotation.rotation270deg;
+        }
+      }
+
+      final inputImage = _inputImageFromCameraImage(image, _activeRotation!);
       if (inputImage == null) {
         debugPrint("DEBUG_AR: inputImage conversion failed");
         _isProcessingFrame = false;
         return;
       }
 
-      final List<Face> faces = await _faceDetector.processImage(inputImage);
-      debugPrint("DEBUG_AR: Face detected: ${faces.length} (Image Size: ${image.width}x${image.height}, Rotation: ${inputImage.metadata?.rotation.rawValue})");
-
-      // Diagnosa Rotasi jika 0 wajah terdeteksi
-      if (faces.isEmpty) {
-        final format = InputImageFormatValue.fromRawValue(image.format.raw);
-        if (format != null && image.planes.isNotEmpty) {
-          final bytes = image.planes.length > 1 ? _combineYuvPlanes(image) : image.planes.first.bytes;
-          for (final rot in [InputImageRotation.rotation0deg, InputImageRotation.rotation90deg, InputImageRotation.rotation180deg]) {
-            final testImage = InputImage.fromBytes(
-              bytes: bytes,
-              metadata: InputImageMetadata(
-                size: Size(image.width.toDouble(), image.height.toDouble()),
-                rotation: rot,
-                format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
-                bytesPerRow: image.planes.first.bytesPerRow,
-              ),
-            );
-            final testFaces = await _faceDetector.processImage(testImage);
-            if (testFaces.isNotEmpty) {
-              debugPrint("DEBUG_AR: SUCCESS! Face detected with rotation ${rot.rawValue}: ${testFaces.length}");
+      List<Face> faces = await _faceDetector.processImage(inputImage);
+      
+      if (faces.isNotEmpty) {
+        _consecutiveFailureCount = 0;
+      } else {
+        _consecutiveFailureCount++;
+        // Jika gagal mendeteksi wajah selama 5 frame berturut-turut,
+        // cari rotasi alternatif secara dinamis (mungkin HP sedang diputar fisik).
+        if (_consecutiveFailureCount >= 5) {
+          final format = InputImageFormatValue.fromRawValue(image.format.raw);
+          if (format != null && image.planes.isNotEmpty) {
+            final bytes = image.planes.length > 1 ? _combineYuvPlanes(image) : image.planes.first.bytes;
+            final rotationsToTry = [
+              InputImageRotation.rotation0deg,
+              InputImageRotation.rotation90deg,
+              InputImageRotation.rotation180deg,
+              InputImageRotation.rotation270deg
+            ];
+            
+            for (final rot in rotationsToTry) {
+              if (rot == _activeRotation) continue;
+              
+              final testImage = InputImage.fromBytes(
+                bytes: bytes,
+                metadata: InputImageMetadata(
+                  size: Size(image.width.toDouble(), image.height.toDouble()),
+                  rotation: rot,
+                  format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
+                  bytesPerRow: image.planes.first.bytesPerRow,
+                ),
+              );
+              
+              final testFaces = await _faceDetector.processImage(testImage);
+              if (testFaces.isNotEmpty) {
+                debugPrint("DEBUG_AR: SUCCESS! Rotated face detected! Switching active rotation to: ${rot.rawValue}");
+                _activeRotation = rot;
+                faces = testFaces;
+                _consecutiveFailureCount = 0;
+                break;
+              }
             }
+          }
+          if (faces.isEmpty) {
+            _consecutiveFailureCount = 0;
           }
         }
       }
@@ -1325,8 +1385,6 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
             _detectedFace = faces.first;
             _imageWidth = image.width;
             _imageHeight = image.height;
-
-            // Wink-to-Switch Gesture Control disabled to prevent accidental color switching during normal blinking
           } else {
             _detectedFace = null;
           }
@@ -1339,7 +1397,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     }
   }
 
-  InputImage? _inputImageFromCameraImage(CameraImage image) {
+  InputImage? _inputImageFromCameraImage(CameraImage image, InputImageRotation rotation) {
     final camera = _cameraController?.description;
     if (camera == null) return null;
 
@@ -1354,41 +1412,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
       bytes = image.planes.first.bytes;
     }
 
-    // Hitung rotasi dinamis berdasarkan orientasi fisik ponsel
-    final deviceOrientation = _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp;
-    final int deviceDegrees = _deviceOrientationToDegrees(deviceOrientation);
-    final int sensorOrientation = camera.sensorOrientation;
-    
-    int rotationDegrees;
-    if (camera.lensDirection == CameraLensDirection.front) {
-      rotationDegrees = (sensorOrientation + deviceDegrees) % 360;
-    } else {
-      rotationDegrees = (sensorOrientation - deviceDegrees + 360) % 360;
-    }
-    
-    InputImageRotation imageRotation;
-    switch (rotationDegrees) {
-      case 0:
-        imageRotation = InputImageRotation.rotation0deg;
-        break;
-      case 90:
-        imageRotation = InputImageRotation.rotation90deg;
-        break;
-      case 180:
-        imageRotation = InputImageRotation.rotation180deg;
-        break;
-      case 270:
-        imageRotation = InputImageRotation.rotation270deg;
-        break;
-      default:
-        imageRotation = InputImageRotation.rotation0deg;
-    }
-
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: imageRotation,
+        rotation: rotation,
         format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
         bytesPerRow: image.planes.first.bytesPerRow,
       ),
