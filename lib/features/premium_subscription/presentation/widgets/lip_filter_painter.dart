@@ -91,59 +91,13 @@ class LipFilterPainter extends CustomPainter {
       path.lineTo(pointsList.last.dx, pointsList.last.dy);
     }
 
-    // Estimasi posisi pipi untuk blush-on dari kontur mata dan hidung (karena contours dan landmarks mutually exclusive)
+    // Estimasi posisi pipi untuk blush-on (menggunakan logika 100% identik dengan uji rias 2D yang sangat bagus)
     Offset? estimatedLeftCheek;
     Offset? estimatedRightCheek;
 
-
-
     final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
-    final rawLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
-    final rawRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
-
-    // Ambil titik pusat wajah di layar untuk membagi sisi kiri/kanan visual
-    final double screenCenterX = mapPoint(Point(face!.boundingBox.center.dx.round(), face!.boundingBox.center.dy.round())).dx;
-
-    // Ambil semua titik kontur luar wajah di layar
-    final faceContourPoints = face!.contours[FaceContourType.face]?.points;
-    final List<Offset> screenOutline = faceContourPoints != null
-        ? faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList()
-        : [];
-
-    Offset getCheekbonePosition(Offset rawCheek) {
-      if (screenOutline.isEmpty) return rawCheek;
-      
-      final bool isVisuallyLeft = rawCheek.dx < screenCenterX;
-      
-      // Filter kontur luar wajah berdasarkan sisi kiri/kanan visual layar
-      final candidates = screenOutline.where((pt) {
-        return isVisuallyLeft ? (pt.dx < screenCenterX) : (pt.dx > screenCenterX);
-      }).toList();
-      
-      if (candidates.isEmpty) return rawCheek;
-      
-      // Temukan titik kontur luar yang Y-nya paling sejajar dengan pipi
-      Offset bestBoundary = candidates.first;
-      double minDiff = (bestBoundary.dy - rawCheek.dy).abs();
-      
-      for (final pt in candidates) {
-        final diff = (pt.dy - rawCheek.dy).abs();
-        if (diff < minDiff) {
-          minDiff = diff;
-          bestBoundary = pt;
-        }
-      }
-      
-      // Tempatkan blush-on di 50% jarak antara pipi dalam dan batas luar wajah (tulang pipi luar)
-      // Ini 100% akurat untuk setiap wajah, tidak akan pernah keluar dari batas wajah, dan dinamis
-      return Offset(
-        rawCheek.dx + (bestBoundary.dx - rawCheek.dx) * 0.50,
-        rawCheek.dy + (bestBoundary.dy - rawCheek.dy) * 0.50,
-      );
-    }
-
-    estimatedLeftCheek = getCheekbonePosition(rawLeftCheek);
-    estimatedRightCheek = getCheekbonePosition(rawRightCheek);
+    estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
+    estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
     // 1. RENDER BASE MAKEUP (LIVE FOUNDATION)
     if (foundationColor != null && foundationOpacity > 0.0) {
@@ -448,26 +402,32 @@ class LipFilterPainter extends CustomPainter {
 
       void drawCheekBlush(Offset center, bool isLeft) {
         final double rollAngle = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
-        
+        final double smileProb = face!.smilingProbability ?? 0.0;
+        // Penyesuaian senyum: naikkan pipi secara vertikal saat tersenyum
+        final double smileShiftY = smileProb * blushRadius * 0.25;
+
         canvas.save();
         canvas.translate(center.dx, center.dy);
+        canvas.rotate(rollAngle);
         
-        // Miringkan blush-on mengikuti kontur tulang pipi ke arah pelipis (draped blush)
-        final double tilt = isLeft ? -0.20 : 0.20;
-        canvas.rotate(rollAngle + tilt);
+        final double width = blushRadius * 2.2;
+        final double height = blushRadius * 1.3;
         
-        final double width = blushRadius * 2.3;
-        final double height = blushRadius * 1.2;
+        // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar (dengan deteksi mirroring kamera depan)
+        final bool isFrontCamera = lensDirection == CameraLensDirection.front;
+        final double offsetX = isFrontCamera
+            ? (isLeft ? width * 0.1 : -width * 0.1)
+            : (isLeft ? -width * 0.1 : width * 0.1);
         
         final Rect bounds = Rect.fromCenter(
-          center: Offset.zero,
+          center: Offset(offsetX, -smileShiftY),
           width: width,
           height: height,
         );
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ui.ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0) // Bauran pinggir ekstra halus
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0) // Bauran pinggir ekstra halus identik 2D
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
