@@ -105,7 +105,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
 
   bool _isExportingBoomerang = false;
   double _exportProgress = 0.0;
-  DateTime? _lastWinkTime;
+  int _faceLostFrames = 0;
 
   // Preset Looks List
   final List<Map<String, dynamic>> _presetLooks = [
@@ -1301,8 +1301,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
             _detectedFace = faces.first;
             _imageWidth = image.width;
             _imageHeight = image.height;
+            _faceLostFrames = 0; // Reset counter saat wajah terdeteksi
           } else {
-            _detectedFace = null;
+            _faceLostFrames++;
+            // Hanya sembunyikan make-up jika wajah benar-benar hilang lebih dari 8 frame (~130ms)
+            // Ini mencegah efek kedip-kedip (flickering/blink-blink) pada filter kosmetik.
+            if (_faceLostFrames >= 8) {
+              _detectedFace = null;
+            }
           }
         });
       }
