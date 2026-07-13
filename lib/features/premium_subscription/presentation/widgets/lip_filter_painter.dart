@@ -101,9 +101,10 @@ class LipFilterPainter extends CustomPainter {
     final rawLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
     final rawRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
-    // Geser posisi titik pipi lebih jauh ke arah luar (tulang pipi luar) dan sedikit ke bawah agar tidak masuk ke area bawah mata
-    estimatedLeftCheek = rawLeftCheek.translate(-faceWidth * 0.22, faceWidth * 0.02);
-    estimatedRightCheek = rawRightCheek.translate(faceWidth * 0.22, faceWidth * 0.02);
+    // Geser posisi titik pipi ke arah luar (menjauh dari hidung) dan sedikit ke bawah agar tidak masuk ke area bawah mata
+    // Karena kamera depan di-mirror secara horizontal, arah translasi kiri/kanan dibalik
+    estimatedLeftCheek = rawLeftCheek.translate(faceWidth * 0.22, faceWidth * 0.02);
+    estimatedRightCheek = rawRightCheek.translate(-faceWidth * 0.22, faceWidth * 0.02);
 
     // 1. RENDER BASE MAKEUP (LIVE FOUNDATION)
     if (foundationColor != null && foundationOpacity > 0.0) {
@@ -360,49 +361,35 @@ class LipFilterPainter extends CustomPainter {
         lowerLipPath.close();
       }
 
-      // Atur finishing lipstik (Matte vs Glossy) dengan efek visual 3D yang stabil
+      // Atur finishing lipstik (Matte vs Glossy) dengan gradien warna alami untuk efek 3D
+      final paintLip = Paint()
+        ..style = PaintingStyle.fill
+        ..blendMode = BlendMode.srcOver
+        ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.4, sigmaY: 1.4);
+
       if (lipstickFinishing == 'glossy') {
-        // Glossy: Base color transparan + 3D Specular Highlight horizontal halus di bibir bawah
-        final paintLip = Paint()
-          ..color = lipstickColor!.withOpacity(lipstickOpacity * 0.75)
-          ..style = PaintingStyle.fill
-          ..blendMode = BlendMode.srcOver
-          ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5);
-
-        canvas.drawPath(upperLipPath, paintLip);
-        canvas.drawPath(lowerLipPath, paintLip);
-
-        // Kilau Pantulan Cahaya (Specular Sheen) horizontal tipis dengan blur ekstra halus
-        final lowerLipCenter = FaceGeometryHelper.getLipCenter(face!);
-        if (lowerLipCenter != null) {
-          final mappedCenter = mapPoint(Point(lowerLipCenter.x.round(), lowerLipCenter.y.round()));
-          
-          final Paint paintHighlight = Paint()
-            ..color = Colors.white.withOpacity(0.26)
-            ..style = PaintingStyle.fill
-            ..blendMode = BlendMode.srcOver
-            ..imageFilter = ui.ImageFilter.blur(sigmaX: 4.5, sigmaY: 2.0); // Blurring horizontal super halus
-          
-          canvas.drawOval(
-            Rect.fromCenter(
-              center: mappedCenter.translate(0, faceWidth * 0.02),
-              width: faceWidth * 0.12,
-              height: faceWidth * 0.035,
-            ),
-            paintHighlight,
-          );
-        }
+        // Glossy: Menggunakan Shader Gradien Vertikal terintegrasi untuk mensimulasikan kilap cahaya di tengah bibir secara natural
+        final Rect upperBounds = upperLipPath.getBounds();
+        final Rect lowerBounds = lowerLipPath.getBounds();
+        final Rect combinedBounds = upperBounds.expandToInclude(lowerBounds);
+        
+        paintLip.shader = ui.Gradient.linear(
+          Offset(combinedBounds.left + combinedBounds.width / 2, combinedBounds.top),
+          Offset(combinedBounds.left + combinedBounds.width / 2, combinedBounds.bottom),
+          [
+            lipstickColor!.withOpacity(lipstickOpacity * 0.70),
+            Color.lerp(lipstickColor, Colors.white, 0.38)!.withOpacity(lipstickOpacity * 0.95), // Pantulan kilap putih-pink lembut di tengah
+            lipstickColor!.withOpacity(lipstickOpacity * 0.70),
+          ],
+          [0.0, 0.6, 1.0],
+        );
       } else {
-        // Matte: Warna velvet solid pekat tanpa highlight dengan kelembutan tepi
-        final paintLip = Paint()
-          ..color = lipstickColor!.withOpacity(lipstickOpacity * 1.1)
-          ..style = PaintingStyle.fill
-          ..blendMode = BlendMode.srcOver
-          ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2);
-
-        canvas.drawPath(upperLipPath, paintLip);
-        canvas.drawPath(lowerLipPath, paintLip);
+        // Matte: Warna velvet solid pekat yang rata dari atas sampai bawah
+        paintLip.color = lipstickColor!.withOpacity(lipstickOpacity * 1.15);
       }
+
+      canvas.drawPath(upperLipPath, paintLip);
+      canvas.drawPath(lowerLipPath, paintLip);
 
       // Harmony Heatmap outline warning for lips
       if (showHarmonyHeatmap && _isLipstickMismatch()) {
