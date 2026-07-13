@@ -28,6 +28,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
   bool _isDetecting = false;
   CameraLensDirection _currentLensDirection = CameraLensDirection.front;
+  InputImageRotation? _activeRotation;
 
   ScannerBloc({
     required ShadeMatcherRepository shadeMatcherRepository,
@@ -546,7 +547,45 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
   Future<List<Face>?> _processCameraImage(CameraImage image) async {
     try {
-      final inputImage = _inputImageFromCameraImage(image);
+      final camera = _cameraController?.description;
+      if (camera == null) return null;
+
+      // Kalibrasi otomatis sekali saja untuk menemukan rotasi sensor yang benar untuk wajah tegak
+      if (_activeRotation == null) {
+        final format = InputImageFormatValue.fromRawValue(image.format.raw);
+        if (format != null && image.planes.isNotEmpty) {
+          final bytes = image.planes.length > 1 ? _combineYuvPlanes(image) : image.planes.first.bytes;
+          final rotationsToTry = [
+            InputImageRotation.rotation270deg,
+            InputImageRotation.rotation90deg,
+            InputImageRotation.rotation0deg,
+            InputImageRotation.rotation180deg,
+          ];
+          
+          for (final rot in rotationsToTry) {
+            final testImage = InputImage.fromBytes(
+              bytes: bytes,
+              metadata: InputImageMetadata(
+                size: Size(image.width.toDouble(), image.height.toDouble()),
+                rotation: rot,
+                format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
+                bytesPerRow: image.planes.first.bytesPerRow,
+              ),
+            );
+            
+            final testFaces = await _faceDetector.processImage(testImage);
+            if (testFaces.isNotEmpty) {
+              debugPrint("DEBUG_SCANNER: Auto-calibration SUCCESS! Face detected at rotation: ${rot.rawValue}");
+              _activeRotation = rot; // Kunci rotasi ini!
+              break;
+            }
+          }
+        }
+      }
+
+      final currentRotation = _activeRotation ?? _getRotationFromSensor(camera.sensorOrientation);
+
+      final inputImage = _inputImageFromCameraImage(image, currentRotation);
       if (inputImage == null) return null;
       return await _faceDetector.processImage(inputImage);
     } catch (_) {
@@ -554,7 +593,22 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     }
   }
 
-  InputImage? _inputImageFromCameraImage(CameraImage image) {
+  InputImageRotation _getRotationFromSensor(int sensorOrientation) {
+    switch (sensorOrientation) {
+      case 0:
+        return InputImageRotation.rotation0deg;
+      case 90:
+        return InputImageRotation.rotation90deg;
+      case 180:
+        return InputImageRotation.rotation180deg;
+      case 270:
+        return InputImageRotation.rotation270deg;
+      default:
+        return InputImageRotation.rotation270deg;
+    }
+  }
+
+  InputImage? _inputImageFromCameraImage(CameraImage image, InputImageRotation rotation) {
     final camera = _cameraController?.description;
     if (camera == null) return null;
 
@@ -569,31 +623,11 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       bytes = image.planes.first.bytes;
     }
 
-    // Gunakan sensorOrientation langsung agar 100% stabil karena UI terkunci portrait
-    final int sensorOrientation = camera.sensorOrientation;
-    InputImageRotation imageRotation;
-    switch (sensorOrientation) {
-      case 0:
-        imageRotation = InputImageRotation.rotation0deg;
-        break;
-      case 90:
-        imageRotation = InputImageRotation.rotation90deg;
-        break;
-      case 180:
-        imageRotation = InputImageRotation.rotation180deg;
-        break;
-      case 270:
-        imageRotation = InputImageRotation.rotation270deg;
-        break;
-      default:
-        imageRotation = InputImageRotation.rotation270deg;
-    }
-
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: imageRotation,
+        rotation: rotation,
         format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
         bytesPerRow: image.planes.first.bytesPerRow,
       ),
