@@ -98,8 +98,12 @@ class LipFilterPainter extends CustomPainter {
 
 
     final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
-    estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
-    estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
+    final rawLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
+    final rawRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
+
+    // Geser posisi titik pipi ke arah luar dan atas (tulang pipi / cheekbones) agar sesuai dengan penempatan blush-on kosmetik profesional
+    estimatedLeftCheek = rawLeftCheek.translate(-faceWidth * 0.11, -faceWidth * 0.07);
+    estimatedRightCheek = rawRightCheek.translate(faceWidth * 0.11, -faceWidth * 0.07);
 
     // 1. RENDER BASE MAKEUP (LIVE FOUNDATION)
     if (foundationColor != null && foundationOpacity > 0.0) {
@@ -356,16 +360,56 @@ class LipFilterPainter extends CustomPainter {
         lowerLipPath.close();
       }
 
-      // Atur blendMode berdasarkan finishing untuk Texture Blending & Specular Preservation
-      // Glossy mempertahankan highlights putih alami bibir dengan BlendMode.color
-      final paintLip = Paint()
-        ..color = lipstickColor!.withOpacity(lipstickOpacity)
-        ..style = PaintingStyle.fill
-        ..blendMode = BlendMode.srcOver
-        ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5); // Feathering effect
+      // Atur finishing lipstik (Matte vs Glossy) dengan efek visual 3D yang stabil
+      if (lipstickFinishing == 'glossy') {
+        // Glossy: Base color transparan + 3D Specular Highlight melengkung di bibir bawah
+        final paintLip = Paint()
+          ..color = lipstickColor!.withOpacity(lipstickOpacity * 0.8)
+          ..style = PaintingStyle.fill
+          ..blendMode = BlendMode.srcOver
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5);
 
-      canvas.drawPath(upperLipPath, paintLip);
-      canvas.drawPath(lowerLipPath, paintLip);
+        canvas.drawPath(upperLipPath, paintLip);
+        canvas.drawPath(lowerLipPath, paintLip);
+
+        // Pantulan Cahaya Kilap (Specular Highlights) di bagian tengah bawah bibir
+        final lowerLipCenter = FaceGeometryHelper.getLipCenter(face!);
+        if (lowerLipCenter != null) {
+          final mappedCenter = mapPoint(Point(lowerLipCenter.x.round(), lowerLipCenter.y.round()));
+          final double highlightRadius = faceWidth * 0.12;
+          
+          final Paint paintHighlight = Paint()
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.srcOver
+            ..shader = ui.Gradient.radial(
+              mappedCenter.translate(0, faceWidth * 0.015),
+              highlightRadius,
+              [
+                Colors.white.withOpacity(0.50),
+                Colors.white.withOpacity(0.0),
+              ],
+            );
+          
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: mappedCenter.translate(0, faceWidth * 0.012),
+              width: highlightRadius * 1.6,
+              height: highlightRadius * 0.7,
+            ),
+            paintHighlight,
+          );
+        }
+      } else {
+        // Matte: Warna velvet solid dan pekat dengan kelembutan tepi yang pas
+        final paintLip = Paint()
+          ..color = lipstickColor!.withOpacity(lipstickOpacity * 1.1)
+          ..style = PaintingStyle.fill
+          ..blendMode = BlendMode.srcOver
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2);
+
+        canvas.drawPath(upperLipPath, paintLip);
+        canvas.drawPath(lowerLipPath, paintLip);
+      }
 
       // Harmony Heatmap outline warning for lips
       if (showHarmonyHeatmap && _isLipstickMismatch()) {
@@ -379,7 +423,7 @@ class LipFilterPainter extends CustomPainter {
       }
     }
 
-    // 4. GAMBAR FILTER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
+    // 4. GAMBAR FILTER BLUSH-ON (PIPI - Oval Terputar menyamping mengikuti tulang pipi / cheekbones)
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
 
@@ -388,21 +432,23 @@ class LipFilterPainter extends CustomPainter {
         
         canvas.save();
         canvas.translate(center.dx, center.dy);
-        canvas.rotate(rollAngle);
         
-        final double width = blushRadius * 2.2;
-        final double height = blushRadius * 1.3;
+        // Miringkan blush-on mengikuti kontur tulang pipi ke arah pelipis (draped blush)
+        final double tilt = isLeft ? -0.20 : 0.20;
+        canvas.rotate(rollAngle + tilt);
         
-        final double offsetX = isLeft ? -width * 0.1 : width * 0.1;
+        final double width = blushRadius * 2.3;
+        final double height = blushRadius * 1.2;
+        
         final Rect bounds = Rect.fromCenter(
-          center: Offset(offsetX, 0),
+          center: Offset.zero,
           width: width,
           height: height,
         );
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ui.ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0) // Bauran pinggir ekstra halus
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
