@@ -1354,7 +1354,35 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
       bytes = image.planes.first.bytes;
     }
 
-    final imageRotation = InputImageRotationValue.fromRawValue(camera.sensorOrientation) ?? InputImageRotation.rotation0deg;
+    // Hitung rotasi dinamis berdasarkan orientasi fisik ponsel
+    final deviceOrientation = _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp;
+    final int deviceDegrees = _deviceOrientationToDegrees(deviceOrientation);
+    final int sensorOrientation = camera.sensorOrientation;
+    
+    int rotationDegrees;
+    if (camera.lensDirection == CameraLensDirection.front) {
+      rotationDegrees = (sensorOrientation + deviceDegrees) % 360;
+    } else {
+      rotationDegrees = (sensorOrientation - deviceDegrees + 360) % 360;
+    }
+    
+    InputImageRotation imageRotation;
+    switch (rotationDegrees) {
+      case 0:
+        imageRotation = InputImageRotation.rotation0deg;
+        break;
+      case 90:
+        imageRotation = InputImageRotation.rotation90deg;
+        break;
+      case 180:
+        imageRotation = InputImageRotation.rotation180deg;
+        break;
+      case 270:
+        imageRotation = InputImageRotation.rotation270deg;
+        break;
+      default:
+        imageRotation = InputImageRotation.rotation0deg;
+    }
 
     return InputImage.fromBytes(
       bytes: bytes,
@@ -1365,6 +1393,19 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         bytesPerRow: image.planes.first.bytesPerRow,
       ),
     );
+  }
+
+  int _deviceOrientationToDegrees(DeviceOrientation orientation) {
+    switch (orientation) {
+      case DeviceOrientation.portraitUp:
+        return 0;
+      case DeviceOrientation.landscapeLeft:
+        return 90;
+      case DeviceOrientation.portraitDown:
+        return 180;
+      case DeviceOrientation.landscapeRight:
+        return 270;
+    }
   }
 
   Uint8List _combineYuvPlanes(CameraImage image) {

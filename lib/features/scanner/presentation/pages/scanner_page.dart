@@ -15,6 +15,7 @@ import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../premium_subscription/data/models/app_settings.dart';
 import '../../../../core/utils/widget_helper.dart';
+import '../../../../core/utils/face_geometry_helper.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
@@ -1095,7 +1096,7 @@ class FaceTrackerPainter extends CustomPainter {
       final double radius = width * 0.07; // Jari-jari lingkaran bidik dinamis yang presisi
 
       // Helper untuk memetakan koordinat landmark dari resolusi kamera ke ukuran layar
-      Offset mapLandmark(Point<int> point) {
+      Offset mapRawPoint(Point<double> point) {
         final double mappedX = lensDirection == CameraLensDirection.front
             ? size.width - (point.x * scaleX)
             : point.x * scaleX;
@@ -1103,38 +1104,16 @@ class FaceTrackerPainter extends CustomPainter {
         return Offset(mappedX, mappedY);
       }
 
-      // 1. Lingkaran Bidik Pipi Kiri
-      Offset centerLeft;
-      if (leftCheek != null) {
-        centerLeft = mapLandmark(leftCheek);
-      } else {
-        centerLeft = Offset(mappedRect.left + width * 0.30, mappedRect.top + height * 0.62);
-      }
+      // Hitung koordinat pipi kiri, kanan, dan dahi secara rotasi-robust menggunakan FaceGeometryHelper
+      final cheeks = FaceGeometryHelper.getCheekCoordinates(face);
+      final centerLeft = mapRawPoint(cheeks['left']!);
       _drawReticle(canvas, centerLeft, radius, guideBoxPaint, fillPaint, textPainter, 'Pipi Kiri');
 
-      // 2. Lingkaran Bidik Pipi Kanan
-      Offset centerRight;
-      if (rightCheek != null) {
-        centerRight = mapLandmark(rightCheek);
-      } else {
-        centerRight = Offset(mappedRect.left + width * 0.70, mappedRect.top + height * 0.62);
-      }
+      final centerRight = mapRawPoint(cheeks['right']!);
       _drawReticle(canvas, centerRight, radius, guideBoxPaint, fillPaint, textPainter, 'Pipi Kanan');
 
-      // 3. Lingkaran Bidik Dahi
-      Offset centerForehead;
-      if (leftEye != null && rightEye != null) {
-        final posLeftEye = mapLandmark(leftEye);
-        final posRightEye = mapLandmark(rightEye);
-        final midpoint = Offset(
-          (posLeftEye.dx + posRightEye.dx) / 2,
-          (posLeftEye.dy + posRightEye.dy) / 2,
-        );
-        final double eyeDistance = (posLeftEye.dx - posRightEye.dx).abs();
-        centerForehead = Offset(midpoint.dx, midpoint.dy - eyeDistance * 0.85);
-      } else {
-        centerForehead = Offset(mappedRect.left + width * 0.50, mappedRect.top + height * 0.26);
-      }
+      final forehead = FaceGeometryHelper.getForeheadCoordinate(face);
+      final centerForehead = mapRawPoint(forehead);
       _drawReticle(canvas, centerForehead, radius, guideBoxPaint, fillPaint, textPainter, 'Dahi');
     }
   }

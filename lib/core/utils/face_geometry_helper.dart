@@ -92,7 +92,9 @@ class FaceGeometryHelper {
     if (referencePoint == null) {
       final upperLip = face.contours[FaceContourType.upperLipTop]?.points;
       if (upperLip != null && upperLip.isNotEmpty) {
-        referencePoint = Point(upperLip.first.x.toDouble(), upperLip.first.y.toDouble());
+        // Menggunakan titik tengah kontur bibir atas agar lebih presisi di garis tengah wajah
+        final midLipPt = upperLip[upperLip.length ~/ 2];
+        referencePoint = Point(midLipPt.x.toDouble(), midLipPt.y.toDouble());
       }
     }
 
@@ -111,8 +113,18 @@ class FaceGeometryHelper {
         unitY_y = -unitY_y;
       }
     } else {
-      // Fallback jika tidak ada landmark terdeteksi, gunakan arah layar bawah
-      if (unitY_y < 0) {
+      // Fallback: gunakan kemiringan wajah roll angle (headEulerAngleZ) dari ML Kit
+      // Konversi headEulerAngleZ (roll) ke radian
+      final double rollDeg = face.headEulerAngleZ ?? 0.0;
+      final double rollRad = rollDeg * pi / 180.0;
+      
+      // Vektor dagu yang diharapkan: rotasi (0, 1) sebesar rollRad
+      // expectedY = (-sin(rollRad), cos(rollRad))
+      final double expY_x = -sin(rollRad);
+      final double expY_y = cos(rollRad);
+
+      final double dot = unitY_x * expY_x + unitY_y * expY_y;
+      if (dot < 0) {
         unitY_x = -unitY_x;
         unitY_y = -unitY_y;
       }
