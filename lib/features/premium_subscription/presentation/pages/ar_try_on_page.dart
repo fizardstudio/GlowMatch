@@ -9,10 +9,17 @@ import 'package:isar/isar.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../../../../core/network/database_service.dart';
+import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../data/models/app_settings.dart';
 import '../widgets/lip_filter_painter.dart';
 import '../../../../core/utils/widget_helper.dart';
+import '../../../../core/data/models/product_shade.dart';
+import '../../../../core/utils/face_geometry_helper.dart';
+import '../../../../core/utils/color_calculator.dart';
+import 'package:image/image.dart' as img;
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 
 class ArTryOnPage extends StatefulWidget {
   const ArTryOnPage({super.key});
@@ -39,6 +46,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     options: FaceDetectorOptions(
       enableContours: true,
       enableLandmarks: false,
+      enableClassification: true,
       performanceMode: FaceDetectorMode.accurate,
     ),
   );
@@ -48,7 +56,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   int _imageWidth = 0;
   int _imageHeight = 0;
 
-  // Active Category (0 = Lipstik, 1 = Blush-On)
+  // Active Category (0 = Looks, 1 = Base, 2 = Bibir, 3 = Pipi)
   int _activeCategoryIndex = 0;
 
   // Filter Parameters - Lipstick (Bibir)
@@ -70,6 +78,88 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   bool _isDemoActive = false;
   int _demoSecondsLeft = 60;
   Timer? _demoTimer;
+
+  // Advanced Try-On Upgrades (Phase 2.5) State Variables
+  String? _activePreset = 'Korean Glass Skin';
+  bool _isSplitMode = true; // DEFAULT ON!
+  bool _showGlassSkin = true;
+
+  // Foundation/Base fields
+  Color _selectedFoundationColor = const Color(0xFFF3D3C4);
+  double _foundationOpacity = 0.0;
+  List<ProductShade> _dbFoundations = [];
+  List<ProductShade> _filteredFoundations = [];
+  List<String> _brands = ['Semua Merek'];
+  String _selectedBrandFilter = 'Semua Merek';
+  ProductShade? _selectedFoundationProduct;
+
+  final GlobalKey _repaintBoundaryKey = GlobalKey();
+  bool _isSavingLook = false;
+  bool _isCapturing = false;
+
+  String _selectedLightingPreset = 'Natural'; // 'Natural', 'Golden Hour', 'Studio Light', 'Cyber Neon'
+  bool _showHarmonyHeatmap = false;
+  bool _showTooltip = false;
+  String _activeTooltipComponent = 'base';
+  Offset _tooltipOffset = Offset.zero;
+
+  bool _isExportingBoomerang = false;
+  double _exportProgress = 0.0;
+  DateTime? _lastWinkTime;
+
+  // Preset Looks List
+  final List<Map<String, dynamic>> _presetLooks = [
+    {
+      'name': 'Clean Girl',
+      'lipstickColor': const Color(0xFFDCAE96),
+      'lipstickOpacity': 0.35,
+      'lipstickFinishing': 'glossy',
+      'blushColor': const Color(0xFFE29A86),
+      'blushOpacity': 0.25,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': true,
+    },
+    {
+      'name': 'Korean Glass Skin',
+      'lipstickColor': const Color(0xFFF98E7B),
+      'lipstickOpacity': 0.45,
+      'lipstickFinishing': 'glossy',
+      'blushColor': const Color(0xFFFF8A80),
+      'blushOpacity': 0.30,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': true,
+    },
+    {
+      'name': 'Douyin Sweetheart',
+      'lipstickColor': const Color(0xFFE23D61),
+      'lipstickOpacity': 0.65,
+      'lipstickFinishing': 'glossy',
+      'blushColor': const Color(0xFFE88A90),
+      'blushOpacity': 0.45,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': false,
+    },
+    {
+      'name': 'Old Money Glam',
+      'lipstickColor': const Color(0xFF8B0000),
+      'lipstickOpacity': 0.70,
+      'lipstickFinishing': 'matte',
+      'blushColor': const Color(0xFFC08060),
+      'blushOpacity': 0.35,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': false,
+    },
+  ];
+
+  // Scanned skin profile history variables
+  String? _lastMatchedShadeName;
+  String? _lastMatchedUndertone;
+  String? _lastMatchedSeasonalColor;
+  String? _lastMatchedSkinTone;
 
   // List Warna Lipstik Eksklusif
   final List<Map<String, dynamic>> _lipstickColors = [
@@ -96,6 +186,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkPremiumStatus();
+    _loadFoundationsFromDb();
     _initializeCamera();
   }
 
@@ -109,14 +200,984 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     }
   }
 
+  Color _getHexColor(String hex) {
+    final cleanHex = hex.replaceAll('#', '');
+    if (cleanHex.length == 6) {
+      return Color(int.parse('FF$cleanHex', radix: 16));
+    }
+    return Colors.transparent;
+  }
+
+  Future<void> _loadFoundationsFromDb() async {
+    try {
+      final foundations = await _isar.productShades
+          .filter()
+          .categoryEqualTo('Foundation')
+          .findAll();
+      if (mounted) {
+        setState(() {
+          _dbFoundations = foundations;
+          final uniqueBrands = foundations.map((f) => f.brand).toSet().toList();
+          _brands = ['Semua Merek', ...uniqueBrands];
+          _applyFoundationFilter();
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading foundations from Isar: $e");
+    }
+  }
+
+  void _applyFoundationFilter() {
+    setState(() {
+      if (_selectedBrandFilter == 'Semua Merek') {
+        _filteredFoundations = _dbFoundations;
+      } else {
+        _filteredFoundations = _dbFoundations
+            .where((f) => f.brand == _selectedBrandFilter)
+            .toList();
+      }
+    });
+  }
+
+  Future<void> _applyAiRecommendation() async {
+    if (_lastMatchedUndertone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Belum ada riwayat hasil pemindaian kulit. Silakan lakukan pemindaian wajah terlebih dahulu.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      final und = _lastMatchedUndertone!.toLowerCase();
+      final skin = _lastMatchedSkinTone?.toLowerCase() ?? 'light';
+
+      // 1. Tentukan warna lipstik
+      if (und == 'warm') {
+        _selectedLipstickColor = const Color(0xFFFF7043); // Peach Coral
+        _lipstickOpacity = 0.50;
+        _lipstickFinishing = 'glossy';
+      } else if (und == 'cool') {
+        _selectedLipstickColor = const Color(0xFFD81B60); // Cherry Red
+        _lipstickOpacity = 0.50;
+        _lipstickFinishing = 'glossy';
+      } else {
+        _selectedLipstickColor = const Color(0xFFAD1457); // Matte Rose
+        _lipstickOpacity = 0.45;
+        _lipstickFinishing = 'matte';
+      }
+
+      // 2. Tentukan warna blush-on
+      if (und == 'warm') {
+        _selectedBlushColor = const Color(0xFFFF8A80); // Soft Coral
+        _blushOpacity = 0.35;
+      } else if (und == 'cool') {
+        _selectedBlushColor = const Color(0xFFFF80AB); // Peach Pink
+        _blushOpacity = 0.35;
+      } else {
+        _selectedBlushColor = const Color(0xFFFF8A80); // Soft Coral
+        _blushOpacity = 0.30;
+      }
+
+      // 3. Tentukan warna foundation (Dasaran Base)
+      if (skin.contains('fair')) {
+        _selectedFoundationColor = const Color(0xFFF5D6C8); // Fair Nude
+        _foundationOpacity = 0.35;
+      } else if (skin.contains('light')) {
+        _selectedFoundationColor = const Color(0xFFEED0BC); // Light Ivory
+        _foundationOpacity = 0.35;
+      } else if (skin.contains('medium')) {
+        _selectedFoundationColor = const Color(0xFFE5C1A7); // Natural Beige
+        _foundationOpacity = 0.35;
+      } else {
+        _selectedFoundationColor = const Color(0xFFC79D7C); // Golden Tan
+        _foundationOpacity = 0.40;
+      }
+
+      // 4. Cari product foundation dari database
+      ProductShade? recommendedProd;
+      if (_dbFoundations.isNotEmpty) {
+        final baseLab = ColorCalculator.rgbToLab(
+          _selectedFoundationColor.red,
+          _selectedFoundationColor.green,
+          _selectedFoundationColor.blue,
+        );
+        double minDelta = double.infinity;
+        for (final prod in _dbFoundations) {
+          final double dist = ColorCalculator.deltaE00(
+            baseLab,
+            LabColor(prod.l, prod.a, prod.b),
+          );
+          if (dist < minDelta) {
+            minDelta = dist;
+            recommendedProd = prod;
+          }
+        }
+      }
+      _selectedFoundationProduct = recommendedProd;
+      _activePreset = 'Rekomendasi AI (${_lastMatchedSeasonalColor ?? "Personal"})';
+      _showGlassSkin = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Rekomendasi AI dipoleskan sesuai rona ${_lastMatchedUndertone!.toUpperCase()} Anda! '),
+        backgroundColor: primaryColor,
+      ),
+    );
+  }
+
   Future<void> _checkPremiumStatus() async {
     final settings = await _isar.appSettings.get(0);
-    if (settings != null && settings.isPremium) {
+    if (settings != null) {
       setState(() {
-        _isPremium = true;
-        _showPaywall = false;
+        if (settings.isPremium) {
+          _isPremium = true;
+          _showPaywall = false;
+        }
+        _lastMatchedShadeName = settings.lastMatchedShadeName;
+        _lastMatchedUndertone = settings.lastMatchedUndertone;
+        _lastMatchedSeasonalColor = settings.lastMatchedSeasonalColor;
+        _lastMatchedSkinTone = settings.lastMatchedSkinTone;
       });
     }
+  }
+
+  void _handleCameraTap(TapDownDetails details, Size fittedSize) {
+    if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
+
+    final double tapX = details.localPosition.dx;
+    final double tapY = details.localPosition.dy;
+    final tapPt = Offset(tapX, tapY);
+
+    final bool isLandscape = fittedSize.width > fittedSize.height;
+    final double scaleX = isLandscape ? fittedSize.width / _imageWidth : fittedSize.width / _imageHeight;
+    final double scaleY = isLandscape ? fittedSize.height / _imageHeight : fittedSize.height / _imageWidth;
+
+    Offset mapPointToScreen(Point<double> point) {
+      final double mappedX = _cameraController!.description.lensDirection == CameraLensDirection.front
+          ? fittedSize.width - (point.x * scaleX)
+          : point.x * scaleX;
+      final double mappedY = point.y * scaleY;
+      return Offset(mappedX, mappedY);
+    }
+
+    double distance(Offset p1, Offset p2) {
+      return sqrt(pow(p1.dx - p2.dx, 2) + pow(p1.dy - p2.dy, 2));
+    }
+
+    // 1. Cek Bibir
+    final lipCenter = FaceGeometryHelper.getLipCenter(_detectedFace!);
+    if (lipCenter != null) {
+      final lipScreen = mapPointToScreen(Point(lipCenter.x.toDouble(), lipCenter.y.toDouble()));
+      if (distance(tapPt, lipScreen) < fittedSize.width * 0.12) {
+        setState(() {
+          _activeTooltipComponent = 'bibir';
+          _tooltipOffset = details.localPosition;
+          _showTooltip = true;
+        });
+        _autoHideTooltip();
+        return;
+      }
+    }
+
+    // 2. Cek Pipi
+    final cheeks = FaceGeometryHelper.getCheekCoordinates(_detectedFace!);
+    final leftCheek = cheeks['left'];
+    final rightCheek = cheeks['right'];
+    if (leftCheek != null && rightCheek != null) {
+      final leftScreen = mapPointToScreen(Point(leftCheek.x.toDouble(), leftCheek.y.toDouble()));
+      final rightScreen = mapPointToScreen(Point(rightCheek.x.toDouble(), rightCheek.y.toDouble()));
+      if (distance(tapPt, leftScreen) < fittedSize.width * 0.15 || distance(tapPt, rightScreen) < fittedSize.width * 0.15) {
+        setState(() {
+          _activeTooltipComponent = 'pipi';
+          _tooltipOffset = details.localPosition;
+          _showTooltip = true;
+        });
+        _autoHideTooltip();
+        return;
+      }
+    }
+
+    // 3. Cek Wajah (Base)
+    final rect = _detectedFace!.boundingBox;
+    final leftTop = mapPointToScreen(Point(rect.left.toDouble(), rect.top.toDouble()));
+    final rightBottom = mapPointToScreen(Point(rect.right.toDouble(), rect.bottom.toDouble()));
+    final double minX = min(leftTop.dx, rightBottom.dx);
+    final double maxX = max(leftTop.dx, rightBottom.dx);
+    final double minY = min(leftTop.dy, rightBottom.dy);
+    final double maxY = max(leftTop.dy, rightBottom.dy);
+
+    if (tapPt.dx >= minX && tapPt.dx <= maxX && tapPt.dy >= minY && tapPt.dy <= maxY) {
+      setState(() {
+        _activeTooltipComponent = 'base';
+        _tooltipOffset = details.localPosition;
+        _showTooltip = true;
+      });
+      _autoHideTooltip();
+    }
+  }
+
+  Timer? _tooltipTimer;
+  void _autoHideTooltip() {
+    _tooltipTimer?.cancel();
+    _tooltipTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _showTooltip = false;
+        });
+      }
+    });
+  }
+
+  bool _ArTryOnPageState_isLipstickMismatch() {
+    if (_lastMatchedUndertone == null) return false;
+    final String und = _lastMatchedUndertone!.toLowerCase();
+    final int value = _selectedLipstickColor.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xD81B60 || value == 0xAD1457 || value == 0x8E24AA || value == 0xB71C1C) {
+      isCool = true;
+    } else if (value == 0xFFFF7043 || value == 0x8D6E63 || value == 0xF98E7B) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
+  bool _ArTryOnPageState_isBlushMismatch() {
+    if (_lastMatchedUndertone == null) return false;
+    final String und = _lastMatchedUndertone!.toLowerCase();
+    final int value = _selectedBlushColor.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xFF80AB || value == 0xE91E63 || value == 0xBA68C8) {
+      isCool = true;
+    } else if (value == 0xFFFF8A80 || value == 0xFFB74D || value == 0xFFFF8F00) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
+  Widget _buildHarmonyAlertBanner() {
+    final bool isLipMismatch = _ArTryOnPageState_isLipstickMismatch();
+    final bool isBlushMismatch = _ArTryOnPageState_isBlushMismatch();
+
+    if (!isLipMismatch && !isBlushMismatch) return const SizedBox.shrink();
+
+    String warningText = '';
+    if (isLipMismatch && isBlushMismatch) {
+      warningText = 'Warna Lipstik & Blush kurang selaras dengan rona ${_lastMatchedUndertone!.toUpperCase()} Anda.';
+    } else if (isLipMismatch) {
+      warningText = 'Warna Lipstik kurang selaras dengan rona ${_lastMatchedUndertone!.toUpperCase()} Anda.';
+    } else {
+      warningText = 'Warna Blush kurang selaras dengan rona ${_lastMatchedUndertone!.toUpperCase()} Anda.';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 14),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              warningText,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTooltipWidget() {
+    String title = '';
+    String info = '';
+    IconData icon = Icons.info_rounded;
+    Color color = primaryColor;
+
+    if (_activeTooltipComponent == 'bibir') {
+      title = 'LIPSTIK (LIPS)';
+      icon = Icons.opacity_rounded;
+      color = _selectedLipstickColor;
+      final match = _lastMatchedUndertone == null 
+          ? 'Coba Scan Kulit' 
+          : (_ArTryOnPageState_isLipstickMismatch() ? 'Rona Kurang Serasi ⚠️' : 'Rona Sangat Serasi ✨');
+      info = 'Pulasan: ${(_lipstickOpacity * 100).round()}% | $match';
+    } else if (_activeTooltipComponent == 'pipi') {
+      title = 'PIPI (BLUSH)';
+      icon = Icons.face_rounded;
+      color = _selectedBlushColor;
+      final match = _lastMatchedUndertone == null 
+          ? 'Coba Scan Kulit' 
+          : (_ArTryOnPageState_isBlushMismatch() ? 'Rona Kurang Serasi ⚠️' : 'Rona Sangat Serasi ✨');
+      info = 'Pulasan: ${(_blushOpacity * 100).round()}% | $match';
+    } else {
+      title = 'BASE (FOUNDATION)';
+      icon = Icons.face_retouching_natural_rounded;
+      color = _selectedFoundationColor;
+      final shadeInfo = _selectedFoundationProduct != null 
+          ? '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.shadeName}'
+          : 'Warna Kustom';
+      info = 'Shade: $shadeInfo\nOpasitas: ${(_foundationOpacity * 100).round()}%';
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 170,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: cardBgColor.withOpacity(0.92),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cardBorderColor.withOpacity(0.7), width: 1.5),
+          boxShadow: ThemeManager.premiumGlowShadow,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 13, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 9, 
+                    fontWeight: FontWeight.bold, 
+                    color: textColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              info,
+              style: TextStyle(fontSize: 8, color: textMutedColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _cycleLipstickColor() {
+    int currentIndex = _lipstickColors.indexWhere((c) => c['color'] == _selectedLipstickColor);
+    int nextIndex = (currentIndex + 1) % _lipstickColors.length;
+    setState(() {
+      _selectedLipstickColor = _lipstickColors[nextIndex]['color'] as Color;
+      _activePreset = null;
+    });
+    
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Kedipan terdeteksi! Mengganti warna lipstik ke: ${_lipstickColors[nextIndex]['name']} 💄'),
+        duration: const Duration(milliseconds: 1500),
+        backgroundColor: primaryColor,
+      ),
+    );
+  }
+
+  void _toggleLipstickFinishing() {
+    setState(() {
+      _lipstickFinishing = _lipstickFinishing == 'glossy' ? 'matte' : 'glossy';
+      _activePreset = null;
+    });
+    
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Kedipan terdeteksi! Mengubah tekstur lipstik ke: ${_lipstickFinishing.toUpperCase()} ✨'),
+        duration: const Duration(milliseconds: 1500),
+        backgroundColor: primaryColor,
+      ),
+    );
+  }
+
+  Map<String, dynamic> _getLookSummaryDetails() {
+    ProductShade? activeFoundationProd = _selectedFoundationProduct;
+    if (activeFoundationProd == null && _dbFoundations.isNotEmpty) {
+      final baseLab = ColorCalculator.rgbToLab(
+        _selectedFoundationColor.red,
+        _selectedFoundationColor.green,
+        _selectedFoundationColor.blue,
+      );
+      
+      double minDelta = double.infinity;
+      ProductShade? closestProd;
+      for (final prod in _dbFoundations) {
+        final double dist = ColorCalculator.deltaE00(
+          baseLab,
+          LabColor(prod.l, prod.a, prod.b),
+        );
+        if (dist < minDelta) {
+          minDelta = dist;
+          closestProd = prod;
+        }
+      }
+      activeFoundationProd = closestProd;
+    }
+
+    final String baseName = activeFoundationProd != null
+        ? '${activeFoundationProd.brand} - ${activeFoundationProd.productName} (${activeFoundationProd.shadeName})'
+        : 'Warna Preset Dasar';
+    final String baseAffiliate = activeFoundationProd?.affiliateUrl ?? 'https://shopee.co.id';
+
+    String lipstickProd = 'Tidak Terdeteksi';
+    String lipstickUrl = 'https://shopee.co.id';
+    
+    final lColor = _selectedLipstickColor.value;
+    if (lColor == const Color(0xFFD81B60).value) {
+      lipstickProd = 'Wardah Everyday Matte Lip Shot - 05 Classic Red & Maybelline Superstay Matte Ink - 20 Pioneer';
+      lipstickUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (lColor == const Color(0xFFAD1457).value) {
+      lipstickProd = 'Wardah Colorfit Last All Day Lip Paint - 02 Dear Jenny & Make Over Intense Matte Lip Cream - 004 Vanity';
+      lipstickUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (lColor == const Color(0xFFFF7043).value) {
+      lipstickProd = 'Maybelline Sensational Liquid Matte - 06 Best Babe & Wardah Exclusive Matte Lip Cream - 18 Peach Perfect';
+      lipstickUrl = 'https://shopee.co.id/maybellineindonesia';
+    } else if (lColor == const Color(0xFF8E24AA).value) {
+      lipstickProd = 'Make Over Intense Matte Lip Cream - 012 Vampy & Maybelline Superstay Matte Ink - 40 Believer';
+      lipstickUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (lColor == const Color(0xFF8D6E63).value) {
+      lipstickProd = 'Wardah Exclusive Matte Lip Cream - 11 Oh so Nude & Make Over Intense Matte Lip Cream - 011 Pomposity';
+      lipstickUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (lColor == const Color(0xFFB71C1C).value) {
+      lipstickProd = 'Maybelline Superstay Matte Ink - 118 Dancer & Wardah Colorfit Velvet Matte Lip Crayon - 05 Skylines';
+      lipstickUrl = 'https://shopee.co.id/maybellineindonesia';
+    } else {
+      lipstickProd = 'Wardah Colorfit Last All Day Lip Paint';
+      lipstickUrl = 'https://shopee.co.id/wardahofficial';
+    }
+
+    String blushProd = 'Tidak Terdeteksi';
+    String blushUrl = 'https://shopee.co.id';
+    
+    final bColor = _selectedBlushColor.value;
+    if (bColor == const Color(0xFFFF8A80).value) {
+      blushProd = 'Wardah Colorfit Cream Blush - 01 Sand Coral & Make Over Multifix Matte Blusher - 02 Coral Flutter';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (bColor == const Color(0xFFFF80AB).value) {
+      blushProd = 'Wardah Exclusive Blush On - 01 Rosy Pink & Maybelline Fit Me Blush - 30 Peach';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (bColor == const Color(0xFFE91E63).value) {
+      blushProd = 'Make Over Cheek Marquee Blush On - 04 Tupper Rose & Wardah Colorfit Cream Blush - 02 Merry Mauve';
+      blushUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (bColor == const Color(0xFFFFB74D).value) {
+      blushProd = 'Wardah Exclusive Blush On - 02 Peach & Make Over Cheek Marquee Blush On - 02 Shimmering Peach';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    } else if (bColor == const Color(0xFFFF8F00).value) {
+      blushProd = 'Make Over Cheek Marquee Blush On - 08 Honey Spice & Maybelline Fit Me Blush - 40 Golden';
+      blushUrl = 'https://shopee.co.id/makeoverofficial';
+    } else if (bColor == const Color(0xFFBA68C8).value) {
+      blushProd = 'Wardah Exclusive Blush On - 02 Rose Pink & Make Over Cheek Marquee Blush On - 05 Burgundy';
+      blushUrl = 'https://shopee.co.id/makeoverofficial';
+    } else {
+      blushProd = 'Wardah Colorfit Cream Blush';
+      blushUrl = 'https://shopee.co.id/wardahofficial';
+    }
+
+    return {
+      'baseName': baseName,
+      'baseAffiliate': baseAffiliate,
+      'lipstickProd': lipstickProd,
+      'lipstickUrl': lipstickUrl,
+      'blushProd': blushProd,
+      'blushUrl': blushUrl,
+    };
+  }
+
+  void _showLookSummarySheet() {
+    if (!_isPremium && !_showPaywall) {
+      setState(() {
+        _showPaywall = true;
+      });
+      return;
+    }
+
+    final summary = _getLookSummaryDetails();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBgColor.withOpacity(0.97),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
+            border: Border.all(color: cardBorderColor, width: 1.5),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child:  Icon(Icons.receipt_long_rounded, color: primaryColor, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                   Text(
+                    'Rangkuman Riasan & Belanja',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // 1. Dasaran Base (Foundation)
+              _buildSummaryItem(
+                title: 'Dasaran Base (Foundation)',
+                name: _foundationOpacity > 0.0 ? summary['baseName'] : 'Tidak digunakan',
+                color: _foundationOpacity > 0.0 ? _selectedFoundationColor : null,
+                subtitle: _foundationOpacity > 0.0 ? 'Opasitas: ${(_foundationOpacity * 100).round()}%' : null,
+                affiliateUrl: _foundationOpacity > 0.0 ? summary['baseAffiliate'] : null,
+              ),
+
+              const SizedBox(height: 16),
+              
+              // 2. Lipstik (Lips)
+              _buildSummaryItem(
+                title: 'Riasan Bibir (Lipstick)',
+                name: _lipstickOpacity > 0.0 ? 'Preset Warna (${_lipstickFinishing.toUpperCase()})' : 'Tidak digunakan',
+                color: _lipstickOpacity > 0.0 ? _selectedLipstickColor : null,
+                subtitle: _lipstickOpacity > 0.0 
+                    ? 'Rekomendasi Produk:\n${summary['lipstickProd']}' 
+                    : null,
+                affiliateUrl: _lipstickOpacity > 0.0 ? summary['lipstickUrl'] : null,
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3. Rona Pipi (Blush-On)
+              _buildSummaryItem(
+                title: 'Rona Pipi (Blush-On)',
+                name: _blushOpacity > 0.0 ? 'Preset Warna' : 'Tidak digunakan',
+                color: _blushOpacity > 0.0 ? _selectedBlushColor : null,
+                subtitle: _blushOpacity > 0.0 
+                    ? 'Rekomendasi Produk:\n${summary['blushProd']}' 
+                    : null,
+                affiliateUrl: _blushOpacity > 0.0 ? summary['blushUrl'] : null,
+              ),
+
+              const SizedBox(height: 28),
+
+              // Close Button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 46),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup Rangkuman', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required String title,
+    required String name,
+    Color? color,
+    String? subtitle,
+    String? affiliateUrl,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (color != null) ...[
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: cardBorderColor, width: 1.5),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: textMutedColor,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: textMutedColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (affiliateUrl != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.shopping_bag_outlined, color: primaryColor, size: 20),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: affiliateUrl));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Tautan belanja Shopee berhasil disalin! 🛍️'),
+                    backgroundColor: primaryColor,
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveCurrentMakeupLook() async {
+    if (!_isPremium && !_showPaywall) {
+      setState(() {
+        _showPaywall = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSavingLook = true;
+      _isCapturing = true;
+    });
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal mendapatkan rendering area wajah.");
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
+
+      if (pngBytes == null) {
+        throw Exception("Gagal mengodekan gambar hasil riasan.");
+      }
+
+      if (!Platform.isAndroid) {
+        throw Exception("Penyimpanan galeri luring saat ini hanya didukung di Android.");
+      }
+
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("saveImageToGallery", {
+        "bytes": pngBytes,
+        "filename": "glowmatch_ar_look_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+              content: const Text('Foto hasil riasan kamera berhasil disimpan ke Galeri! 📸💖 (Folder: Pictures/GlowMatch)'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal menyimpan foto.");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan ke galeri: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingLook = false;
+          _isCapturing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _exportBoomerangGif() async {
+    if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
+
+    setState(() {
+      _isExportingBoomerang = true;
+      _exportProgress = 0.0;
+      _isCapturing = true; // Sembunyikan garis slider saat pemotretan
+    });
+
+    final List<Uint8List> frames = [];
+    final double originalSliderX = _sliderX;
+    final bool originalSplitMode = _isSplitMode;
+
+    try {
+      setState(() {
+        _isSplitMode = true;
+      });
+
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal menginisialisasi area dandan.");
+      }
+
+      final double width = boundary.size.width;
+
+      // Ambil 6 frame bertahap dari kiri ke kanan (0% hingga 100%)
+      final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+      for (int i = 0; i < steps.length; i++) {
+        setState(() {
+          _sliderX = steps[i] * width;
+          _isCapturing = false;
+        });
+
+        await Future.delayed(const Duration(milliseconds: 150));
+
+        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.2);
+        final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (byteData != null) {
+          frames.add(byteData.buffer.asUint8List());
+        }
+
+        setState(() {
+          _exportProgress = (i + 1) / steps.length * 0.45;
+        });
+      }
+
+      setState(() {
+        _isCapturing = true;
+      });
+
+      final int w = boundary.size.width.toInt();
+      final int h = boundary.size.height.toInt();
+      final int frameW = (w * 1.2).toInt();
+      final int frameH = (h * 1.2).toInt();
+
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final img.Image gifAnim = img.Image(width: frameW, height: frameH, numChannels: 4);
+      gifAnim.frameDuration = 150;
+
+      for (int fIndex = 0; fIndex < frames.length; fIndex++) {
+        final img.Image frameImg = img.Image.fromBytes(
+          width: frameW,
+          height: frameH,
+          bytes: frames[fIndex].buffer,
+          numChannels: 4,
+        );
+        frameImg.frameDuration = 150;
+        if (fIndex == 0) {
+          gifAnim.frames[0] = frameImg;
+        } else {
+          gifAnim.addFrame(frameImg);
+        }
+        
+        setState(() {
+          _exportProgress = 0.45 + ((fIndex + 1) / frames.length * 0.45);
+        });
+      }
+
+      for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
+        final img.Image frameImg = img.Image.fromBytes(
+          width: frameW,
+          height: frameH,
+          bytes: frames[fIndex].buffer,
+          numChannels: 4,
+        );
+        frameImg.frameDuration = 150;
+        gifAnim.addFrame(frameImg);
+      }
+
+      final gifEncoder = img.GifEncoder();
+      final List<int> gifBytes = gifEncoder.encode(gifAnim);
+
+      setState(() {
+        _exportProgress = 0.95;
+      });
+
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("shareImage", {
+        "bytes": Uint8List.fromList(gifBytes),
+        "filename": "glowmatch_ar_boomerang_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Animasi Boomerang Kamera berhasil dibagikan! 🎬🌟'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal membagikan animasi.");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat Boomerang: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _sliderX = originalSliderX;
+        _isSplitMode = originalSplitMode;
+        _isCapturing = false;
+        _isExportingBoomerang = false;
+      });
+    }
+  }
+
+  Widget _buildFinishingButton(String label, bool isSel) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _lipstickFinishing = label.toLowerCase();
+          _activePreset = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isSel ? Colors.white : textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliderRow(String label, double value, ValueChanged<double> onChanged) {
+    return Row(
+      children: [
+        Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(color: textColor, fontSize: 11),
+        ),
+        Expanded(
+          child: Slider(
+            activeColor: primaryColor,
+            inactiveColor: cardBorderColor,
+            value: value,
+            min: 0.0,
+            max: 0.8,
+            onChanged: _showPaywall ? null : onChanged,
+          ),
+        ),
+        Text(
+          '${(value * 100).round()}%',
+          style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColorCircle(Color color, String name, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: _showPaywall ? null : onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 14),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.55),
+            width: isSelected ? 3 : 1,
+          ),
+        ),
+        child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 18) : null,
+      ),
+    );
   }
 
   Future<void> _activatePremium() async {
@@ -264,6 +1325,22 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
             _detectedFace = faces.first;
             _imageWidth = image.width;
             _imageHeight = image.height;
+
+            // Wink-to-Switch Gesture Control (Phase 2.5)
+            final leftOpen = _detectedFace!.leftEyeOpenProbability;
+            final rightOpen = _detectedFace!.rightEyeOpenProbability;
+            if (leftOpen != null && rightOpen != null) {
+              final now = DateTime.now();
+              if (_lastWinkTime == null || now.difference(_lastWinkTime!) > const Duration(milliseconds: 1200)) {
+                if (leftOpen < 0.15 && rightOpen > 0.75) {
+                  _lastWinkTime = now;
+                  _cycleLipstickColor();
+                } else if (rightOpen < 0.15 && leftOpen > 0.75) {
+                  _lastWinkTime = now;
+                  _toggleLipstickFinishing();
+                }
+              }
+            }
           } else {
             _detectedFace = null;
           }
@@ -472,6 +1549,21 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         backgroundColor: cardBgColor,
         elevation: 0,
         iconTheme:  IconThemeData(color: textColor),
+        actions: [
+          if (!_showPaywall)
+            IconButton(
+              icon: Icon(
+                _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
+                color: _isSplitMode ? primaryColor : textColor,
+              ),
+              tooltip: _isSplitMode ? 'Sembunyikan Pembanding' : 'Tampilkan Pembanding',
+              onPressed: () {
+                setState(() {
+                  _isSplitMode = !_isSplitMode;
+                });
+              },
+            ),
+        ],
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -498,23 +1590,29 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       }
 
                       // Hitung sliderX untuk painter di dalam FittedBox agar posisinya sinkron dengan garis pembagi di layar
-                      final double painterSliderX = ( _sliderX - cameraAreaWidth / 2 ) / scaleFactor + previewWidth / 2;
+                      final double painterSliderX = _isSplitMode 
+                          ? (( _sliderX - cameraAreaWidth / 2 ) / scaleFactor + previewWidth / 2)
+                          : 0.0;
 
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          // Camera & Overlays (FittedBox cover)
-                          Positioned.fill(
-                            child: ClipRect(
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: previewWidth,
-                                  height: previewHeight,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      CameraPreview(_cameraController!),
+                      return GestureDetector(
+                        onTapDown: (details) => _handleCameraTap(details, Size(cameraAreaWidth, cameraAreaHeight)),
+                        child: RepaintBoundary(
+                          key: _repaintBoundaryKey,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              // Camera & Overlays (FittedBox cover)
+                              Positioned.fill(
+                                child: ClipRect(
+                                  child: FittedBox(
+                                    fit: BoxFit.cover,
+                                    child: SizedBox(
+                                      width: previewWidth,
+                                      height: previewHeight,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          CameraPreview(_cameraController!),
 
                                       // Layer Rendering Lipstik & Blush-On CustomPaint
                                       if (!_showPaywall)
@@ -529,8 +1627,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                               lipstickOpacity: _lipstickOpacity,
                                               lipstickFinishing: _lipstickFinishing,
                                               blushColor: _selectedBlushColor,
-                                              blushOpacity: _blushOpacity,
+                                              blushOpacity: _detectedFace?.smilingProbability != null
+                                                  ? (_blushOpacity * (1.0 + _detectedFace!.smilingProbability! * 0.45)).clamp(0.0, 1.0)
+                                                  : _blushOpacity,
+                                              foundationColor: _selectedFoundationColor,
+                                              foundationOpacity: _foundationOpacity,
+                                              showGlassSkin: _showGlassSkin,
                                               sliderX: painterSliderX,
+                                              selectedLightingPreset: _selectedLightingPreset,
+                                              showHarmonyHeatmap: _showHarmonyHeatmap,
+                                              undertone: _lastMatchedUndertone,
                                             ),
                                           ),
                                         ),
@@ -542,7 +1648,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                           ),
 
                           // Handle Slider Pembagi Layar Vertikal yang Bisa Digeser
-                          if (!_showPaywall)
+                          if (!_showPaywall && _isSplitMode)
                             Positioned(
                               left: _sliderX - 25,
                               top: 0,
@@ -631,6 +1737,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                   ),
                                 ],
                               ),
+                            ),
+
+                          // Interactive floating tooltip
+                          if (_showTooltip && !_isCapturing)
+                            Positioned(
+                              left: (_tooltipOffset.dx - 85).clamp(8.0, cameraAreaWidth - 178.0),
+                              top: (_tooltipOffset.dy - 70).clamp(8.0, cameraAreaHeight - 78.0),
+                              child: _buildTooltipWidget(),
                             ),
 
                           // Overlay Dialog Paywall Premium Glassmorphism
@@ -748,7 +1862,9 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                 ),
                               ),
                             ),
-                        ],
+                            ],
+                          ),
+                        ),
                       );
                     },
                   )
@@ -762,7 +1878,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
           // 2. Tombol Show/Hide Floating Panel
           if (_isCameraInitialized && _cameraController != null && !_showPaywall)
             Positioned(
-              bottom: _showControls ? 230 : 24,
+              bottom: _showControls ? 300 : 24,
               right: 16,
               child: FloatingActionButton(
                 heroTag: 'toggle_controls_fab',
@@ -810,7 +1926,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 1. Selector Tab Kategori (Lipstik vs Blush-On)
+                    // 1. Selector Tab Kategori (Looks vs Dasaran Base vs Lipstik vs Blush-On)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
@@ -821,28 +1937,20 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                    _activeCategoryIndex = 0;
-                                });
-                              },
+                              onTap: () => setState(() => _activeCategoryIndex = 0),
                               child: Container(
                                 alignment: Alignment.center,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 0
-                                      ? primaryColor
-                                      : Colors.transparent,
+                                  color: _activeCategoryIndex == 0 ? primaryColor : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  'BIBIR (LIPSTICK)',
+                                  'LOOKS',
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 0
-                                        ? Colors.white
-                                        : textMutedColor,
+                                    color: _activeCategoryIndex == 0 ? Colors.white : textMutedColor,
                                   ),
                                 ),
                               ),
@@ -850,28 +1958,62 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _activeCategoryIndex = 1;
-                                });
-                              },
+                              onTap: () => setState(() => _activeCategoryIndex = 1),
                               child: Container(
                                 alignment: Alignment.center,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 1
-                                      ? primaryColor
-                                      : Colors.transparent,
+                                  color: _activeCategoryIndex == 1 ? primaryColor : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  'PIPI (BLUSH-ON)',
+                                  'BASE',
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 1
-                                        ? Colors.white
-                                        : textMutedColor,
+                                    color: _activeCategoryIndex == 1 ? Colors.white : textMutedColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _activeCategoryIndex = 2),
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _activeCategoryIndex == 2 ? primaryColor : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'BIBIR',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _activeCategoryIndex == 2 ? Colors.white : textMutedColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _activeCategoryIndex = 3),
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _activeCategoryIndex == 3 ? primaryColor : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'PIPI',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _activeCategoryIndex == 3 ? Colors.white : textMutedColor,
                                   ),
                                 ),
                               ),
@@ -881,147 +2023,409 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       ),
                     ),
 
-                    // 1b. Finishing Lipstick Selector (Hanya jika kategori Bibir aktif)
+                    // Sliders & Toggles khusus Tab Aktif
                     if (_activeCategoryIndex == 0) ...[
+                      // Pilihan Preset Looks & AI Recommendation
+                      Text(
+                        'PILIH PRESET LOOKS:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 48,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _presetLooks.length + (_lastMatchedUndertone != null ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (_lastMatchedUndertone != null && index == 0) {
+                              final isSelected = _activePreset?.startsWith('Rekomendasi AI') ?? false;
+                              return GestureDetector(
+                                onTap: _showPaywall ? null : _applyAiRecommendation,
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFBF953F),
+                                        Color(0xFFFCF6BA),
+                                        Color(0xFFB38728),
+                                        Color(0xFFFBF5B7),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: ThemeManager.premiumGlowShadow,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 14),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Rekomendasi AI',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final presetIndex = _lastMatchedUndertone != null ? index - 1 : index;
+                            final preset = _presetLooks[presetIndex];
+                            final String name = preset['name'] as String;
+                            final isSelected = _activePreset == name;
+
+                            return GestureDetector(
+                              onTap: _showPaywall
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _selectedLipstickColor = preset['lipstickColor'] as Color;
+                                        _lipstickOpacity = preset['lipstickOpacity'] as double;
+                                        _lipstickFinishing = preset['lipstickFinishing'] as String;
+                                        _selectedBlushColor = preset['blushColor'] as Color;
+                                        _blushOpacity = preset['blushOpacity'] as double;
+                                        _selectedFoundationColor = preset['foundationColor'] as Color;
+                                        _foundationOpacity = preset['foundationOpacity'] as double;
+                                        _showGlassSkin = preset['showGlassSkin'] as bool;
+                                        _activePreset = name;
+                                      });
+                                    },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isSelected ? primaryColor : cardBgColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.55),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: isSelected ? ThemeManager.premiumGlowShadow : null,
+                                ),
+                                child: Text(
+                                  name,
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : textColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ] else if (_activeCategoryIndex == 1) ...[
+                      // Opacity Foundation (Dasaran Base)
                       Row(
                         children: [
-                           Icon(Icons.brush_rounded, color: primaryColor, size: 18),
+                          Icon(Icons.face_retouching_natural_rounded, color: primaryColor, size: 18),
                           const SizedBox(width: 8),
-                           Text('Tipe Finishing', style: TextStyle(color: textColor, fontSize: 11)),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: _showPaywall ? null : () => setState(() => _lipstickFinishing = 'matte'),
+                          Text('Opasitas Base', style: TextStyle(color: textColor, fontSize: 11)),
+                          Expanded(
+                            child: Slider(
+                              activeColor: primaryColor,
+                              inactiveColor: cardBorderColor,
+                              value: _foundationOpacity,
+                              min: 0.0,
+                              max: 0.8,
+                              onChanged: _showPaywall
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _foundationOpacity = val;
+                                        _activePreset = null;
+                                      });
+                                    },
+                            ),
+                          ),
+                          Text(
+                            '${(_foundationOpacity * 100).round()}%',
+                            style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Dropdown filter Merek Foundation
+                      Row(
+                        children: [
+                           Text(
+                            'Merek:',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              height: 32,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                color: _lipstickFinishing == 'matte' ? primaryColor : cardBgColor,
-                                borderRadius: BorderRadius.circular(20),
-                                border: _lipstickFinishing == 'matte' ? null : Border.all(color: cardBorderColor),
+                                color: cardBgColor,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: cardBorderColor.withOpacity(0.55), width: 1.5),
                               ),
-                              child: Text(
-                                'Matte',
-                                style: TextStyle(
-                                  color: _lipstickFinishing == 'matte' ? Colors.white : textMutedColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedBrandFilter,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.arrow_drop_down, size: 16),
+                                  style: TextStyle(fontSize: 10, color: textColor, fontWeight: FontWeight.bold),
+                                  items: _brands.map((String b) {
+                                    return DropdownMenuItem<String>(
+                                      value: b,
+                                      child: Text(b),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _selectedBrandFilter = val;
+                                        _applyFoundationFilter();
+                                      });
+                                    }
+                                  },
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: _showPaywall ? null : () => setState(() => _lipstickFinishing = 'glossy'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: _lipstickFinishing == 'glossy' ? primaryColor : cardBgColor,
-                                borderRadius: BorderRadius.circular(20),
-                                border: _lipstickFinishing == 'glossy' ? null : Border.all(color: cardBorderColor),
-                              ),
+                          if (_selectedFoundationProduct != null && _foundationOpacity > 0) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
                               child: Text(
-                                'Glossy (Satin)',
-                                style: TextStyle(
-                                  color: _lipstickFinishing == 'glossy' ? Colors.white : textMutedColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.shadeName}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: primaryColor),
                               ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Palet Warna Foundation dari DB
+                      SizedBox(
+                        height: 48,
+                        child: _filteredFoundations.isEmpty
+                            ? const Center(child: Text('Memuat data...', style: TextStyle(fontSize: 11, color: Colors.grey)))
+                            : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _filteredFoundations.length,
+                                itemBuilder: (context, index) {
+                                  final fProd = _filteredFoundations[index];
+                                  final hexColor = _getHexColor(fProd.hexCode);
+                                  final isSel = _selectedFoundationProduct?.id == fProd.id;
+                                  return GestureDetector(
+                                    onTap: _showPaywall
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              _selectedFoundationProduct = fProd;
+                                              _selectedFoundationColor = hexColor;
+                                              _activePreset = null;
+                                              if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
+                                            });
+                                          },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 14),
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: hexColor,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
+                                          width: isSel ? 3 : 1,
+                                        ),
+                                      ),
+                                      child: isSel
+                                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                                          : null,
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ] else if (_activeCategoryIndex == 2) ...[
+                      // Opacity Lipstick & Finishing Toggle
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Transparansi Bibir', style: TextStyle(color: textColor, fontSize: 11)),
+                                Expanded(
+                                  child: Slider(
+                                    activeColor: primaryColor,
+                                    inactiveColor: cardBorderColor,
+                                    value: _lipstickOpacity,
+                                    min: 0.0,
+                                    max: 0.8,
+                                    onChanged: _showPaywall
+                                        ? null
+                                        : (val) {
+                                            setState(() {
+                                              _lipstickOpacity = val;
+                                              _activePreset = null;
+                                            });
+                                          },
+                                  ),
+                                ),
+                                Text(
+                                  '${(_lipstickOpacity * 100).round()}%',
+                                  style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Glossy vs Matte
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: cardBgColor,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: cardBorderColor.withOpacity(0.55), width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                _buildFinishingButton('Matte', _lipstickFinishing == 'matte'),
+                                _buildFinishingButton('Glossy', _lipstickFinishing == 'glossy'),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // 2. Slider Opacity/Ketebalan Kategori yang Aktif
-                    Row(
-                      children: [
-                         Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          _activeCategoryIndex == 0 ? 'Transparansi Lipstik' : 'Transparansi Blush',
-                          style:  TextStyle(color: textColor, fontSize: 11),
-                        ),
-                        Expanded(
-                          child: Slider(
-                            activeColor: primaryColor,
-                            inactiveColor: cardBorderColor,
-                            value: _activeCategoryIndex == 0 ? _lipstickOpacity : _blushOpacity,
-                            min: 0.0,
-                            max: 0.8,
-                            onChanged: _showPaywall
-                                ? null
-                                : (val) {
-                                    setState(() {
-                                      if (_activeCategoryIndex == 0) {
-                                        _lipstickOpacity = val;
-                                      } else {
-                                        _blushOpacity = val;
-                                      }
-                                    });
-                                  },
-                          ),
-                        ),
-                        Text(
-                          '${((_activeCategoryIndex == 0 ? _lipstickOpacity : _blushOpacity) * 100).round()}%',
-                          style:  TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 3. Palet Pemilihan Warna Kategori yang Aktif
-                    Text(
-                      _activeCategoryIndex == 0 ? 'WARNA LIPSTIK:' : 'WARNA BLUSH-ON:',
-                      style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 48,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _activeCategoryIndex == 0 ? _lipstickColors.length : _blushColors.length,
-                        itemBuilder: (context, index) {
-                          final item = _activeCategoryIndex == 0
-                              ? _lipstickColors[index]
-                              : _blushColors[index];
-                          final colorVal = item['color'] as Color;
-                          final isSelected = _activeCategoryIndex == 0
-                              ? _selectedLipstickColor == colorVal
-                              : _selectedBlushColor == colorVal;
-
-                          return GestureDetector(
-                            onTap: _showPaywall
-                                ? null
-                                : () {
-                                    setState(() {
-                                      if (_activeCategoryIndex == 0) {
-                                        _selectedLipstickColor = colorVal;
-                                      } else {
-                                        _selectedBlushColor = colorVal;
-                                      }
-                                    });
-                                  },
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 14),
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: colorVal,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected ? primaryColor : cardBorderColor,
-                                  width: isSelected ? 3 : 1,
-                                ),
-                              ),
-                              child: isSelected
-                                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                                  : null,
-                            ),
-                          );
-                        },
+                      const SizedBox(height: 8),
+                      // Palet Warna Lipstick
+                      Text(
+                        'WARNA LIPSTIK:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 48,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _lipstickColors.length,
+                          itemBuilder: (context, index) {
+                            final lColor = _lipstickColors[index];
+                            final isSel = _selectedLipstickColor == lColor['color'];
+                            return GestureDetector(
+                              onTap: _showPaywall
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _selectedLipstickColor = lColor['color'];
+                                        _activePreset = null;
+                                        if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
+                                      });
+                                    },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 14),
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: lColor['color'],
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
+                                    width: isSel ? 3 : 1,
+                                  ),
+                                ),
+                                child: isSel
+                                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ] else ...[
+                      // Opacity Blush-On
+                      Row(
+                        children: [
+                          Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Transparansi Pipi', style: TextStyle(color: textColor, fontSize: 11)),
+                          Expanded(
+                            child: Slider(
+                              activeColor: primaryColor,
+                              inactiveColor: cardBorderColor,
+                              value: _blushOpacity,
+                              min: 0.0,
+                              max: 0.8,
+                              onChanged: _showPaywall
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _blushOpacity = val;
+                                        _activePreset = null;
+                                      });
+                                    },
+                            ),
+                          ),
+                          Text(
+                            '${(_blushOpacity * 100).round()}%',
+                            style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Palet Warna Blush-On
+                      Text(
+                        'WARNA BLUSH-ON:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 48,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _blushColors.length,
+                          itemBuilder: (context, index) {
+                            final bColor = _blushColors[index];
+                            final isSel = _selectedBlushColor == bColor['color'];
+                            return GestureDetector(
+                              onTap: _showPaywall
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _selectedBlushColor = bColor['color'];
+                                        _activePreset = null;
+                                        if (_blushOpacity == 0.0) _blushOpacity = 0.25;
+                                      });
+                                    },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 14),
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: bColor['color'],
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
+                                    width: isSel ? 3 : 1,
+                                  ),
+                                ),
+                                child: isSel
+                                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

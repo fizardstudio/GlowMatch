@@ -1,6 +1,6 @@
 import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:math';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
@@ -20,7 +20,19 @@ class LipFilterPainter extends CustomPainter {
   final Color? blushColor;
   final double blushOpacity;
 
+  // Parameter Base Makeup (Foundation)
+  final Color? foundationColor;
+  final double foundationOpacity;
+
+  // Glass Skin & Highlighter
+  final bool showGlassSkin;
+
   final double sliderX;
+
+  // Advanced Try-On Upgrades (Phase 2.5)
+  final String selectedLightingPreset; // 'Natural', 'Golden Hour', 'Studio Light', 'Cyber Neon'
+  final bool showHarmonyHeatmap;
+  final String? undertone;
 
   LipFilterPainter({
     required this.face,
@@ -32,7 +44,13 @@ class LipFilterPainter extends CustomPainter {
     required this.lipstickFinishing,
     this.blushColor,
     required this.blushOpacity,
+    this.foundationColor,
+    required this.foundationOpacity,
+    required this.showGlassSkin,
     required this.sliderX,
+    required this.selectedLightingPreset,
+    required this.showHarmonyHeatmap,
+    this.undertone,
   });
 
   @override
@@ -82,7 +100,224 @@ class LipFilterPainter extends CustomPainter {
     estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
     estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
-    // 1. GAMBAR FILTER LIPSTIK (BIBIR)
+    // 1. RENDER BASE MAKEUP (LIVE FOUNDATION)
+    if (foundationColor != null && foundationOpacity > 0.0) {
+      final faceContourPoints = face!.contours[FaceContourType.face]?.points;
+      if (faceContourPoints != null && faceContourPoints.isNotEmpty) {
+        final Path facePath = Path();
+        final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+        
+        // Perluas dahi ke arah hairline
+        final hairlinePts = FaceGeometryHelper.getHairlinePoints(face!);
+        faceOffsets.add(mapPoint(Point(hairlinePts[0].x.round(), hairlinePts[0].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[1].x.round(), hairlinePts[1].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[2].x.round(), hairlinePts[2].y.round())));
+        
+        buildSmoothPath(facePath, faceOffsets);
+        facePath.close();
+
+        // Buat lubang cutout agar tidak menutupi mata, alis, dan mulut
+        final Path holesPath = Path();
+
+        // Mata Kiri
+        final leftEye = face!.contours[FaceContourType.leftEye]?.points;
+        if (leftEye != null && leftEye.isNotEmpty) {
+          final Path leftEyePath = Path();
+          buildSmoothPath(leftEyePath, leftEye.map((p) => mapPoint(Point(p.x, p.y))).toList());
+          leftEyePath.close();
+          holesPath.addPath(leftEyePath, Offset.zero);
+        }
+
+        // Mata Kanan
+        final rightEye = face!.contours[FaceContourType.rightEye]?.points;
+        if (rightEye != null && rightEye.isNotEmpty) {
+          final Path rightEyePath = Path();
+          buildSmoothPath(rightEyePath, rightEye.map((p) => mapPoint(Point(p.x, p.y))).toList());
+          rightEyePath.close();
+          holesPath.addPath(rightEyePath, Offset.zero);
+        }
+
+        // Bibir (Mulut luar)
+        final upperLipTop = face!.contours[FaceContourType.upperLipTop]?.points;
+        final lowerLipBottom = face!.contours[FaceContourType.lowerLipBottom]?.points;
+        if (upperLipTop != null && upperLipTop.isNotEmpty && lowerLipBottom != null && lowerLipBottom.isNotEmpty) {
+          final Path lipsPath = Path();
+          final List<Offset> lipsOffsets = [];
+          lipsOffsets.addAll(upperLipTop.map((p) => mapPoint(Point(p.x, p.y))));
+          lipsOffsets.addAll(lowerLipBottom.reversed.map((p) => mapPoint(Point(p.x, p.y))));
+          buildSmoothPath(lipsPath, lipsOffsets);
+          lipsPath.close();
+          holesPath.addPath(lipsPath, Offset.zero);
+        }
+
+        // Alis Kiri
+        final leftEyebrowTop = face!.contours[FaceContourType.leftEyebrowTop]?.points;
+        final leftEyebrowBottom = face!.contours[FaceContourType.leftEyebrowBottom]?.points;
+        if (leftEyebrowTop != null && leftEyebrowTop.isNotEmpty) {
+          final Path eyebrowPath = Path();
+          final List<Offset> eyebrowOffsets = [];
+          eyebrowOffsets.addAll(leftEyebrowTop.map((p) => mapPoint(Point(p.x, p.y))));
+          if (leftEyebrowBottom != null) {
+            eyebrowOffsets.addAll(leftEyebrowBottom.reversed.map((p) => mapPoint(Point(p.x, p.y))));
+          }
+          buildSmoothPath(eyebrowPath, eyebrowOffsets);
+          eyebrowPath.close();
+          holesPath.addPath(eyebrowPath, Offset.zero);
+        }
+
+        // Alis Kanan
+        final rightEyebrowTop = face!.contours[FaceContourType.rightEyebrowTop]?.points;
+        final rightEyebrowBottom = face!.contours[FaceContourType.rightEyebrowBottom]?.points;
+        if (rightEyebrowTop != null && rightEyebrowTop.isNotEmpty) {
+          final Path eyebrowPath = Path();
+          final List<Offset> eyebrowOffsets = [];
+          eyebrowOffsets.addAll(rightEyebrowTop.map((p) => mapPoint(Point(p.x, p.y))));
+          if (rightEyebrowBottom != null) {
+            eyebrowOffsets.addAll(rightEyebrowBottom.reversed.map((p) => mapPoint(Point(p.x, p.y))));
+          }
+          buildSmoothPath(eyebrowPath, eyebrowOffsets);
+          eyebrowPath.close();
+          holesPath.addPath(eyebrowPath, Offset.zero);
+        }
+
+        // Kurangkan lubang dari masker wajah utuh
+        final Path finalFoundationPath = Path.combine(
+          PathOperation.difference,
+          facePath,
+          holesPath,
+        );
+
+        final paintBase = Paint()
+          ..color = foundationColor!.withOpacity(foundationOpacity)
+          ..style = PaintingStyle.fill
+          ..blendMode = BlendMode.softLight
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
+
+        canvas.drawPath(finalFoundationPath, paintBase);
+      }
+    }
+
+    // RENDER BASE MAKEUP LIGHTING PRESETS OVERLAY ON FACE
+    if (selectedLightingPreset != 'Natural') {
+      final faceContourPoints = face!.contours[FaceContourType.face]?.points;
+      if (faceContourPoints != null && faceContourPoints.isNotEmpty) {
+        final Path facePath = Path();
+        final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+        
+        final hairlinePts = FaceGeometryHelper.getHairlinePoints(face!);
+        faceOffsets.add(mapPoint(Point(hairlinePts[0].x.round(), hairlinePts[0].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[1].x.round(), hairlinePts[1].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[2].x.round(), hairlinePts[2].y.round())));
+        
+        buildSmoothPath(facePath, faceOffsets);
+        facePath.close();
+
+        if (selectedLightingPreset == 'Golden Hour') {
+          // Warm golden sunset overlay
+          final paintLight = Paint()
+            ..color = const Color(0xFFFFB74D).withOpacity(0.18)
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.overlay
+            ..imageFilter = ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0);
+          canvas.drawPath(facePath, paintLight);
+        } else if (selectedLightingPreset == 'Studio Light') {
+          // Specular white spotlight over dahi & nose
+          final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
+          final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
+          final double spotlightRadius = faceWidth * 0.4;
+          final Paint paintLight = Paint()
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.softLight
+            ..shader = ui.Gradient.radial(
+              mappedForehead,
+              spotlightRadius,
+              [
+                Colors.white.withOpacity(0.35),
+                Colors.white.withOpacity(0.0),
+              ],
+            );
+          canvas.drawPath(facePath, paintLight);
+        } else if (selectedLightingPreset == 'Cyber Neon') {
+          // Dual cyan-pink neon exposure from sides
+          final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
+          final mappedLeft = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
+          final mappedRight = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
+          final double neonRadius = faceWidth * 0.6;
+          
+          final Paint paintNeon = Paint()
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.screen;
+
+          // Left neon cyan
+          paintNeon.shader = ui.Gradient.radial(
+            mappedLeft.translate(-faceWidth * 0.3, 0),
+            neonRadius,
+            [
+              const Color(0xFF00E5FF).withOpacity(0.20),
+              Colors.transparent,
+            ],
+          );
+          canvas.drawPath(facePath, paintNeon);
+
+          // Right neon pink
+          paintNeon.shader = ui.Gradient.radial(
+            mappedRight.translate(faceWidth * 0.3, 0),
+            neonRadius,
+            [
+              const Color(0xFFFF007F).withOpacity(0.20),
+              Colors.transparent,
+            ],
+          );
+          canvas.drawPath(facePath, paintNeon);
+        }
+      }
+    }
+
+    // 2. RENDER DEWY GLASS SKIN GLOW
+    if (showGlassSkin && estimatedLeftCheek != null && estimatedRightCheek != null) {
+      final double glowRadius = faceWidth * 0.22;
+      
+      final Paint paintGlow = Paint()
+        ..style = PaintingStyle.fill
+        ..blendMode = BlendMode.screen;
+
+      // Glow Pipi Kiri
+      paintGlow.shader = ui.Gradient.radial(
+        estimatedLeftCheek,
+        glowRadius,
+        [
+          Colors.white.withOpacity(0.18),
+          Colors.white.withOpacity(0.0),
+        ],
+      );
+      canvas.drawCircle(estimatedLeftCheek, glowRadius, paintGlow);
+
+      // Glow Pipi Kanan
+      paintGlow.shader = ui.Gradient.radial(
+        estimatedRightCheek,
+        glowRadius,
+        [
+          Colors.white.withOpacity(0.18),
+          Colors.white.withOpacity(0.0),
+        ],
+      );
+      canvas.drawCircle(estimatedRightCheek, glowRadius, paintGlow);
+
+      // Glow Dahi
+      final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
+      final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
+      paintGlow.shader = ui.Gradient.radial(
+        mappedForehead,
+        glowRadius * 1.2,
+        [
+          Colors.white.withOpacity(0.15),
+          Colors.white.withOpacity(0.0),
+        ],
+      );
+      canvas.drawCircle(mappedForehead, glowRadius * 1.2, paintGlow);
+    }
+
+    // 3. GAMBAR FILTER LIPSTIK (BIBIR)
     if (lipstickColor != null && lipstickOpacity > 0.0) {
       final upperLipTop = face!.contours[FaceContourType.upperLipTop]?.points;
       final upperLipBottom = face!.contours[FaceContourType.upperLipBottom]?.points;
@@ -126,13 +361,24 @@ class LipFilterPainter extends CustomPainter {
         ..color = lipstickColor!.withOpacity(lipstickOpacity)
         ..style = PaintingStyle.fill
         ..blendMode = lipstickFinishing == 'glossy' ? BlendMode.color : BlendMode.multiply
-        ..imageFilter = ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5); // Feathering effect
+        ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5); // Feathering effect
 
       canvas.drawPath(upperLipPath, paintLip);
       canvas.drawPath(lowerLipPath, paintLip);
+
+      // Harmony Heatmap outline warning for lips
+      if (showHarmonyHeatmap && _isLipstickMismatch()) {
+        final paintWarning = Paint()
+          ..color = const Color(0xFFFF3D00) // Neon orange-red alert
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.0, sigmaY: 1.0);
+        canvas.drawPath(upperLipPath, paintWarning);
+        canvas.drawPath(lowerLipPath, paintWarning);
+      }
     }
 
-    // 2. GAMBAR FILTER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
+    // 4. GAMBAR FILTER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
 
@@ -155,7 +401,7 @@ class LipFilterPainter extends CustomPainter {
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
@@ -164,6 +410,16 @@ class LipFilterPainter extends CustomPainter {
           ).createShader(bounds);
 
         canvas.drawOval(bounds, paintCheek);
+
+        // Harmony Heatmap outline warning for cheeks
+        if (showHarmonyHeatmap && _isBlushMismatch()) {
+          final paintWarning = Paint()
+            ..color = const Color(0xFFFF3D00)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0;
+          canvas.drawOval(bounds.inflate(4.0), paintWarning);
+        }
+
         canvas.restore();
       }
 
@@ -178,6 +434,38 @@ class LipFilterPainter extends CustomPainter {
     canvas.restore();
   }
 
+  bool _isLipstickMismatch() {
+    if (undertone == null || lipstickColor == null || lipstickOpacity == 0.0) return false;
+    final String und = undertone!.toLowerCase();
+    final int value = lipstickColor!.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xD81B60 || value == 0xAD1457 || value == 0x8E24AA || value == 0xB71C1C) {
+      isCool = true;
+    } else if (value == 0xFFFF7043 || value == 0x8D6E63 || value == 0xF98E7B) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
+  bool _isBlushMismatch() {
+    if (undertone == null || blushColor == null || blushOpacity == 0.0) return false;
+    final String und = undertone!.toLowerCase();
+    final int value = blushColor!.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xFF80AB || value == 0xE91E63 || value == 0xBA68C8) {
+      isCool = true;
+    } else if (value == 0xFFFF8A80 || value == 0xFFB74D || value == 0xFFFF8F00) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
   @override
   bool shouldRepaint(covariant LipFilterPainter oldDelegate) {
     return oldDelegate.face != face ||
@@ -186,8 +474,12 @@ class LipFilterPainter extends CustomPainter {
         oldDelegate.lipstickFinishing != lipstickFinishing ||
         oldDelegate.blushColor != blushColor ||
         oldDelegate.blushOpacity != blushOpacity ||
+        oldDelegate.foundationColor != foundationColor ||
+        oldDelegate.foundationOpacity != foundationOpacity ||
+        oldDelegate.showGlassSkin != showGlassSkin ||
         oldDelegate.sliderX != sliderX ||
-        oldDelegate.imageWidth != imageWidth ||
-        oldDelegate.imageHeight != imageHeight;
+        oldDelegate.selectedLightingPreset != selectedLightingPreset ||
+        oldDelegate.showHarmonyHeatmap != showHarmonyHeatmap ||
+        oldDelegate.undertone != undertone;
   }
 }

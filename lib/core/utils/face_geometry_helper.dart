@@ -166,4 +166,21 @@ class FaceGeometryHelper {
       Point(fhRightX, fhRightY),
     ];
   }
+
+  /// Mendapatkan titik pusat bibir (lip center) secara robust.
+  static Point<double>? getLipCenter(Face face) {
+    final lipPoints = face.contours[FaceContourType.upperLipTop]?.points;
+    if (lipPoints != null && lipPoints.isNotEmpty) {
+      double sumX = 0;
+      double sumY = 0;
+      for (var p in lipPoints) {
+        sumX += p.x;
+        sumY += p.y;
+      }
+      return Point(sumX / lipPoints.length, sumY / lipPoints.length);
+    }
+    // Fallback using bounding box math
+    final rect = face.boundingBox;
+    return Point(rect.left + rect.width / 2.0, rect.top + rect.height * 0.75);
+  }
 }

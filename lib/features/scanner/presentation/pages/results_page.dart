@@ -125,6 +125,29 @@ class _ResultsPageState extends State<ResultsPage> {
   void initState() {
     super.initState();
     _checkPremiumStatus();
+    _saveLastMatchedShade();
+  }
+
+  Future<void> _saveLastMatchedShade() async {
+    try {
+      final isar = DatabaseService().isar;
+      await isar.writeTxn(() async {
+        final settings = await isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
+        settings.lastMatchedShadeName = widget.matchedStandard.name;
+        settings.lastMatchedUndertone = widget.matchedStandard.undertone;
+        final profile = ColorCalculator.getSeasonalColorProfile(
+          widget.matchedStandard.l,
+          widget.matchedStandard.a,
+          widget.matchedStandard.b,
+        );
+        settings.lastMatchedSeasonalColor = profile['season'] as String;
+        settings.lastMatchedSkinTone = widget.matchedStandard.skinTone;
+        await isar.appSettings.put(settings);
+      });
+      debugPrint("SUCCESS_ISAR: Scanned shade results saved to AppSettings.");
+    } catch (e) {
+      debugPrint("ERROR_ISAR: Failed to save matched shade to AppSettings: $e");
+    }
   }
 
   Future<void> _checkPremiumStatus() async {

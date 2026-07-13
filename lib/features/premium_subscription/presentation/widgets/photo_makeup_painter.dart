@@ -1,6 +1,6 @@
 import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:math';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
@@ -8,6 +8,7 @@ class PhotoMakeupPainter extends CustomPainter {
   final Face? face;
   final int originalImageWidth;
   final int originalImageHeight;
+  final ui.Image? backgroundImage;
   
   // Parameter Base Makeup (Foundation)
   final Color? foundationColor;
@@ -22,13 +23,22 @@ class PhotoMakeupPainter extends CustomPainter {
   final Color? blushColor;
   final double blushOpacity;
 
+  // Glass Skin & Highlighter
+  final bool showGlassSkin;
+
   // Split screen divider X
   final double sliderX;
+
+  // Advanced Try-On Upgrades (Phase 2.5)
+  final String selectedLightingPreset; // 'Natural', 'Golden Hour', 'Studio Light', 'Cyber Neon'
+  final bool showHarmonyHeatmap;
+  final String? undertone;
 
   PhotoMakeupPainter({
     required this.face,
     required this.originalImageWidth,
     required this.originalImageHeight,
+    this.backgroundImage,
     this.foundationColor,
     required this.foundationOpacity,
     this.lipstickColor,
@@ -36,11 +46,24 @@ class PhotoMakeupPainter extends CustomPainter {
     required this.lipstickFinishing,
     this.blushColor,
     required this.blushOpacity,
+    required this.showGlassSkin,
     required this.sliderX,
+    required this.selectedLightingPreset,
+    required this.showHarmonyHeatmap,
+    this.undertone,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (backgroundImage != null) {
+      canvas.drawImageRect(
+        backgroundImage!,
+        Rect.fromLTWH(0, 0, backgroundImage!.width.toDouble(), backgroundImage!.height.toDouble()),
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint(),
+      );
+    }
+
     if (face == null || originalImageWidth == 0 || originalImageHeight == 0) return;
 
     // Hitung faktor skala dari koordinat foto asli ke dimensi rendering di layar (fitted)
@@ -80,14 +103,10 @@ class PhotoMakeupPainter extends CustomPainter {
         final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
         
         // Perluas dahi (forehead extension) ke arah hairline menggunakan FaceGeometryHelper
-        final leftEyePt = face!.landmarks[FaceLandmarkType.leftEye]?.position;
-        final rightEyePt = face!.landmarks[FaceLandmarkType.rightEye]?.position;
-        if (leftEyePt != null && rightEyePt != null) {
-          final hairlinePts = FaceGeometryHelper.getHairlinePoints(face!);
-          faceOffsets.add(mapPoint(Point(hairlinePts[0].x.round(), hairlinePts[0].y.round())));
-          faceOffsets.add(mapPoint(Point(hairlinePts[1].x.round(), hairlinePts[1].y.round())));
-          faceOffsets.add(mapPoint(Point(hairlinePts[2].x.round(), hairlinePts[2].y.round())));
-        }
+        final hairlinePts = FaceGeometryHelper.getHairlinePoints(face!);
+        faceOffsets.add(mapPoint(Point(hairlinePts[0].x.round(), hairlinePts[0].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[1].x.round(), hairlinePts[1].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[2].x.round(), hairlinePts[2].y.round())));
         buildSmoothPath(facePath, faceOffsets);
         facePath.close();
 
@@ -166,9 +185,85 @@ class PhotoMakeupPainter extends CustomPainter {
           ..color = foundationColor!.withOpacity(foundationOpacity)
           ..style = PaintingStyle.fill
           ..blendMode = BlendMode.softLight // Menghasilkan perpaduan warna kulit yang sangat alami
-          ..imageFilter = ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5); // Blending transisi tepi wajah halus
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5); // Blending transisi tepi wajah halus
 
         canvas.drawPath(finalFoundationPath, paintBase);
+      }
+    }
+
+    // RENDER BASE MAKEUP LIGHTING PRESETS OVERLAY ON FACE
+    if (selectedLightingPreset != 'Natural') {
+      final faceContourPoints = face!.contours[FaceContourType.face]?.points;
+      if (faceContourPoints != null && faceContourPoints.isNotEmpty) {
+        final Path facePath = Path();
+        final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+        
+        final hairlinePts = FaceGeometryHelper.getHairlinePoints(face!);
+        faceOffsets.add(mapPoint(Point(hairlinePts[0].x.round(), hairlinePts[0].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[1].x.round(), hairlinePts[1].y.round())));
+        faceOffsets.add(mapPoint(Point(hairlinePts[2].x.round(), hairlinePts[2].y.round())));
+        
+        buildSmoothPath(facePath, faceOffsets);
+        facePath.close();
+
+        if (selectedLightingPreset == 'Golden Hour') {
+          // Warm golden sunset overlay
+          final paintLight = Paint()
+            ..color = const Color(0xFFFFB74D).withOpacity(0.18)
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.overlay
+            ..imageFilter = ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0);
+          canvas.drawPath(facePath, paintLight);
+        } else if (selectedLightingPreset == 'Studio Light') {
+          // Specular white spotlight over dahi & nose
+          final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
+          final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
+          final double spotlightRadius = faceWidth * 0.4;
+          final Paint paintLight = Paint()
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.softLight
+            ..shader = ui.Gradient.radial(
+              mappedForehead,
+              spotlightRadius,
+              [
+                Colors.white.withOpacity(0.35),
+                Colors.white.withOpacity(0.0),
+              ],
+            );
+          canvas.drawPath(facePath, paintLight);
+        } else if (selectedLightingPreset == 'Cyber Neon') {
+          // Dual cyan-pink neon exposure from sides
+          final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
+          final mappedLeft = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
+          final mappedRight = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
+          final double neonRadius = faceWidth * 0.6;
+          
+          final Paint paintNeon = Paint()
+            ..style = PaintingStyle.fill
+            ..blendMode = BlendMode.screen;
+
+          // Left neon cyan
+          paintNeon.shader = ui.Gradient.radial(
+            mappedLeft.translate(-faceWidth * 0.3, 0),
+            neonRadius,
+            [
+              const Color(0xFF00E5FF).withOpacity(0.20),
+              Colors.transparent,
+            ],
+          );
+          canvas.drawPath(facePath, paintNeon);
+
+          // Right neon pink
+          paintNeon.shader = ui.Gradient.radial(
+            mappedRight.translate(faceWidth * 0.3, 0),
+            neonRadius,
+            [
+              const Color(0xFFFF007F).withOpacity(0.20),
+              Colors.transparent,
+            ],
+          );
+          canvas.drawPath(facePath, paintNeon);
+        }
       }
     }
 
@@ -176,13 +271,55 @@ class PhotoMakeupPainter extends CustomPainter {
     Offset? estimatedLeftCheek;
     Offset? estimatedRightCheek;
 
-
-
     final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
     estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
     estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
-    // 2. RENDER LIPSTIK (BIBIR)
+    // 2. RENDER DEWY GLASS SKIN GLOW
+    if (showGlassSkin && estimatedLeftCheek != null && estimatedRightCheek != null) {
+      final double glowRadius = faceWidth * 0.22;
+      
+      final Paint paintGlow = Paint()
+        ..style = PaintingStyle.fill
+        ..blendMode = BlendMode.screen;
+
+      // Glow Pipi Kiri
+      paintGlow.shader = ui.Gradient.radial(
+        estimatedLeftCheek,
+        glowRadius,
+        [
+          Colors.white.withOpacity(0.18),
+          Colors.white.withOpacity(0.0),
+        ],
+      );
+      canvas.drawCircle(estimatedLeftCheek, glowRadius, paintGlow);
+
+      // Glow Pipi Kanan
+      paintGlow.shader = ui.Gradient.radial(
+        estimatedRightCheek,
+        glowRadius,
+        [
+          Colors.white.withOpacity(0.18),
+          Colors.white.withOpacity(0.0),
+        ],
+      );
+      canvas.drawCircle(estimatedRightCheek, glowRadius, paintGlow);
+
+      // Glow Dahi
+      final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
+      final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
+      paintGlow.shader = ui.Gradient.radial(
+        mappedForehead,
+        glowRadius * 1.2,
+        [
+          Colors.white.withOpacity(0.15),
+          Colors.white.withOpacity(0.0),
+        ],
+      );
+      canvas.drawCircle(mappedForehead, glowRadius * 1.2, paintGlow);
+    }
+
+    // 3. RENDER LIPSTIK (BIBIR)
     if (lipstickColor != null && lipstickOpacity > 0.0) {
       final upperLipTop = face!.contours[FaceContourType.upperLipTop]?.points;
       final upperLipBottom = face!.contours[FaceContourType.upperLipBottom]?.points;
@@ -220,10 +357,21 @@ class PhotoMakeupPainter extends CustomPainter {
         ..color = lipstickColor!.withOpacity(lipstickOpacity)
         ..style = PaintingStyle.fill
         ..blendMode = lipstickFinishing == 'glossy' ? BlendMode.color : BlendMode.multiply
-        ..imageFilter = ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5); // Efek gradasi tepi bibir halus
+        ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5); // Efek gradasi tepi bibir halus
 
       canvas.drawPath(upperLipPath, paintLip);
       canvas.drawPath(lowerLipPath, paintLip);
+
+      // Harmony Heatmap outline warning for lips
+      if (showHarmonyHeatmap && _isLipstickMismatch()) {
+        final paintWarning = Paint()
+          ..color = const Color(0xFFFF3D00) // Neon orange-red alert
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.0, sigmaY: 1.0);
+        canvas.drawPath(upperLipPath, paintWarning);
+        canvas.drawPath(lowerLipPath, paintWarning);
+      }
     }
 
     // 3. RENDER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
@@ -232,7 +380,10 @@ class PhotoMakeupPainter extends CustomPainter {
 
       void drawCheekBlush(Offset center, bool isLeft) {
         final double rollAngle = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
-        
+        final double smileProb = face!.smilingProbability ?? 0.0;
+        // Smile adaptability: shift cheeks vertically upward when smiling
+        final double smileShiftY = smileProb * blushRadius * 0.25;
+
         canvas.save();
         canvas.translate(center.dx, center.dy);
         canvas.rotate(rollAngle);
@@ -243,14 +394,14 @@ class PhotoMakeupPainter extends CustomPainter {
         // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar
         final double offsetX = isLeft ? -width * 0.1 : width * 0.1;
         final Rect bounds = Rect.fromCenter(
-          center: Offset(offsetX, 0),
+          center: Offset(offsetX, -smileShiftY),
           width: width,
           height: height,
         );
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
@@ -259,6 +410,16 @@ class PhotoMakeupPainter extends CustomPainter {
           ).createShader(bounds);
 
         canvas.drawOval(bounds, paintCheek);
+
+        // Harmony Heatmap outline warning for cheeks
+        if (showHarmonyHeatmap && _isBlushMismatch()) {
+          final paintWarning = Paint()
+            ..color = const Color(0xFFFF3D00)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0;
+          canvas.drawOval(bounds.inflate(4.0), paintWarning);
+        }
+
         canvas.restore();
       }
 
@@ -273,6 +434,38 @@ class PhotoMakeupPainter extends CustomPainter {
     canvas.restore();
   }
 
+  bool _isLipstickMismatch() {
+    if (undertone == null || lipstickColor == null || lipstickOpacity == 0.0) return false;
+    final String und = undertone!.toLowerCase();
+    final int value = lipstickColor!.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xD81B60 || value == 0xAD1457 || value == 0x8E24AA || value == 0xB71C1C) {
+      isCool = true;
+    } else if (value == 0xFF7043 || value == 0x8D6E63) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
+  bool _isBlushMismatch() {
+    if (undertone == null || blushColor == null || blushOpacity == 0.0) return false;
+    final String und = undertone!.toLowerCase();
+    final int value = blushColor!.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xFF80AB || value == 0xE91E63 || value == 0xBA68C8) {
+      isCool = true;
+    } else if (value == 0xFF8A80 || value == 0xFFB74D || value == 0xFF8F00) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
   @override
   bool shouldRepaint(covariant PhotoMakeupPainter oldDelegate) {
     return oldDelegate.face != face ||
@@ -285,6 +478,9 @@ class PhotoMakeupPainter extends CustomPainter {
         oldDelegate.blushOpacity != blushOpacity ||
         oldDelegate.sliderX != sliderX ||
         oldDelegate.originalImageWidth != originalImageWidth ||
-        oldDelegate.originalImageHeight != originalImageHeight;
+        oldDelegate.originalImageHeight != originalImageHeight ||
+        oldDelegate.selectedLightingPreset != selectedLightingPreset ||
+        oldDelegate.showHarmonyHeatmap != showHarmonyHeatmap ||
+        oldDelegate.undertone != undertone;
   }
 }

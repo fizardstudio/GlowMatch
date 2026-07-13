@@ -15,8 +15,10 @@ import '../../data/models/app_settings.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/utils/color_calculator.dart';
 import '../widgets/photo_makeup_painter.dart';
+import '../../../../core/utils/face_geometry_helper.dart';
 import '../../../../core/utils/widget_helper.dart';
 import 'package:flutter/rendering.dart';
+import 'package:image/image.dart' as img;
 
 class PhotoTryOnPage extends StatefulWidget {
   final String? initialFilePath;
@@ -43,7 +45,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableContours: true,
-      enableLandmarks: false,
+      enableLandmarks: true,
+      enableClassification: true,
       performanceMode: FaceDetectorMode.accurate,
     ),
   );
@@ -54,11 +57,26 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   bool _isSavingLook = false;
   bool _isCapturing = false;
   Face? _detectedFace;
+  ui.Image? _decodedImage;
   int _originalWidth = 0;
   int _originalHeight = 0;
 
-  // Active Category (0 = Dasaran/Base, 1 = Lipstik, 2 = Blush-On)
+  // Active Category (0 = Looks, 1 = Base, 2 = Bibir, 3 = Pipi)
   int _activeCategoryIndex = 0;
+  String? _activePreset = 'Korean Glass Skin';
+  bool _isSplitMode = true; // DEFAULT ON!
+  bool _showGlassSkin = true;
+
+  // Advanced Try-On Upgrades (Phase 2.5)
+  String _selectedLightingPreset = 'Natural'; // 'Natural', 'Golden Hour', 'Studio Light', 'Cyber Neon'
+  bool _showHarmonyHeatmap = false;
+  bool _showTooltip = false;
+  String _activeTooltipComponent = 'base';
+  Offset _tooltipOffset = Offset.zero;
+
+  // Boomerang Export Progress
+  bool _isExportingBoomerang = false;
+  double _exportProgress = 0.0;
 
   // Filter Parameters - Base Makeup (Foundation)
   Color _selectedFoundationColor = const Color(0xFFF3D3C4); // Fair Nude
@@ -72,15 +90,68 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   ProductShade? _selectedFoundationProduct;
 
   // Filter Parameters - Lipstick (Bibir)
-  Color _selectedLipstickColor = const Color(0xFFD81B60); // Cherry Red
-  double _lipstickOpacity = 0.0; // Default 0% (tidak aktif)
-  String _lipstickFinishing = 'matte'; // 'matte' atau 'glossy'
+  Color _selectedLipstickColor = const Color(0xFFF98E7B); // Coral pink (Korean Glass Skin default)
+  double _lipstickOpacity = 0.45;
+  String _lipstickFinishing = 'glossy';
 
   // Filter Parameters - Blush-On (Pipi)
   Color _selectedBlushColor = const Color(0xFFFF8A80); // Soft Coral
-  double _blushOpacity = 0.0; // Default 0% (tidak aktif)
+  double _blushOpacity = 0.30;
 
-  double _sliderX = 180.0; // Koordinat pembagi horizontal (default diatur di didChangeDependencies)
+  double _sliderX = 180.0; // Koordinat pembagi horizontal
+
+  // Scanned history data
+  String? _lastMatchedShadeName;
+  String? _lastMatchedUndertone;
+  String? _lastMatchedSeasonalColor;
+  String? _lastMatchedSkinTone;
+
+  final List<Map<String, dynamic>> _presetLooks = [
+    {
+      'name': 'Clean Girl',
+      'lipstickColor': const Color(0xFFDCAE96),
+      'lipstickOpacity': 0.35,
+      'lipstickFinishing': 'glossy',
+      'blushColor': const Color(0xFFE29A86),
+      'blushOpacity': 0.25,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': true,
+    },
+    {
+      'name': 'Korean Glass Skin',
+      'lipstickColor': const Color(0xFFF98E7B),
+      'lipstickOpacity': 0.45,
+      'lipstickFinishing': 'glossy',
+      'blushColor': const Color(0xFFFF8A80),
+      'blushOpacity': 0.30,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': true,
+    },
+    {
+      'name': 'Douyin Sweetheart',
+      'lipstickColor': const Color(0xFFE23D61),
+      'lipstickOpacity': 0.65,
+      'lipstickFinishing': 'glossy',
+      'blushColor': const Color(0xFFE88A90),
+      'blushOpacity': 0.45,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': false,
+    },
+    {
+      'name': 'Old Money Glam',
+      'lipstickColor': const Color(0xFF8B0000),
+      'lipstickOpacity': 0.70,
+      'lipstickFinishing': 'matte',
+      'blushColor': const Color(0xFFC08060),
+      'blushOpacity': 0.35,
+      'foundationColor': const Color(0xFFF5D6C8),
+      'foundationOpacity': 0.0,
+      'showGlassSkin': false,
+    },
+  ];
   bool _isSliderInitialized = false;
   bool _showControls = true;
 
@@ -485,10 +556,463 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
   Future<void> _checkPremiumStatus() async {
     final settings = await _isar.appSettings.get(0);
-    if (settings != null && settings.isPremium) {
+    if (settings != null) {
       setState(() {
-        _isPremium = true;
-        _showPaywall = false;
+        if (settings.isPremium) {
+          _isPremium = true;
+          _showPaywall = false;
+        }
+        _lastMatchedShadeName = settings.lastMatchedShadeName;
+        _lastMatchedUndertone = settings.lastMatchedUndertone;
+        _lastMatchedSeasonalColor = settings.lastMatchedSeasonalColor;
+        _lastMatchedSkinTone = settings.lastMatchedSkinTone;
+      });
+    }
+  }
+
+
+
+  Widget _buildFinishingButton(String label, bool isSel) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _lipstickFinishing = label.toLowerCase();
+          _activePreset = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? primaryColor : cardBgColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSel ? Colors.white : textMutedColor,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _applyAiRecommendation() {
+    if (_lastMatchedUndertone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Belum ada riwayat hasil pemindaian kulit. Silakan lakukan pemindaian wajah terlebih dahulu.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      final und = _lastMatchedUndertone!.toLowerCase();
+      final skin = _lastMatchedSkinTone?.toLowerCase() ?? 'light';
+
+      // 1. Tentukan warna lipstik
+      if (und == 'warm') {
+        _selectedLipstickColor = const Color(0xFFFF7043); // Peach Coral
+        _lipstickOpacity = 0.50;
+        _lipstickFinishing = 'glossy';
+      } else if (und == 'cool') {
+        _selectedLipstickColor = const Color(0xFFD81B60); // Cherry Red
+        _lipstickOpacity = 0.50;
+        _lipstickFinishing = 'glossy';
+      } else {
+        _selectedLipstickColor = const Color(0xFFAD1457); // Matte Rose
+        _lipstickOpacity = 0.45;
+        _lipstickFinishing = 'matte';
+      }
+
+      // 2. Tentukan warna blush-on
+      if (und == 'warm') {
+        _selectedBlushColor = const Color(0xFFFF8A80); // Soft Coral
+        _blushOpacity = 0.35;
+      } else if (und == 'cool') {
+        _selectedBlushColor = const Color(0xFFFF80AB); // Peach Pink
+        _blushOpacity = 0.35;
+      } else {
+        _selectedBlushColor = const Color(0xFFFF8A80); // Soft Coral
+        _blushOpacity = 0.30;
+      }
+
+      // 3. Tentukan warna foundation (Dasaran Base)
+      if (skin.contains('fair')) {
+        _selectedFoundationColor = const Color(0xFFF5D6C8); // Fair Nude
+        _foundationOpacity = 0.35;
+      } else if (skin.contains('light')) {
+        _selectedFoundationColor = const Color(0xFFEED0BC); // Light Ivory
+        _foundationOpacity = 0.35;
+      } else if (skin.contains('medium')) {
+        _selectedFoundationColor = const Color(0xFFE5C1A7); // Natural Beige
+        _foundationOpacity = 0.35;
+      } else {
+        _selectedFoundationColor = const Color(0xFFC79D7C); // Golden Tan
+        _foundationOpacity = 0.40;
+      }
+
+      _activePreset = 'Rekomendasi AI (${_lastMatchedSeasonalColor ?? "Personal"})';
+      _showGlassSkin = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Rekomendasi AI dipoleskan sesuai rona ${_lastMatchedUndertone!.toUpperCase()} Anda! 🌟'),
+        backgroundColor: primaryColor,
+      ),
+    );
+  }
+
+  void _handleImageTap(TapDownDetails details, Size fittedSize) {
+    if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
+    
+    // Konversi koordinat sentuhan lokal ke koordinat foto asli
+    final double tapX = (details.localPosition.dx / fittedSize.width) * _originalWidth;
+    final double tapY = (details.localPosition.dy / fittedSize.height) * _originalHeight;
+    final tapPt = Point<double>(tapX, tapY);
+
+    double distance(Point<double> p1, Point<num> p2) {
+      return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
+    }
+
+    // 1. Cek kedekatan dengan Bibir (Lipstik)
+    final lipCenter = FaceGeometryHelper.getLipCenter(_detectedFace!);
+    if (lipCenter != null) {
+      final dLip = distance(tapPt, lipCenter);
+      if (dLip < _originalWidth * 0.08) {
+        setState(() {
+          _activeTooltipComponent = 'bibir';
+          _tooltipOffset = details.localPosition;
+          _showTooltip = true;
+        });
+        _autoHideTooltip();
+        return;
+      }
+    }
+
+    // 2. Cek kedekatan dengan Pipi (Blush-On)
+    final cheeks = FaceGeometryHelper.getCheekCoordinates(_detectedFace!);
+    final leftCheek = cheeks['left'];
+    final rightCheek = cheeks['right'];
+    if (leftCheek != null && rightCheek != null) {
+      final dLeft = distance(tapPt, leftCheek);
+      final dRight = distance(tapPt, rightCheek);
+      if (dLeft < _originalWidth * 0.12 || dRight < _originalWidth * 0.12) {
+        setState(() {
+          _activeTooltipComponent = 'pipi';
+          _tooltipOffset = details.localPosition;
+          _showTooltip = true;
+        });
+        _autoHideTooltip();
+        return;
+      }
+    }
+
+    // 3. Cek apakah ketukan berada di dalam kontur wajah (Base Foundation)
+    final rect = _detectedFace!.boundingBox;
+    if (tapX >= rect.left && tapX <= rect.right && tapY >= rect.top && tapY <= rect.bottom) {
+      setState(() {
+        _activeTooltipComponent = 'base';
+        _tooltipOffset = details.localPosition;
+        _showTooltip = true;
+      });
+      _autoHideTooltip();
+    }
+  }
+
+  Timer? _tooltipTimer;
+  void _autoHideTooltip() {
+    _tooltipTimer?.cancel();
+    _tooltipTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _showTooltip = false;
+        });
+      }
+    });
+  }
+
+  bool _PhotoTryOnPageState_isLipstickMismatch() {
+    if (_lastMatchedUndertone == null) return false;
+    final String und = _lastMatchedUndertone!.toLowerCase();
+    final int value = _selectedLipstickColor.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xD81B60 || value == 0xAD1457 || value == 0x8E24AA || value == 0xB71C1C) {
+      isCool = true;
+    } else if (value == 0xFF7043 || value == 0x8D6E63) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
+  bool _PhotoTryOnPageState_isBlushMismatch() {
+    if (_lastMatchedUndertone == null) return false;
+    final String und = _lastMatchedUndertone!.toLowerCase();
+    final int value = _selectedBlushColor.value & 0xFFFFFF;
+    bool isCool = false;
+    bool isWarm = false;
+    if (value == 0xFF80AB || value == 0xE91E63 || value == 0xBA68C8) {
+      isCool = true;
+    } else if (value == 0xFF8A80 || value == 0xFFB74D || value == 0xFF8F00) {
+      isWarm = true;
+    }
+    if (und == 'warm' && isCool) return true;
+    if (und == 'cool' && isWarm) return true;
+    return false;
+  }
+
+  Widget _buildHarmonyAlertBanner() {
+    final bool isLipMismatch = _PhotoTryOnPageState_isLipstickMismatch();
+    final bool isBlushMismatch = _PhotoTryOnPageState_isBlushMismatch();
+
+    if (!isLipMismatch && !isBlushMismatch) return const SizedBox.shrink();
+
+    String warningText = '';
+    if (isLipMismatch && isBlushMismatch) {
+      warningText = 'Warna Lipstik & Blush kurang selaras dengan rona ${_lastMatchedUndertone!.toUpperCase()} Anda.';
+    } else if (isLipMismatch) {
+      warningText = 'Warna Lipstik kurang selaras dengan rona ${_lastMatchedUndertone!.toUpperCase()} Anda.';
+    } else {
+      warningText = 'Warna Blush kurang selaras dengan rona ${_lastMatchedUndertone!.toUpperCase()} Anda.';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 14),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              warningText,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTooltipWidget() {
+    String title = '';
+    String info = '';
+    IconData icon = Icons.info_rounded;
+    Color color = primaryColor;
+
+    if (_activeTooltipComponent == 'bibir') {
+      title = 'LIPSTIK (LIPS)';
+      icon = Icons.opacity_rounded;
+      color = _selectedLipstickColor;
+      final match = _lastMatchedUndertone == null 
+          ? 'Coba Scan Kulit' 
+          : (_PhotoTryOnPageState_isLipstickMismatch() ? 'Rona Kurang Serasi ⚠️' : 'Rona Sangat Serasi ✨');
+      info = 'Pulasan: ${(_lipstickOpacity * 100).round()}% | $match';
+    } else if (_activeTooltipComponent == 'pipi') {
+      title = 'PIPI (BLUSH)';
+      icon = Icons.face_rounded;
+      color = _selectedBlushColor;
+      final match = _lastMatchedUndertone == null 
+          ? 'Coba Scan Kulit' 
+          : (_PhotoTryOnPageState_isBlushMismatch() ? 'Rona Kurang Serasi ⚠️' : 'Rona Sangat Serasi ✨');
+      info = 'Pulasan: ${(_blushOpacity * 100).round()}% | $match';
+    } else {
+      title = 'BASE (FOUNDATION)';
+      icon = Icons.face_retouching_natural_rounded;
+      color = _selectedFoundationColor;
+      final shadeInfo = _selectedFoundationProduct != null 
+          ? '${_selectedFoundationProduct!.brand} - ${_selectedFoundationProduct!.shadeName}'
+          : 'Warna Kustom';
+      info = 'Shade: $shadeInfo\nOpasitas: ${(_foundationOpacity * 100).round()}%';
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 170,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: cardBgColor.withOpacity(0.92),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cardBorderColor.withOpacity(0.7), width: 1.5),
+          boxShadow: ThemeManager.premiumGlowShadow,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 13, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 9, 
+                    fontWeight: FontWeight.bold, 
+                    color: textColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              info,
+              style: TextStyle(fontSize: 8, color: textMutedColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportBoomerangGif() async {
+    if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
+
+    setState(() {
+      _isExportingBoomerang = true;
+      _exportProgress = 0.0;
+      _isCapturing = true; // Sembunyikan garis slider saat pemotretan
+    });
+
+    final List<Uint8List> frames = [];
+    final double originalSliderX = _sliderX;
+    final bool originalSplitMode = _isSplitMode;
+
+    try {
+      setState(() {
+        _isSplitMode = true;
+      });
+
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal menginisialisasi area dandan.");
+      }
+
+      final double width = boundary.size.width;
+
+      // Ambil 6 frame bertahap dari kiri ke kanan (0% hingga 100%)
+      final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+      for (int i = 0; i < steps.length; i++) {
+        setState(() {
+          _sliderX = steps[i] * width;
+          _isCapturing = false; // Tampilkan garis slider/split line di frame
+        });
+
+        await Future.delayed(const Duration(milliseconds: 150));
+
+        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.2);
+        final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (byteData != null) {
+          frames.add(byteData.buffer.asUint8List());
+        }
+
+        setState(() {
+          _exportProgress = (i + 1) / steps.length * 0.45; // 0% - 45%
+        });
+      }
+
+      setState(() {
+        _isCapturing = true;
+      });
+
+      // Proses konversi dan pengodean GIF anim menggunakan package:image
+      final int w = boundary.size.width.toInt();
+      final int h = boundary.size.height.toInt();
+      final int frameW = (w * 1.2).toInt();
+      final int frameH = (h * 1.2).toInt();
+
+      // Tunggu agar CPU bebas
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final img.Image gifAnim = img.Image(width: frameW, height: frameH, numChannels: 4);
+      gifAnim.frameDuration = 150;
+
+      for (int fIndex = 0; fIndex < frames.length; fIndex++) {
+        final img.Image frameImg = img.Image.fromBytes(
+          width: frameW,
+          height: frameH,
+          bytes: frames[fIndex].buffer,
+          numChannels: 4,
+        );
+        frameImg.frameDuration = 150;
+        if (fIndex == 0) {
+          gifAnim.frames[0] = frameImg;
+        } else {
+          gifAnim.addFrame(frameImg);
+        }
+        
+        setState(() {
+          _exportProgress = 0.45 + ((fIndex + 1) / frames.length * 0.45); // 45% - 90%
+        });
+      }
+
+      // Ping-pong frames untuk efek Boomerang
+      for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
+        final img.Image frameImg = img.Image.fromBytes(
+          width: frameW,
+          height: frameH,
+          bytes: frames[fIndex].buffer,
+          numChannels: 4,
+        );
+        frameImg.frameDuration = 150;
+        gifAnim.addFrame(frameImg);
+      }
+
+      final gifEncoder = img.GifEncoder();
+      final List<int> gifBytes = gifEncoder.encode(gifAnim);
+
+      setState(() {
+        _exportProgress = 0.95;
+      });
+
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("shareImage", {
+        "bytes": Uint8List.fromList(gifBytes),
+        "filename": "glowmatch_boomerang_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Animasi Boomerang berhasil dibagikan! 🎬🌟'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal membagikan animasi.");
+        }
+      }
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat Boomerang: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _sliderX = originalSliderX;
+        _isSplitMode = originalSplitMode;
+        _isCapturing = false;
+        _isExportingBoomerang = false;
       });
     }
   }
@@ -575,6 +1099,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
       if (mounted) {
         setState(() {
+          _decodedImage = uiImage;
           if (faces.isNotEmpty) {
             _detectedFace = faces.first;
           } else {
@@ -860,7 +1385,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                     : LayoutBuilder(
                         builder: (context, constraints) {
                           final double areaWidth = constraints.maxWidth;
-                          final double areaHeight = constraints.maxHeight - (_showControls ? 230 : 0);
+                          final double areaHeight = constraints.maxHeight - (_showControls ? 300 : 0);
 
                           final Size fittedSize = _getFittedImageSize(
                             areaWidth,
@@ -874,26 +1399,28 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                             _isSliderInitialized = true;
                           }
 
-                          final double topPadding = (constraints.maxHeight - (_showControls ? 230 : 0) - fittedSize.height).clamp(0.0, double.infinity) / 2;
+                          final double topPadding = (constraints.maxHeight - (_showControls ? 300 : 0) - fittedSize.height).clamp(0.0, double.infinity) / 2;
                           return Align(
                             alignment: Alignment.topCenter,
                             child: Padding(
                               padding: EdgeInsets.only(top: topPadding),
                               child: RepaintBoundary(
                                 key: _repaintBoundaryKey,
-                                child: SizedBox(
-                                  width: fittedSize.width,
-                                  height: fittedSize.height,
-                                  child: Stack(
-                                    children: [
-                                      Positioned.fill(
-                                    child: Image.file(
-                                      File(_imagePath!),
-                                      fit: BoxFit.fill,
+                                child: GestureDetector(
+                                  onTapDown: (details) => _handleImageTap(details, fittedSize),
+                                  child: SizedBox(
+                                    width: fittedSize.width,
+                                    height: fittedSize.height,
+                                    child: Stack(
+                                      children: [
+                                        Positioned.fill(
+                                      child: Image.file(
+                                        File(_imagePath!),
+                                        fit: BoxFit.fill,
+                                      ),
                                     ),
-                                  ),
 
-                                  // Layer Gambar Riasan (CustomPaint)
+// Layer Gambar Riasan (CustomPaint)
                                   if (!_showPaywall)
                                     Positioned.fill(
                                       child: CustomPaint(
@@ -901,6 +1428,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           face: _detectedFace,
                                           originalImageWidth: _originalWidth,
                                           originalImageHeight: _originalHeight,
+                                          backgroundImage: _decodedImage,
                                           foundationColor: _selectedFoundationColor,
                                           foundationOpacity: _foundationOpacity,
                                           lipstickColor: _selectedLipstickColor,
@@ -908,7 +1436,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           lipstickFinishing: _lipstickFinishing,
                                           blushColor: _selectedBlushColor,
                                           blushOpacity: _blushOpacity,
-                                          sliderX: _isCapturing ? 0.0 : _sliderX,
+                                          showGlassSkin: _showGlassSkin,
+                                          sliderX: _isCapturing || !_isSplitMode ? 0.0 : _sliderX,
+                                          selectedLightingPreset: _selectedLightingPreset,
+                                          showHarmonyHeatmap: _showHarmonyHeatmap,
+                                          undertone: _lastMatchedUndertone,
                                         ),
                                       ),
                                     ),
@@ -1002,6 +1534,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                             ),
                           ),
                         ),
+                      ),
                       );
                     },
                   ),
@@ -1029,7 +1562,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           // 3. Toggle Panel Kontrol
           if (_imagePath != null && !_showPaywall)
             Positioned(
-              bottom: _showControls ? 230 : 24,
+              bottom: _showControls ? 300 : 24,
               right: 16,
               child: FloatingActionButton(
                 heroTag: 'photo_toggle_controls_fab',
@@ -1315,6 +1848,47 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
               ),
             ),
 
+          // 4.6. Boomerang GIF Exporter Progress Overlay
+          if (_isExportingBoomerang)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: cardBgColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: cardBorderColor, width: 1.5),
+                      boxShadow: ThemeManager.premiumGlowShadow,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          value: _exportProgress,
+                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          backgroundColor: cardBorderColor,
+                          strokeWidth: 4,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Membuat Animasi Boomerang...',
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${(_exportProgress * 100).round()}% Selesai',
+                          style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // 5. Paywall Dialog Screen Overlay (Glassmorphism)
           if (_showPaywall)
             Positioned.fill(
@@ -1465,30 +2039,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     );
   }
 
-  Widget _buildFinishingButton(String label, bool isSel) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _lipstickFinishing = label.toLowerCase();
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSel ? primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: isSel ? Colors.white : textColor,
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildSliderRow(String label, double val, ValueChanged<double> onChg) {
     return Row(

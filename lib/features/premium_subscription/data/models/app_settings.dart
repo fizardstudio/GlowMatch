@@ -8,4 +8,9 @@ class AppSettings {
 
   late bool isPremium;
   bool hasUsedCoupleTrial = false;
+
+  String? lastMatchedShadeName;
+  String? lastMatchedUndertone;
+  String? lastMatchedSeasonalColor;
+  String? lastMatchedSkinTone;
 }
