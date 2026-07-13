@@ -374,25 +374,45 @@ class PhotoMakeupPainter extends CustomPainter {
       }
     }
 
-    // 3. RENDER BLUSH-ON (PIPI - Oval Terputar mengikuti sudut miring wajah)
+    // 3. RENDER BLUSH-ON (PIPI - Oval Panjang Terputar menyamping mengikuti kontur tulang pipi / cheekbone draping)
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
+
+      canvas.save();
+      // Potong area gambar hanya di dalam garis kontur wajah menggunakan clipPath agar blush-on tidak beleber keluar wajah
+      final faceContourPoints = face!.contours[FaceContourType.face]?.points;
+      if (faceContourPoints != null && faceContourPoints.isNotEmpty) {
+        final Path faceOutlinePath = Path();
+        final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+        faceOutlinePath.moveTo(faceOffsets.first.dx, faceOffsets.first.dy);
+        for (int i = 1; i < faceOffsets.length; i++) {
+          faceOutlinePath.lineTo(faceOffsets[i].dx, faceOffsets[i].dy);
+        }
+        faceOutlinePath.close();
+        canvas.clipPath(faceOutlinePath);
+      }
 
       void drawCheekBlush(Offset center, bool isLeft) {
         final double rollAngle = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
         final double smileProb = face!.smilingProbability ?? 0.0;
-        // Smile adaptability: shift cheeks vertically upward when smiling
+        // Penyesuaian senyum: naikkan pipi secara vertikal saat tersenyum
         final double smileShiftY = smileProb * blushRadius * 0.25;
 
         canvas.save();
         canvas.translate(center.dx, center.dy);
-        canvas.rotate(rollAngle);
         
-        final double width = blushRadius * 2.2;
-        final double height = blushRadius * 1.3;
+        // Kemiringan sapuan (slanted tilt) naik ke arah pelipis/hairline agar berkesan tirus (draping)
+        // Kita miringkan ke atas sekitar 13.5 derajat (0.24 radian)
+        final double tilt = isLeft ? -0.24 : 0.24;
+        canvas.rotate(rollAngle + tilt);
         
-        // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar
-        final double offsetX = isLeft ? -width * 0.1 : width * 0.1;
+        // Ukuran blush-on disesuaikan secara profesional agar meluncur panjang (tidak bulat kerdil)
+        final double width = faceWidth * 0.54;  // Sapuan panjang menutupi area pipi hingga luar
+        final double height = faceWidth * 0.26; // Ketebalan sapuan yang proporsional
+        
+        // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar (tanpa mirroring karena foto 2D statis)
+        final double offsetX = isLeft ? -width * 0.25 : width * 0.25;
+        
         final Rect bounds = Rect.fromCenter(
           center: Offset(offsetX, -smileShiftY),
           width: width,
@@ -401,7 +421,8 @@ class PhotoMakeupPainter extends CustomPainter {
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ui.ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0)
+          // Efek blur/bauran tinggi (airbrush effect) agar tidak terlihat lingkaran kaku di wajah
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 19.5, sigmaY: 15.5)
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
@@ -429,6 +450,7 @@ class PhotoMakeupPainter extends CustomPainter {
       if (estimatedRightCheek != null) {
         drawCheekBlush(estimatedRightCheek, false);
       }
+      canvas.restore();
     }
 
     canvas.restore();

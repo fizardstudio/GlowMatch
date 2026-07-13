@@ -400,6 +400,20 @@ class LipFilterPainter extends CustomPainter {
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
 
+      canvas.save();
+      // Potong area gambar hanya di dalam garis kontur wajah menggunakan clipPath agar blush-on tidak beleber keluar wajah
+      final faceContourPoints = face!.contours[FaceContourType.face]?.points;
+      if (faceContourPoints != null && faceContourPoints.isNotEmpty) {
+        final Path faceOutlinePath = Path();
+        final List<Offset> faceOffsets = faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+        faceOutlinePath.moveTo(faceOffsets.first.dx, faceOffsets.first.dy);
+        for (int i = 1; i < faceOffsets.length; i++) {
+          faceOutlinePath.lineTo(faceOffsets[i].dx, faceOffsets[i].dy);
+        }
+        faceOutlinePath.close();
+        canvas.clipPath(faceOutlinePath);
+      }
+
       void drawCheekBlush(Offset center, bool isLeft) {
         final double rollAngle = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
         final double smileProb = face!.smilingProbability ?? 0.0;
@@ -461,6 +475,7 @@ class LipFilterPainter extends CustomPainter {
       if (estimatedRightCheek != null) {
         drawCheekBlush(estimatedRightCheek, false);
       }
+      canvas.restore();
     }
 
     canvas.restore();
