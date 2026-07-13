@@ -1615,10 +1615,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                           ? (( _sliderX - cameraAreaWidth / 2 ) / scaleFactor + previewWidth / 2)
                           : 0.0;
 
-                      return GestureDetector(
-                        onTapDown: (details) => _handleCameraTap(details, Size(cameraAreaWidth, cameraAreaHeight)),
-                        child: RepaintBoundary(
-                          key: _repaintBoundaryKey,
+                      return RepaintBoundary(
+                        key: _repaintBoundaryKey,
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
@@ -1760,13 +1758,6 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                               ),
                             ),
 
-                          // Interactive floating tooltip
-                          if (_showTooltip && !_isCapturing)
-                            Positioned(
-                              left: (_tooltipOffset.dx - 85).clamp(8.0, cameraAreaWidth - 178.0),
-                              top: (_tooltipOffset.dy - 70).clamp(8.0, cameraAreaHeight - 78.0),
-                              child: _buildTooltipWidget(),
-                            ),
 
                           // Overlay Dialog Paywall Premium Glassmorphism
                           if (_showPaywall)
@@ -1885,8 +1876,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                             ),
                             ],
                           ),
-                        ),
-                      );
+                        );
                     },
                   )
                 :  Center(
