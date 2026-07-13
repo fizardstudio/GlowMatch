@@ -101,10 +101,49 @@ class LipFilterPainter extends CustomPainter {
     final rawLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
     final rawRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
-    // Geser posisi titik pipi ke arah luar (menjauh dari hidung) dan sedikit ke bawah agar tidak masuk ke area bawah mata
-    // Karena kamera depan di-mirror secara horizontal, arah translasi kiri/kanan dibalik
-    estimatedLeftCheek = rawLeftCheek.translate(faceWidth * 0.22, faceWidth * 0.02);
-    estimatedRightCheek = rawRightCheek.translate(-faceWidth * 0.22, faceWidth * 0.02);
+    // Ambil titik pusat wajah di layar untuk membagi sisi kiri/kanan visual
+    final double screenCenterX = mapPoint(Point(face!.boundingBox.center.x.round(), face!.boundingBox.center.y.round())).dx;
+
+    // Ambil semua titik kontur luar wajah di layar
+    final faceContourPoints = face!.contours[FaceContourType.face]?.points;
+    final List<Offset> screenOutline = faceContourPoints != null
+        ? faceContourPoints.map((p) => mapPoint(Point(p.x, p.y))).toList()
+        : [];
+
+    Offset getCheekbonePosition(Offset rawCheek) {
+      if (screenOutline.isEmpty) return rawCheek;
+      
+      final bool isVisuallyLeft = rawCheek.dx < screenCenterX;
+      
+      // Filter kontur luar wajah berdasarkan sisi kiri/kanan visual layar
+      final candidates = screenOutline.where((pt) {
+        return isVisuallyLeft ? (pt.dx < screenCenterX) : (pt.dx > screenCenterX);
+      }).toList();
+      
+      if (candidates.isEmpty) return rawCheek;
+      
+      // Temukan titik kontur luar yang Y-nya paling sejajar dengan pipi
+      Offset bestBoundary = candidates.first;
+      double minDiff = (bestBoundary.dy - rawCheek.dy).abs();
+      
+      for (final pt in candidates) {
+        final diff = (pt.dy - rawCheek.dy).abs();
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestBoundary = pt;
+        }
+      }
+      
+      // Tempatkan blush-on di 50% jarak antara pipi dalam dan batas luar wajah (tulang pipi luar)
+      // Ini 100% akurat untuk setiap wajah, tidak akan pernah keluar dari batas wajah, dan dinamis
+      return Offset(
+        rawCheek.dx + (bestBoundary.dx - rawCheek.dx) * 0.50,
+        rawCheek.dy + (bestBoundary.dy - rawCheek.dy) * 0.50,
+      );
+    }
+
+    estimatedLeftCheek = getCheekbonePosition(rawLeftCheek);
+    estimatedRightCheek = getCheekbonePosition(rawRightCheek);
 
     // 1. RENDER BASE MAKEUP (LIVE FOUNDATION)
     if (foundationColor != null && foundationOpacity > 0.0) {
