@@ -396,7 +396,7 @@ class LipFilterPainter extends CustomPainter {
       }
     }
 
-    // 4. GAMBAR FILTER BLUSH-ON (PIPI - Oval Terputar menyamping mengikuti tulang pipi / cheekbones)
+    // 4. GAMBAR FILTER BLUSH-ON (PIPI - Oval Panjang Terputar menyamping mengikuti kontur tulang pipi / cheekbone draping)
     if (blushColor != null && blushOpacity > 0.0) {
       final double blushRadius = faceWidth * 0.16;
 
@@ -408,16 +408,21 @@ class LipFilterPainter extends CustomPainter {
 
         canvas.save();
         canvas.translate(center.dx, center.dy);
-        canvas.rotate(rollAngle);
         
-        final double width = blushRadius * 2.2;
-        final double height = blushRadius * 1.3;
+        // Kemiringan sapuan (slanted tilt) naik ke arah pelipis/hairline agar berkesan tirus (draping)
+        // Kita miringkan ke atas sekitar 13.5 derajat (0.24 radian)
+        final double tilt = isLeft ? -0.24 : 0.24;
+        canvas.rotate(rollAngle + tilt);
         
-        // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar (dengan deteksi mirroring kamera depan)
+        // Ukuran blush-on disesuaikan secara profesional agar meluncur panjang (tidak bulat kerdil)
+        final double width = faceWidth * 0.54;  // Sapuan panjang menutupi area pipi hingga luar
+        final double height = faceWidth * 0.26; // Ketebalan sapuan yang proporsional
+        
+        // Arah pergeseran luar (outward) dengan memperhitungkan pencerminan kamera depan
         final bool isFrontCamera = lensDirection == CameraLensDirection.front;
         final double offsetX = isFrontCamera
-            ? (isLeft ? width * 0.1 : -width * 0.1)
-            : (isLeft ? -width * 0.1 : width * 0.1);
+            ? (isLeft ? width * 0.25 : -width * 0.25)
+            : (isLeft ? -width * 0.25 : width * 0.25);
         
         final Rect bounds = Rect.fromCenter(
           center: Offset(offsetX, -smileShiftY),
@@ -427,7 +432,8 @@ class LipFilterPainter extends CustomPainter {
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
-          ..imageFilter = ui.ImageFilter.blur(sigmaX: 7.0, sigmaY: 7.0) // Bauran pinggir ekstra halus identik 2D
+          // Efek blur/bauran tinggi (airbrush effect) agar tidak terlihat lingkaran kaku di wajah
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: 19.5, sigmaY: 15.5)
           ..shader = RadialGradient(
             colors: [
               blushColor!.withOpacity(blushOpacity),
