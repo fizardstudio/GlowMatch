@@ -191,7 +191,7 @@ class LipFilterPainter extends CustomPainter {
         final paintBase = Paint()
           ..color = foundationColor!.withOpacity(foundationOpacity)
           ..style = PaintingStyle.fill
-          ..blendMode = BlendMode.softLight
+          ..blendMode = BlendMode.srcOver
           ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
 
         canvas.drawPath(finalFoundationPath, paintBase);
@@ -218,7 +218,7 @@ class LipFilterPainter extends CustomPainter {
           final paintLight = Paint()
             ..color = const Color(0xFFFFB74D).withOpacity(0.18)
             ..style = PaintingStyle.fill
-            ..blendMode = BlendMode.overlay
+            ..blendMode = BlendMode.srcOver
             ..imageFilter = ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0);
           canvas.drawPath(facePath, paintLight);
         } else if (selectedLightingPreset == 'Studio Light') {
@@ -228,7 +228,7 @@ class LipFilterPainter extends CustomPainter {
           final double spotlightRadius = faceWidth * 0.4;
           final Paint paintLight = Paint()
             ..style = PaintingStyle.fill
-            ..blendMode = BlendMode.softLight
+            ..blendMode = BlendMode.srcOver
             ..shader = ui.Gradient.radial(
               mappedForehead,
               spotlightRadius,
@@ -247,7 +247,7 @@ class LipFilterPainter extends CustomPainter {
           
           final Paint paintNeon = Paint()
             ..style = PaintingStyle.fill
-            ..blendMode = BlendMode.screen;
+            ..blendMode = BlendMode.srcOver;
 
           // Left neon cyan
           paintNeon.shader = ui.Gradient.radial(
@@ -280,7 +280,7 @@ class LipFilterPainter extends CustomPainter {
       
       final Paint paintGlow = Paint()
         ..style = PaintingStyle.fill
-        ..blendMode = BlendMode.screen;
+        ..blendMode = BlendMode.srcOver;
 
       // Glow Pipi Kiri
       paintGlow.shader = ui.Gradient.radial(
@@ -361,7 +361,7 @@ class LipFilterPainter extends CustomPainter {
       final paintLip = Paint()
         ..color = lipstickColor!.withOpacity(lipstickOpacity)
         ..style = PaintingStyle.fill
-        ..blendMode = lipstickFinishing == 'glossy' ? BlendMode.color : BlendMode.multiply
+        ..blendMode = BlendMode.srcOver
         ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5); // Feathering effect
 
       canvas.drawPath(upperLipPath, paintLip);
