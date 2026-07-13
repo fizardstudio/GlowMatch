@@ -425,9 +425,11 @@ class PhotoMakeupPainter extends CustomPainter {
           ..imageFilter = ui.ImageFilter.blur(sigmaX: 19.5, sigmaY: 15.5)
           ..shader = RadialGradient(
             colors: [
-              blushColor!.withOpacity(blushOpacity),
+              blushColor!.withOpacity((blushOpacity * 1.55).clamp(0.0, 1.0)),
+              blushColor!.withOpacity((blushOpacity * 0.70).clamp(0.0, 1.0)),
               blushColor!.withOpacity(0.0),
             ],
+            stops: const [0.0, 0.45, 1.0],
           ).createShader(bounds);
 
         canvas.drawOval(bounds, paintCheek);
