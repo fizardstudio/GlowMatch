@@ -102,7 +102,7 @@ class LipFilterPainter extends CustomPainter {
     final rawRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 
     // Ambil titik pusat wajah di layar untuk membagi sisi kiri/kanan visual
-    final double screenCenterX = mapPoint(Point(face!.boundingBox.center.x.round(), face!.boundingBox.center.y.round())).dx;
+    final double screenCenterX = mapPoint(Point(face!.boundingBox.center.dx.round(), face!.boundingBox.center.dy.round())).dx;
 
     // Ambil semua titik kontur luar wajah di layar
     final faceContourPoints = face!.contours[FaceContourType.face]?.points;
