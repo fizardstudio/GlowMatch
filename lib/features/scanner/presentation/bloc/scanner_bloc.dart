@@ -28,8 +28,6 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
   bool _isDetecting = false;
   CameraLensDirection _currentLensDirection = CameraLensDirection.front;
-  InputImageRotation? _activeRotation;
-  int _consecutiveFailureCount = 0;
 
   ScannerBloc({
     required ShadeMatcherRepository shadeMatcherRepository,
@@ -451,7 +449,29 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     int cheekRightX, cheekRightY;
     int foreheadX, foreheadY;
 
-    if (leftEye != null && rightEye != null) {
+    if (leftCheek != null && rightCheek != null) {
+      cheekLeftX = (leftCheek.x - boxW / 2).round();
+      cheekLeftY = (leftCheek.y - boxW / 2).round();
+      cheekRightX = (rightCheek.x - boxW / 2).round();
+      cheekRightY = (rightCheek.y - boxW / 2).round();
+
+      if (leftEye != null && rightEye != null) {
+        final Point<double> leftEyePt = Point(leftEye.x.toDouble(), leftEye.y.toDouble());
+        final Point<double> rightEyePt = Point(rightEye.x.toDouble(), rightEye.y.toDouble());
+        final vectors = FaceGeometryHelper.getFaceUnitVectors(face, leftEyePt, rightEyePt);
+        final unitY = vectors['unitY']!;
+        final double eyeDistance = vectors['distance']!.x;
+        
+        final double midX = (leftEyePt.x + rightEyePt.x) / 2.0;
+        final double midY = (leftEyePt.y + rightEyePt.y) / 2.0;
+        
+        foreheadX = (midX - unitY.x * (eyeDistance * 0.55) - boxW / 2).round();
+        foreheadY = (midY - unitY.y * (eyeDistance * 0.55) - boxH / 2).round();
+      } else {
+        foreheadX = (rect.left + rect.width * 0.42).round();
+        foreheadY = (rect.top + rect.height * 0.20).round();
+      }
+    } else if (leftEye != null && rightEye != null) {
       final Point<double> leftEyePt = Point(leftEye.x.toDouble(), leftEye.y.toDouble());
       final Point<double> rightEyePt = Point(rightEye.x.toDouble(), rightEye.y.toDouble());
       final vectors = FaceGeometryHelper.getFaceUnitVectors(face, leftEyePt, rightEyePt);
@@ -526,96 +546,15 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
   Future<List<Face>?> _processCameraImage(CameraImage image) async {
     try {
-      final camera = _cameraController?.description;
-      if (camera == null) return null;
-
-      // Tentukan rotasi awal jika belum ada
-      if (_activeRotation == null) {
-        final deviceOrientation = _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp;
-        final int deviceDegrees = _deviceOrientationToDegrees(deviceOrientation);
-        final int sensorOrientation = camera.sensorOrientation;
-        int rotationDegrees;
-        if (camera.lensDirection == CameraLensDirection.front) {
-          rotationDegrees = (sensorOrientation + deviceDegrees) % 360;
-        } else {
-          rotationDegrees = (sensorOrientation - deviceDegrees + 360) % 360;
-        }
-        
-        switch (rotationDegrees) {
-          case 0:
-            _activeRotation = InputImageRotation.rotation0deg;
-            break;
-          case 90:
-            _activeRotation = InputImageRotation.rotation90deg;
-            break;
-          case 180:
-            _activeRotation = InputImageRotation.rotation180deg;
-            break;
-          case 270:
-            _activeRotation = InputImageRotation.rotation270deg;
-            break;
-          default:
-            _activeRotation = InputImageRotation.rotation270deg;
-        }
-      }
-
-      final inputImage = _inputImageFromCameraImage(image, _activeRotation!);
+      final inputImage = _inputImageFromCameraImage(image);
       if (inputImage == null) return null;
-
-      List<Face> faces = await _faceDetector.processImage(inputImage);
-      
-      if (faces.isNotEmpty) {
-        _consecutiveFailureCount = 0;
-        return faces;
-      } else {
-        _consecutiveFailureCount++;
-        // Jika gagal mendeteksi wajah selama 5 frame berturut-turut,
-        // cari rotasi alternatif secara dinamis (mungkin HP sedang diputar fisik).
-        if (_consecutiveFailureCount >= 5) {
-          final format = InputImageFormatValue.fromRawValue(image.format.raw);
-          if (format != null && image.planes.isNotEmpty) {
-            final bytes = image.planes.length > 1 ? _combineYuvPlanes(image) : image.planes.first.bytes;
-            final rotationsToTry = [
-              InputImageRotation.rotation0deg,
-              InputImageRotation.rotation90deg,
-              InputImageRotation.rotation180deg,
-              InputImageRotation.rotation270deg
-            ];
-            
-            for (final rot in rotationsToTry) {
-              if (rot == _activeRotation) continue;
-              
-              final testImage = InputImage.fromBytes(
-                bytes: bytes,
-                metadata: InputImageMetadata(
-                  size: Size(image.width.toDouble(), image.height.toDouble()),
-                  rotation: rot,
-                  format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
-                  bytesPerRow: image.planes.first.bytesPerRow,
-                ),
-              );
-              
-              final testFaces = await _faceDetector.processImage(testImage);
-              if (testFaces.isNotEmpty) {
-                debugPrint("DEBUG_SCANNER: SUCCESS! Rotated face detected! Switching active rotation to: ${rot.rawValue}");
-                _activeRotation = rot;
-                _consecutiveFailureCount = 0;
-                return testFaces;
-              }
-            }
-          }
-          if (faces.isEmpty) {
-            _consecutiveFailureCount = 0;
-          }
-        }
-        return faces;
-      }
+      return await _faceDetector.processImage(inputImage);
     } catch (_) {
       return null;
     }
   }
 
-  InputImage? _inputImageFromCameraImage(CameraImage image, InputImageRotation rotation) {
+  InputImage? _inputImageFromCameraImage(CameraImage image) {
     final camera = _cameraController?.description;
     if (camera == null) return null;
 
@@ -630,28 +569,35 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       bytes = image.planes.first.bytes;
     }
 
+    // Gunakan sensorOrientation langsung agar 100% stabil karena UI terkunci portrait
+    final int sensorOrientation = camera.sensorOrientation;
+    InputImageRotation imageRotation;
+    switch (sensorOrientation) {
+      case 0:
+        imageRotation = InputImageRotation.rotation0deg;
+        break;
+      case 90:
+        imageRotation = InputImageRotation.rotation90deg;
+        break;
+      case 180:
+        imageRotation = InputImageRotation.rotation180deg;
+        break;
+      case 270:
+        imageRotation = InputImageRotation.rotation270deg;
+        break;
+      default:
+        imageRotation = InputImageRotation.rotation270deg;
+    }
+
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: rotation,
+        rotation: imageRotation,
         format: image.planes.length > 1 ? InputImageFormat.nv21 : format,
         bytesPerRow: image.planes.first.bytesPerRow,
       ),
     );
-  }
-
-  int _deviceOrientationToDegrees(DeviceOrientation orientation) {
-    switch (orientation) {
-      case DeviceOrientation.portraitUp:
-        return 0;
-      case DeviceOrientation.landscapeLeft:
-        return 90;
-      case DeviceOrientation.portraitDown:
-        return 180;
-      case DeviceOrientation.landscapeRight:
-        return 270;
-    }
   }
 
   Uint8List _combineYuvPlanes(CameraImage image) {

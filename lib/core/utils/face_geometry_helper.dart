@@ -139,6 +139,18 @@ class FaceGeometryHelper {
 
   /// Menghitung letak koordinat pipi kiri dan kanan terputar yang akurat.
   static Map<String, Point<double>> getCheekCoordinates(Face face) {
+    // 1. Coba gunakan landmark pipi riil jika tersedia (ScannerPage)
+    final leftCheekLandmark = face.landmarks[FaceLandmarkType.leftCheek]?.position;
+    final rightCheekLandmark = face.landmarks[FaceLandmarkType.rightCheek]?.position;
+    
+    if (leftCheekLandmark != null && rightCheekLandmark != null) {
+      return {
+        'left': Point(leftCheekLandmark.x.toDouble(), leftCheekLandmark.y.toDouble()),
+        'right': Point(rightCheekLandmark.x.toDouble(), rightCheekLandmark.y.toDouble()),
+      };
+    }
+
+    // 2. Fallback geometris terputar (AR Try-On)
     final eyes = getEyeCenters(face);
     final leftEye = eyes['left']!;
     final rightEye = eyes['right']!;

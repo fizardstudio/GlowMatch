@@ -11,7 +11,6 @@ class LipFilterPainter extends CustomPainter {
   final int imageWidth;
   final int imageHeight;
   final CameraLensDirection lensDirection;
-  final DeviceOrientation deviceOrientation;
   
   // Parameter Lipstik (Bibir)
   final Color? lipstickColor;
@@ -41,7 +40,6 @@ class LipFilterPainter extends CustomPainter {
     required this.imageWidth,
     required this.imageHeight,
     required this.lensDirection,
-    required this.deviceOrientation,
     this.lipstickColor,
     required this.lipstickOpacity,
     required this.lipstickFinishing,
@@ -65,18 +63,10 @@ class LipFilterPainter extends CustomPainter {
     final double scaleY = isLandscape ? size.height / imageHeight : size.height / imageWidth;
 
     Offset mapPoint(Point<int> point) {
-      double mappedX = lensDirection == CameraLensDirection.front
+      final double mappedX = lensDirection == CameraLensDirection.front
           ? size.width - (point.x * scaleX)
           : point.x * scaleX;
-      double mappedY = point.y * scaleY;
-      
-      // Balik koordinat 180 derajat secara manual jika HP dipegang terbalik (portraitDown)
-      // karena canvas tidak ikut berputar di mode Portrait locked
-      if (deviceOrientation == DeviceOrientation.portraitDown) {
-        mappedX = size.width - mappedX;
-        mappedY = size.height - mappedY;
-      }
-      
+      final double mappedY = point.y * scaleY;
       return Offset(mappedX, mappedY);
     }
 
