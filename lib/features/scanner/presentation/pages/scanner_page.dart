@@ -516,6 +516,7 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                                       imageWidth: state.imageWidth ?? 0,
                                       imageHeight: state.imageHeight ?? 0,
                                       lensDirection: state.lensDirection,
+                                      deviceOrientation: controller.value.deviceOrientation,
                                     ),
                                   ),
                                 ),
@@ -1040,12 +1041,14 @@ class FaceTrackerPainter extends CustomPainter {
   final int imageWidth;
   final int imageHeight;
   final CameraLensDirection lensDirection;
+  final DeviceOrientation deviceOrientation;
 
   FaceTrackerPainter({
     required this.faces,
     required this.imageWidth,
     required this.imageHeight,
     required this.lensDirection,
+    required this.deviceOrientation,
   });
 
   @override
@@ -1097,10 +1100,18 @@ class FaceTrackerPainter extends CustomPainter {
 
       // Helper untuk memetakan koordinat landmark dari resolusi kamera ke ukuran layar
       Offset mapRawPoint(Point<double> point) {
-        final double mappedX = lensDirection == CameraLensDirection.front
+        double mappedX = lensDirection == CameraLensDirection.front
             ? size.width - (point.x * scaleX)
             : point.x * scaleX;
-        final double mappedY = point.y * scaleY;
+        double mappedY = point.y * scaleY;
+        
+        // Balik koordinat 180 derajat secara manual jika HP dipegang terbalik (portraitDown)
+        // karena canvas tidak ikut berputar di mode Portrait locked
+        if (deviceOrientation == DeviceOrientation.portraitDown) {
+          mappedX = size.width - mappedX;
+          mappedY = size.height - mappedY;
+        }
+        
         return Offset(mappedX, mappedY);
       }
 

@@ -1678,6 +1678,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                               imageWidth: _imageWidth,
                                               imageHeight: _imageHeight,
                                               lensDirection: _cameraController!.description.lensDirection,
+                                              deviceOrientation: _cameraController?.value.deviceOrientation ?? DeviceOrientation.portraitUp,
                                               lipstickColor: _selectedLipstickColor,
                                               lipstickOpacity: _lipstickOpacity,
                                               lipstickFinishing: _lipstickFinishing,

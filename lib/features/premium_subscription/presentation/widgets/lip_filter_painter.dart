@@ -2,6 +2,7 @@ import '../../../../core/utils/face_geometry_helper.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
 
@@ -10,6 +11,7 @@ class LipFilterPainter extends CustomPainter {
   final int imageWidth;
   final int imageHeight;
   final CameraLensDirection lensDirection;
+  final DeviceOrientation deviceOrientation;
   
   // Parameter Lipstik (Bibir)
   final Color? lipstickColor;
@@ -39,6 +41,7 @@ class LipFilterPainter extends CustomPainter {
     required this.imageWidth,
     required this.imageHeight,
     required this.lensDirection,
+    required this.deviceOrientation,
     this.lipstickColor,
     required this.lipstickOpacity,
     required this.lipstickFinishing,
@@ -62,10 +65,18 @@ class LipFilterPainter extends CustomPainter {
     final double scaleY = isLandscape ? size.height / imageHeight : size.height / imageWidth;
 
     Offset mapPoint(Point<int> point) {
-      final double mappedX = lensDirection == CameraLensDirection.front
+      double mappedX = lensDirection == CameraLensDirection.front
           ? size.width - (point.x * scaleX)
           : point.x * scaleX;
-      final double mappedY = point.y * scaleY;
+      double mappedY = point.y * scaleY;
+      
+      // Balik koordinat 180 derajat secara manual jika HP dipegang terbalik (portraitDown)
+      // karena canvas tidak ikut berputar di mode Portrait locked
+      if (deviceOrientation == DeviceOrientation.portraitDown) {
+        mappedX = size.width - mappedX;
+        mappedY = size.height - mappedY;
+      }
+      
       return Offset(mappedX, mappedY);
     }
 
