@@ -10,7 +10,12 @@ class ImageProcessor {
       if (!await file.exists()) return null;
 
       final bytes = await file.readAsBytes();
-      return img.decodeImage(bytes);
+      final decodedImage = img.decodeImage(bytes);
+      if (decodedImage != null) {
+        // Memutar fisik array piksel sesuai EXIF agar selaras dengan koordinat ML Kit
+        return img.bakeOrientation(decodedImage);
+      }
+      return null;
     } catch (e) {
       // Penanganan error pembacaan/decode gambar
       return null;

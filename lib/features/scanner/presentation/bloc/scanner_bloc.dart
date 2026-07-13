@@ -449,35 +449,27 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     int foreheadX, foreheadY;
 
     if (leftEye != null && rightEye != null) {
-      final double dx = (rightEye.x - leftEye.x).toDouble();
-      final double dy = (rightEye.y - leftEye.y).toDouble();
-      final double eyeDistance = sqrt(dx * dx + dy * dy);
+      final Point<double> leftEyePt = Point(leftEye.x.toDouble(), leftEye.y.toDouble());
+      final Point<double> rightEyePt = Point(rightEye.x.toDouble(), rightEye.y.toDouble());
+      final vectors = FaceGeometryHelper.getFaceUnitVectors(face, leftEyePt, rightEyePt);
+      final unitX = vectors['unitX']!;
+      final unitY = vectors['unitY']!;
+      final double eyeDistance = vectors['distance']!.x;
       
-      final double unitX_x = dx / eyeDistance;
-      final double unitX_y = dy / eyeDistance;
-      double unitY_x = -unitX_y;
-      double unitY_y = unitX_x;
-      
-      // Pastikan unitY selalu mengarah ke bawah (ke arah pipi/dagu, bukan ke dahi/alis)
-      if (unitY_y < 0) {
-        unitY_x = -unitY_x;
-        unitY_y = -unitY_y;
-      }
-      
-      final double midX = (leftEye.x + rightEye.x) / 2.0;
-      final double midY = (leftEye.y + rightEye.y) / 2.0;
+      final double midX = (leftEyePt.x + rightEyePt.x) / 2.0;
+      final double midY = (leftEyePt.y + rightEyePt.y) / 2.0;
       
       // Rotated forehead calculation using face axes
-      foreheadX = (midX - unitY_x * (eyeDistance * 0.55) - boxW / 2).round();
-      foreheadY = (midY - unitY_y * (eyeDistance * 0.55) - boxH / 2).round();
+      foreheadX = (midX - unitY.x * (eyeDistance * 0.55) - boxW / 2).round();
+      foreheadY = (midY - unitY.y * (eyeDistance * 0.55) - boxH / 2).round();
       
       // Rotated left cheek calculation using face axes
-      cheekLeftX = (leftEye.x + unitY_x * (eyeDistance * 0.45) - unitX_x * (eyeDistance * 0.15) - boxW / 2).round();
-      cheekLeftY = (leftEye.y + unitY_y * (eyeDistance * 0.45) - unitX_y * (eyeDistance * 0.15) - boxW / 2).round();
+      cheekLeftX = (leftEyePt.x + unitY.x * (eyeDistance * 0.45) - unitX.x * (eyeDistance * 0.15) - boxW / 2).round();
+      cheekLeftY = (leftEyePt.y + unitY.y * (eyeDistance * 0.45) - unitX.y * (eyeDistance * 0.15) - boxW / 2).round();
       
       // Rotated right cheek calculation using face axes
-      cheekRightX = (rightEye.x + unitY_x * (eyeDistance * 0.45) + unitX_x * (eyeDistance * 0.15) - boxW / 2).round();
-      cheekRightY = (rightEye.y + unitY_y * (eyeDistance * 0.45) + unitX_y * (eyeDistance * 0.15) - boxW / 2).round();
+      cheekRightX = (rightEyePt.x + unitY.x * (eyeDistance * 0.45) + unitX.x * (eyeDistance * 0.15) - boxW / 2).round();
+      cheekRightY = (rightEyePt.y + unitY.y * (eyeDistance * 0.45) + unitX.y * (eyeDistance * 0.15) - boxW / 2).round();
     } else {
       cheekLeftX = (rect.left + rect.width * 0.25).round();
       cheekLeftY = (rect.top + rect.height * 0.55).round();

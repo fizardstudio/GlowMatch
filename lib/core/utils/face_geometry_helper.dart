@@ -65,8 +65,8 @@ class FaceGeometryHelper {
 
   /// Menghitung vektor sumbu wajah terputar (unitX dan unitY) berdasarkan posisi mata.
   /// unitX: arah horizontal wajah (kiri ke kanan mata).
-  /// unitY: arah vertikal wajah ke bawah (selalu menunjuk ke arah pipi/dagu, bukan alis).
-  static Map<String, Point<double>> getFaceUnitVectors(Point<double> leftEye, Point<double> rightEye) {
+  /// unitY: arah vertikal wajah ke bawah (selalu menunjuk ke arah pipi/dagu, bukan dahi).
+  static Map<String, Point<double>> getFaceUnitVectors(Face face, Point<double> leftEye, Point<double> rightEye) {
     final double dx = rightEye.x - leftEye.x;
     final double dy = rightEye.y - leftEye.y;
     final double dist = sqrt(dx * dx + dy * dy);
@@ -79,10 +79,43 @@ class FaceGeometryHelper {
     double unitY_x = -unitX_y;
     double unitY_y = unitX_x;
 
-    // Pastikan unitY selalu mengarah ke bawah (Y positif di layar)
-    if (unitY_y < 0) {
-      unitY_x = -unitY_x;
-      unitY_y = -unitY_y;
+    // Cari titik referensi anatomis di bawah mata (hidung atau bibir)
+    Point<double>? referencePoint;
+    
+    // Coba gunakan landmark dasar hidung (noseBase) jika ada (untuk Scanner)
+    final noseBase = face.landmarks[FaceLandmarkType.noseBase]?.position;
+    if (noseBase != null) {
+      referencePoint = Point(noseBase.x.toDouble(), noseBase.y.toDouble());
+    }
+
+    // Jika tidak ada, coba gunakan kontur bibir atas jika ada (untuk AR Try-On)
+    if (referencePoint == null) {
+      final upperLip = face.contours[FaceContourType.upperLipTop]?.points;
+      if (upperLip != null && upperLip.isNotEmpty) {
+        referencePoint = Point(upperLip.first.x.toDouble(), upperLip.first.y.toDouble());
+      }
+    }
+
+    if (referencePoint != null) {
+      final double midEyeX = (leftEye.x + rightEye.x) / 2.0;
+      final double midEyeY = (leftEye.y + rightEye.y) / 2.0;
+
+      // Vektor aktual dari mata ke hidung/bibir (selalu menunjuk ke bawah wajah)
+      final double refX = referencePoint.x - midEyeX;
+      final double refY = referencePoint.y - midEyeY;
+
+      // Dot product untuk mendeteksi apakah arah unitY berlawanan dengan arah hidung/bibir
+      final double dot = unitY_x * refX + unitY_y * refY;
+      if (dot < 0) {
+        unitY_x = -unitY_x;
+        unitY_y = -unitY_y;
+      }
+    } else {
+      // Fallback jika tidak ada landmark terdeteksi, gunakan arah layar bawah
+      if (unitY_y < 0) {
+        unitY_x = -unitY_x;
+        unitY_y = -unitY_y;
+      }
     }
 
     return {
@@ -98,7 +131,7 @@ class FaceGeometryHelper {
     final leftEye = eyes['left']!;
     final rightEye = eyes['right']!;
     
-    final vectors = getFaceUnitVectors(leftEye, rightEye);
+    final vectors = getFaceUnitVectors(face, leftEye, rightEye);
     final unitX = vectors['unitX']!;
     final unitY = vectors['unitY']!;
     final double eyeDistance = vectors['distance']!.x;
@@ -123,7 +156,7 @@ class FaceGeometryHelper {
     final leftEye = eyes['left']!;
     final rightEye = eyes['right']!;
     
-    final vectors = getFaceUnitVectors(leftEye, rightEye);
+    final vectors = getFaceUnitVectors(face, leftEye, rightEye);
     final unitY = vectors['unitY']!;
     final double eyeDistance = vectors['distance']!.x;
 
@@ -143,7 +176,7 @@ class FaceGeometryHelper {
     final leftEye = eyes['left']!;
     final rightEye = eyes['right']!;
     
-    final vectors = getFaceUnitVectors(leftEye, rightEye);
+    final vectors = getFaceUnitVectors(face, leftEye, rightEye);
     final unitX = vectors['unitX']!;
     final unitY = vectors['unitY']!;
     final double eyeDistance = vectors['distance']!.x;

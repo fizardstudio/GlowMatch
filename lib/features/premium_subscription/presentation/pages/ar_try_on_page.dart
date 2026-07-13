@@ -1326,21 +1326,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
             _imageWidth = image.width;
             _imageHeight = image.height;
 
-            // Wink-to-Switch Gesture Control (Phase 2.5)
-            final leftOpen = _detectedFace!.leftEyeOpenProbability;
-            final rightOpen = _detectedFace!.rightEyeOpenProbability;
-            if (leftOpen != null && rightOpen != null) {
-              final now = DateTime.now();
-              if (_lastWinkTime == null || now.difference(_lastWinkTime!) > const Duration(milliseconds: 1200)) {
-                if (leftOpen < 0.15 && rightOpen > 0.75) {
-                  _lastWinkTime = now;
-                  _cycleLipstickColor();
-                } else if (rightOpen < 0.15 && leftOpen > 0.75) {
-                  _lastWinkTime = now;
-                  _toggleLipstickFinishing();
-                }
-              }
-            }
+            // Wink-to-Switch Gesture Control disabled to prevent accidental color switching during normal blinking
           } else {
             _detectedFace = null;
           }
