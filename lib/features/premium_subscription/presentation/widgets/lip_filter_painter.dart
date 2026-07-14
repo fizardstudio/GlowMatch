@@ -323,8 +323,6 @@ class LipFilterPainter extends CustomPainter {
       final lowerLipTop = face!.contours[FaceContourType.lowerLipTop]?.points;
       final lowerLipBottom = face!.contours[FaceContourType.lowerLipBottom]?.points;
 
-      debugPrint("DEBUG_PAINTER: upperLipTop points: ${upperLipTop?.length}, upperLipBottom: ${upperLipBottom?.length}, lowerLipTop: ${lowerLipTop?.length}, lowerLipBottom: ${lowerLipBottom?.length}");
-
       final Path upperLipPath = Path();
       final Path lowerLipPath = Path();
 
