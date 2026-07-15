@@ -33,6 +33,8 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **2D Photo Makeup Try-On** | Uji coba riasan wajah lengkap (dasaran/foundation, lipstik, & blush-on) secara interaktif langsung pada foto statis hasil unggahan menggunakan pemetaan titik Face Mesh. | `lib/features/premium_subscription/presentation/pages/photo_try_on_page.dart` |
 | **[x]** | **Seasonal Color Palette & Hijab** | Klasifikasi tipe warna wajah ke dalam 12 Musim Warna (*Value, Chroma, Hue*) serta rekomendasi warna Hijab yang cocok. | `lib/features/scanner/presentation/pages/results_page.dart` & `lib/core/utils/color_calculator.dart` |
 | **[x]** | **AI Makeup Detector from Photo** | Deteksi otomatis warna riasan (lipstik, blush-on, foundation) dari foto unggahan galeri/kamera, lalu mencocokkannya ke shade produk komersial di database. | `lib/features/premium_subscription/presentation/pages/makeup_detector_page.dart` |
+| **[x]** | **Riasan Mata AR (Eyeshadow & Eyeliner)** | Riasan kelopak mata (gradien linear lokal, anti-bleed eyeball clip) dan garis eyeliner presisi (custom filled polygon & tapering ketebalan dinamis) menggunakan kontur mata ML Kit (`leftEye` & `rightEye`). | `lib/features/premium_subscription/presentation/widgets/` |
+| **[x]** | **One-Tap Makeup Looks (Presets)** | Fitur menerapkan langsung kombinasi lipstik, blush-on, eyeliner, eyeshadow, dan foundation kurasi profesional dalam sekali ketuk (misal: "Clean Girl", "Korean Glass Skin", "Douyin Sweetheart", "Old Money Glam"). | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 
 ---
 
@@ -52,8 +54,6 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 
 | Status | Fitur / Optimalisasi | Rincian Fungsionalitas | Estimasi Modul Layer |
 | :---: | :--- | :--- | :--- |
-| **[ ]** | **Riasan Mata AR (Eyeshadow & Eyeliner)** | Riasan kelopak mata dan garis eyeliner presisi menggunakan kontur mata ML Kit (`leftEye` & `rightEye`). | `lib/features/premium_subscription/presentation/widgets/` |
-| **[ ]** | **One-Tap Makeup Looks (Presets)** | Fitur menerapkan langsung kombinasi lipstik, blush-on, dan foundation kurasi profesional dalam sekali ketuk (misal: "Korean Glass Look", "Office Glam", "Cyber Punk"). | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 | **[ ]** | **Dynamic ML Kit Frame Throttling** | Pembatasan deteksi ML Kit ke 15-20 FPS ditambah interpolasi kanvas 60 FPS untuk menghemat baterai HP hingga 40%. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 | **[ ]** | **Pencari Kecocokan Shade Otomatis** | Auto-highlighting warna kosmetik yang serasi di katalog/kamera berdasarkan hasil scan warna kulit & undertone di Isar DB. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[ ]** | **Tekstur Bedak Realistis (Satin/Matte/Dewy)**| Efek dasaran wajah dengan kilau specular 3D dinamis pada dahi, dagu, dan tulang hidung. | `lib/features/premium_subscription/presentation/widgets/` |
