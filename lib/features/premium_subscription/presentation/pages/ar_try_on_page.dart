@@ -1726,6 +1726,52 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                               ),
                             ),
 
+                          // Live Face Shape Badge
+                          if (!_showPaywall && _detectedFace != null)
+                            Positioned(
+                              top: 20,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: cardBgColor.withOpacity(0.85),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: primaryColor.withOpacity(0.4), width: 1.5),
+                                    boxShadow: ThemeManager.premiumGlowShadow,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'round'
+                                            ? Icons.blur_circular_rounded
+                                            : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'long'
+                                                ? Icons.crop_portrait_rounded
+                                                : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'square'
+                                                    ? Icons.crop_square_rounded
+                                                    : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'heart'
+                                                        ? Icons.favorite_rounded
+                                                        : Icons.face_rounded,
+                                        color: primaryColor,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Wajah: ${FaceGeometryHelper.classifyFaceShape(_detectedFace!).toUpperCase()}',
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
 
                           // Overlay Dialog Paywall Premium Glassmorphism
                           if (_showPaywall)

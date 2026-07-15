@@ -421,12 +421,23 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         }
       }
 
+      String? faceShape;
+      String? coupleFaceShape;
+      if (detectedFaces.isNotEmpty) {
+        faceShape = FaceGeometryHelper.classifyFaceShape(detectedFaces.first);
+        if (event.isCoupleMode && detectedFaces.length >= 2) {
+          coupleFaceShape = FaceGeometryHelper.classifyFaceShape(detectedFaces[1]);
+        }
+      }
+
       emit(ScannerSuccess(
         extractedRgb: finalRgb,
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
+        faceShape: faceShape,
         coupleExtractedRgb: coupleRgb,
         coupleMatchedStandard: coupleMatchedStandard,
+        coupleFaceShape: coupleFaceShape,
         galleryFilePath: photoFile.path,
       ));
     } catch (e) {
@@ -683,10 +694,16 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         return;
       }
 
+      String? faceShape;
+      if (detectedFaces.isNotEmpty) {
+        faceShape = FaceGeometryHelper.classifyFaceShape(detectedFaces.first);
+      }
+
       emit(ScannerSuccess(
         extractedRgb: finalRgb,
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
+        faceShape: faceShape,
         galleryFilePath: event.filePath,
       ));
     } catch (e) {

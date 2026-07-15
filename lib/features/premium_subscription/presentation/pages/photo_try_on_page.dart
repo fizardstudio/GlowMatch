@@ -1494,6 +1494,53 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                       ),
                                     ),
 
+                                  // Live Face Shape Badge
+                                  if (!_showPaywall && _detectedFace != null && !_isCapturing)
+                                    Positioned(
+                                      top: 16,
+                                      left: 0,
+                                      right: 0,
+                                      child: Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: cardBgColor.withOpacity(0.85),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: primaryColor.withOpacity(0.4), width: 1.5),
+                                            boxShadow: ThemeManager.premiumGlowShadow,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'round'
+                                                    ? Icons.blur_circular_rounded
+                                                    : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'long'
+                                                        ? Icons.crop_portrait_rounded
+                                                        : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'square'
+                                                            ? Icons.crop_square_rounded
+                                                            : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'heart'
+                                                                ? Icons.favorite_rounded
+                                                                : Icons.face_rounded,
+                                                color: primaryColor,
+                                                size: 14,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Wajah: ${FaceGeometryHelper.classifyFaceShape(_detectedFace!).toUpperCase()}',
+                                                style: TextStyle(
+                                                  color: textColor,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
                                   // Floating Actions Ganti/Ambil Foto di Pojok Kiri Atas
                                   if (!_isCapturing)
                                     Positioned(

@@ -19,10 +19,12 @@ class ResultsPage extends StatefulWidget {
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
   final String? galleryFilePath;
+  final String? faceShape;
 
   // Fields for Face 2 (Couple Mode)
   final List<int>? coupleExtractedRgb;
   final StandardShade? coupleMatchedStandard;
+  final String? coupleFaceShape;
 
   const ResultsPage({
     super.key,
@@ -30,8 +32,10 @@ class ResultsPage extends StatefulWidget {
     required this.matchedStandard,
     required this.commercialMatches,
     this.galleryFilePath,
+    this.faceShape,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
+    this.coupleFaceShape,
   });
 
   bool get isCoupleMode => coupleMatchedStandard != null && coupleExtractedRgb != null;
@@ -142,6 +146,7 @@ class _ResultsPageState extends State<ResultsPage> {
         );
         settings.lastMatchedSeasonalColor = profile['season'] as String;
         settings.lastMatchedSkinTone = widget.matchedStandard.skinTone;
+        settings.lastMatchedFaceShape = widget.faceShape;
         await isar.appSettings.put(settings);
       });
       debugPrint("SUCCESS_ISAR: Scanned shade results saved to AppSettings.");
@@ -604,6 +609,10 @@ class _ResultsPageState extends State<ResultsPage> {
 
               // 2.2 Seasonal Color Palette & Hijab Recommendations (Fitur PREMIUM)
               _buildSeasonalColorSection(targetLab),
+              const SizedBox(height: 20),
+
+              // 2.3 Analisis Bentuk Wajah (Face Shape)
+              _buildFaceShapeSection(),
               const SizedBox(height: 28),
 
               // Preferensi Hasil Riasan (Subjektif)
@@ -1235,6 +1244,165 @@ class _ResultsPageState extends State<ResultsPage> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildFaceShapeSection() {
+    final String detectedShape = widget.faceShape?.toLowerCase() ?? 'oval';
+    
+    // Konversi key ke Nama Terbaca
+    String shapeName = 'Oval';
+    String desc = 'Bentuk wajah proporsional dan seimbang.';
+    String eyebrowGuide = 'Soft Arch (Lengkung Lembut) - Menjaga harmoni alami wajah.';
+    String contourGuide = 'Standard Highlighting - Berikan highlight di dahi, batang hidung, dan dagu. Contour ringan di bawah tulang pipi.';
+    String hijabGuide = 'Gaya Klasik - Cocok dengan hampir seluruh gaya lipatan hijab atau belahan rambut.';
+    IconData shapeIcon = Icons.face_rounded;
+
+    if (detectedShape == 'round') {
+      shapeName = 'Bulat (Round)';
+      desc = 'Bentuk wajah feminin dengan garis rahang melengkung lembut.';
+      eyebrowGuide = 'High Arch (Menukik Tajam) - Menambah sudut ketegasan struktural pada wajah.';
+      contourGuide = 'Slanted Shading - Contour miring di bawah tulang pipi mengarah ke sudut bibir untuk memberikan efek tirus.';
+      hijabGuide = 'Sisi Pipi Tertutup - Tarik kain hijab agak ke depan pipi untuk mempersempit area lebar wajah.';
+      shapeIcon = Icons.blur_circular_rounded;
+    } else if (detectedShape == 'long') {
+      shapeName = 'Lonjong (Long/Oblong)';
+      desc = 'Panjang wajah lebih menonjol dibanding lebar pelipis dan rahang.';
+      eyebrowGuide = 'Flat / Straight (Mendatar) - Membantu memotong panjang wajah secara visual.';
+      contourGuide = 'Horizontal Shading - Contour horizontal di sepanjang tulang pipi luar, dahi atas, dan dagu bawah untuk memperpendek wajah.';
+      hijabGuide = 'Ciput Tampak - Gunakan ciput/undercap yang menonjol untuk memotong jarak dahi secara visual.';
+      shapeIcon = Icons.crop_portrait_rounded;
+    } else if (detectedShape == 'square') {
+      shapeName = 'Kotak (Square)';
+      desc = 'Garis rahang tegas dan lebar dahi sejajar dengan lebar rahang.';
+      eyebrowGuide = 'Curved / Rounded (Membulat) - Membantu melunakkan sudut rahang yang tegas.';
+      contourGuide = 'Jawline Contouring - Fokus shading pada sudut rahang bawah dan pelipis untuk menghaluskan sudut tajam.';
+      hijabGuide = 'Lipatan Longgar - Gaya hijab longgar/loose di area rahang untuk menyamarkan sudut tulang rahang lebar.';
+      shapeIcon = Icons.crop_square_rounded;
+    } else if (detectedShape == 'heart') {
+      shapeName = 'Hati (Heart)';
+      desc = 'Dahi lebar dengan rahang lembut yang menirus tajam ke dagu.';
+      eyebrowGuide = 'Low Arch / Rounded - Menyeimbangkan dahi lebar dan dagu runcing.';
+      contourGuide = 'Temples Contouring - Contour di pelipis dahi atas untuk mempersempit dahi, highlight pada dagu untuk efek volume.';
+      hijabGuide = 'Volume Leher - Lipatan hijab ber-volume di bawah dagu/leher untuk mengimbangi dahi yang lebar.';
+      shapeIcon = Icons.favorite_rounded;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: cardBorderColor.withOpacity(0.55),
+          width: 1.5,
+        ),
+        boxShadow: ThemeManager.premiumGlowShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(shapeIcon, color: primaryColor, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Analisis Bentuk Wajah (Face Shape)',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (widget.faceShape == null)
+            Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Wajah kurang terdeteksi penuh. Menggunakan tipe wajah universal (Oval).',
+                      style: TextStyle(color: Colors.amber, fontSize: 10, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Text(
+            'Bentuk Wajah Terdeteksi: $shapeName',
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            desc,
+            style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          Divider(color: cardBorderColor.withOpacity(0.15)),
+          const SizedBox(height: 12),
+          
+          // Rekomendasi Alis
+          _buildRecRow(Icons.remove_red_eye_outlined, 'Bentuk Alis (Eyebrow Guide):', eyebrowGuide),
+          const SizedBox(height: 14),
+          
+          // Rekomendasi Contouring
+          _buildRecRow(Icons.brush_outlined, 'Teknik Shading (Contour & Highlight):', contourGuide),
+          const SizedBox(height: 14),
+          
+          // Rekomendasi Hijab
+          _buildRecRow(Icons.checkroom_rounded, 'Gaya Hijab & Rambut:', hijabGuide),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecRow(IconData icon, String title, String content) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: primaryColor.withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: primaryColor, size: 14),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(color: textMutedColor, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                content,
+                style: TextStyle(color: textColor, fontSize: 12, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

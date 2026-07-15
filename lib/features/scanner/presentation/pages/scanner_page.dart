@@ -382,8 +382,10 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                   matchedStandard: state.matchedStandard,
                   commercialMatches: state.commercialMatches,
                   galleryFilePath: state.galleryFilePath,
+                  faceShape: state.faceShape,
                   coupleExtractedRgb: state.coupleExtractedRgb,
                   coupleMatchedStandard: state.coupleMatchedStandard,
+                  coupleFaceShape: state.coupleFaceShape,
                 ),
               ),
             ).then((_) {

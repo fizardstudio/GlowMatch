@@ -13,4 +13,5 @@ class AppSettings {
   String? lastMatchedUndertone;
   String? lastMatchedSeasonalColor;
   String? lastMatchedSkinTone;
+  String? lastMatchedFaceShape;
 }

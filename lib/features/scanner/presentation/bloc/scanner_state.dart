@@ -79,18 +79,22 @@ class ScannerSuccess extends ScannerState {
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
   final String? galleryFilePath;
+  final String? faceShape;
 
   // Fields for Face 2 (Couple Mode)
   final List<int>? coupleExtractedRgb;
   final StandardShade? coupleMatchedStandard;
+  final String? coupleFaceShape;
 
   const ScannerSuccess({
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
     this.galleryFilePath,
+    this.faceShape,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
+    this.coupleFaceShape,
   });
 
   bool get isCoupleMode => coupleMatchedStandard != null;
@@ -101,8 +105,10 @@ class ScannerSuccess extends ScannerState {
         matchedStandard,
         commercialMatches,
         galleryFilePath,
+        faceShape,
         coupleExtractedRgb,
         coupleMatchedStandard,
+        coupleFaceShape,
       ];
 }
 

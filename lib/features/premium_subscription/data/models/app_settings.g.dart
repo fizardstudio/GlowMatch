@@ -27,23 +27,28 @@ const AppSettingsSchema = CollectionSchema(
       name: r'isPremium',
       type: IsarType.bool,
     ),
-    r'lastMatchedSeasonalColor': PropertySchema(
+    r'lastMatchedFaceShape': PropertySchema(
       id: 2,
+      name: r'lastMatchedFaceShape',
+      type: IsarType.string,
+    ),
+    r'lastMatchedSeasonalColor': PropertySchema(
+      id: 3,
       name: r'lastMatchedSeasonalColor',
       type: IsarType.string,
     ),
     r'lastMatchedShadeName': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'lastMatchedShadeName',
       type: IsarType.string,
     ),
     r'lastMatchedSkinTone': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'lastMatchedSkinTone',
       type: IsarType.string,
     ),
     r'lastMatchedUndertone': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'lastMatchedUndertone',
       type: IsarType.string,
     )
@@ -68,6 +73,12 @@ int _appSettingsEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.lastMatchedFaceShape;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   {
     final value = object.lastMatchedSeasonalColor;
     if (value != null) {
@@ -103,10 +114,11 @@ void _appSettingsSerialize(
 ) {
   writer.writeBool(offsets[0], object.hasUsedCoupleTrial);
   writer.writeBool(offsets[1], object.isPremium);
-  writer.writeString(offsets[2], object.lastMatchedSeasonalColor);
-  writer.writeString(offsets[3], object.lastMatchedShadeName);
-  writer.writeString(offsets[4], object.lastMatchedSkinTone);
-  writer.writeString(offsets[5], object.lastMatchedUndertone);
+  writer.writeString(offsets[2], object.lastMatchedFaceShape);
+  writer.writeString(offsets[3], object.lastMatchedSeasonalColor);
+  writer.writeString(offsets[4], object.lastMatchedShadeName);
+  writer.writeString(offsets[5], object.lastMatchedSkinTone);
+  writer.writeString(offsets[6], object.lastMatchedUndertone);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -119,10 +131,11 @@ AppSettings _appSettingsDeserialize(
   object.hasUsedCoupleTrial = reader.readBool(offsets[0]);
   object.id = id;
   object.isPremium = reader.readBool(offsets[1]);
-  object.lastMatchedSeasonalColor = reader.readStringOrNull(offsets[2]);
-  object.lastMatchedShadeName = reader.readStringOrNull(offsets[3]);
-  object.lastMatchedSkinTone = reader.readStringOrNull(offsets[4]);
-  object.lastMatchedUndertone = reader.readStringOrNull(offsets[5]);
+  object.lastMatchedFaceShape = reader.readStringOrNull(offsets[2]);
+  object.lastMatchedSeasonalColor = reader.readStringOrNull(offsets[3]);
+  object.lastMatchedShadeName = reader.readStringOrNull(offsets[4]);
+  object.lastMatchedSkinTone = reader.readStringOrNull(offsets[5]);
+  object.lastMatchedUndertone = reader.readStringOrNull(offsets[6]);
   return object;
 }
 
@@ -144,6 +157,8 @@ P _appSettingsDeserializeProp<P>(
     case 4:
       return (reader.readStringOrNull(offset)) as P;
     case 5:
+      return (reader.readStringOrNull(offset)) as P;
+    case 6:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -312,6 +327,160 @@ extension AppSettingsQueryFilter
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isPremium',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastMatchedFaceShape',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastMatchedFaceShape',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastMatchedFaceShape',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastMatchedFaceShape',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastMatchedFaceShape',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastMatchedFaceShape',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'lastMatchedFaceShape',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'lastMatchedFaceShape',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'lastMatchedFaceShape',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'lastMatchedFaceShape',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastMatchedFaceShape',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedFaceShapeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'lastMatchedFaceShape',
+        value: '',
       ));
     });
   }
@@ -970,6 +1139,20 @@ extension AppSettingsQuerySortBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByLastMatchedFaceShape() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastMatchedFaceShape', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByLastMatchedFaceShapeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastMatchedFaceShape', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByLastMatchedSeasonalColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastMatchedSeasonalColor', Sort.asc);
@@ -1067,6 +1250,20 @@ extension AppSettingsQuerySortThenBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByLastMatchedFaceShape() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastMatchedFaceShape', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByLastMatchedFaceShapeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastMatchedFaceShape', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByLastMatchedSeasonalColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastMatchedSeasonalColor', Sort.asc);
@@ -1139,6 +1336,14 @@ extension AppSettingsQueryWhereDistinct
   }
 
   QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByLastMatchedFaceShape({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastMatchedFaceShape',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByLastMatchedSeasonalColor({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastMatchedSeasonalColor',
@@ -1189,6 +1394,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, bool, QQueryOperations> isPremiumProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isPremium');
+    });
+  }
+
+  QueryBuilder<AppSettings, String?, QQueryOperations>
+      lastMatchedFaceShapeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastMatchedFaceShape');
     });
   }
 

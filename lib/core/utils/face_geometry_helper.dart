@@ -287,4 +287,61 @@ class FaceGeometryHelper {
     final rect = face.boundingBox;
     return Point(rect.left + rect.width / 2.0, rect.top + rect.height * 0.75);
   }
+
+  /// Mengklasifikasikan bentuk wajah ('oval', 'round', 'square', 'long', 'heart') berdasarkan rasio bounding box dan kontur wajah.
+  static String classifyFaceShape(Face face) {
+    final double boxW = face.boundingBox.width.toDouble();
+    final double boxH = face.boundingBox.height.toDouble();
+    if (boxW == 0.0) return 'oval';
+    final double ratio = boxH / boxW;
+
+    if (ratio > 1.25) {
+      return 'long';
+    } else if (ratio < 1.13) {
+      // Cek dahi vs rahang untuk membedakan bulat (round) vs kotak (square)
+      final faceContour = face.contours[FaceContourType.face]?.points;
+      if (faceContour != null && faceContour.length >= 25) {
+        // Kontur wajah ML Kit memiliki 36 titik di sekeliling wajah.
+        // Titik atas (dahi): sekitar indeks 0-4 dan 32-35
+        // Titik bawah (dagu/rahang): sekitar indeks 12-24
+        // Kita hitung lebar dahi (jarak horizontal antara kiri atas dan kanan atas)
+        // dan lebar rahang (jarak horizontal antara kiri bawah dan kanan bawah)
+        final pLeftForehead = faceContour[4];
+        final pRightForehead = faceContour[32];
+        final pLeftJaw = faceContour[12];
+        final pRightJaw = faceContour[24];
+        
+        final double foreheadWidth = (pRightForehead.x - pLeftForehead.x).abs().toDouble();
+        final double jawWidth = (pRightJaw.x - pLeftJaw.x).abs().toDouble();
+        
+        if (foreheadWidth > 0 && jawWidth > 0) {
+          final double jawRatio = jawWidth / foreheadWidth;
+          if (jawRatio > 0.90) {
+            return 'square'; // Rahang lebar mendekati lebar dahi
+          }
+        }
+      }
+      return 'round';
+    } else {
+      // Cek dahi vs rahang untuk membedakan hati (heart) vs oval
+      final faceContour = face.contours[FaceContourType.face]?.points;
+      if (faceContour != null && faceContour.length >= 25) {
+        final pLeftForehead = faceContour[4];
+        final pRightForehead = faceContour[32];
+        final pLeftJaw = faceContour[12];
+        final pRightJaw = faceContour[24];
+        
+        final double foreheadWidth = (pRightForehead.x - pLeftForehead.x).abs().toDouble();
+        final double jawWidth = (pRightJaw.x - pLeftJaw.x).abs().toDouble();
+        
+        if (foreheadWidth > 0 && jawWidth > 0) {
+          final double jawRatio = jawWidth / foreheadWidth;
+          if (jawRatio < 0.72) {
+            return 'heart'; // Rahang sempit dibanding dahi lebar
+          }
+        }
+      }
+      return 'oval';
+    }
+  }
 }
