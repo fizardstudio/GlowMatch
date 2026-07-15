@@ -1163,7 +1163,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     try {
-      final XFile? selectedFile = await picker.pickImage(source: source);
+      final XFile? selectedFile = await picker.pickImage(
+        source: source,
+        preferredCameraDevice: CameraDevice.rear,
+      );
       if (selectedFile != null) {
         _processImageFile(selectedFile.path);
       }

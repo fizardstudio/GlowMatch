@@ -39,6 +39,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   final Isar _isar = DatabaseService().isar;
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
+  CameraLensDirection _cameraLensDirection = CameraLensDirection.front;
   bool _isPremium = false;
   bool _showPaywall = true;
 
@@ -1298,14 +1299,13 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
-      // Pilih kamera depan
-      final frontCamera = cameras.firstWhere(
-        (cam) => cam.lensDirection == CameraLensDirection.front,
+      final targetCamera = cameras.firstWhere(
+        (cam) => cam.lensDirection == _cameraLensDirection,
         orElse: () => cameras.first,
       );
 
       _cameraController = CameraController(
-        frontCamera,
+        targetCamera,
         ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
@@ -1330,13 +1330,37 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal memuat kamera depan.'),
+          SnackBar(
+            content: Text('Gagal memuat kamera ${_cameraLensDirection == CameraLensDirection.front ? "depan" : "belakang"}.'),
             backgroundColor: Colors.redAccent,
           ),
         );
       }
     }
+  }
+
+  Future<void> _toggleCameraDirection() async {
+    if (_cameraController == null) return;
+    
+    // Matikan streaming dan bersihkan controller yang sekarang
+    try {
+      await _cameraController!.stopImageStream();
+    } catch (e) {
+      debugPrint("Error stopping image stream: $e");
+    }
+    await _cameraController!.dispose();
+    _cameraController = null;
+    
+    if (mounted) {
+      setState(() {
+        _isCameraInitialized = false;
+        _cameraLensDirection = _cameraLensDirection == CameraLensDirection.front
+            ? CameraLensDirection.back
+            : CameraLensDirection.front;
+      });
+    }
+    
+    await _initializeCamera();
   }
 
   Future<void> _processFrame(CameraImage image) async {
@@ -1599,7 +1623,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         elevation: 0,
         iconTheme:  IconThemeData(color: textColor),
         actions: [
-          if (!_showPaywall)
+          if (!_showPaywall) ...[
             IconButton(
               icon: Icon(
                 _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
@@ -1612,6 +1636,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                 });
               },
             ),
+            IconButton(
+              icon: Icon(Icons.flip_camera_ios_rounded, color: textColor),
+              tooltip: 'Ganti Kamera',
+              onPressed: _toggleCameraDirection,
+            ),
+          ],
         ],
       ),
       body: Stack(
