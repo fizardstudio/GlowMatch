@@ -47,7 +47,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
       enableContours: true,
       enableLandmarks: false,
       enableClassification: true,
-      performanceMode: FaceDetectorMode.accurate,
+      performanceMode: FaceDetectorMode.fast,
     ),
   );
 
@@ -1403,43 +1403,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   }
 
   Uint8List _combineYuvPlanes(CameraImage image) {
-    final int width = image.width;
-    final int height = image.height;
-    final int ySize = width * height;
-    final int uvSize = (width * height / 2).round();
-
-    final Uint8List nv21 = Uint8List(ySize + uvSize);
-
-    // Copy Y plane
-    final Uint8List yPlane = image.planes[0].bytes;
-    nv21.setRange(0, ySize, yPlane);
-
-    // Interleave VU planes
-    final Uint8List uPlane = image.planes[1].bytes;
-    final Uint8List vPlane = image.planes[2].bytes;
-
-    final int uRowStride = image.planes[1].bytesPerRow;
-    final int vRowStride = image.planes[2].bytesPerRow;
-    final int uPixelStride = image.planes[1].bytesPerPixel ?? 1;
-    final int vPixelStride = image.planes[2].bytesPerPixel ?? 1;
-
-    int nvIndex = ySize;
-
-    for (int y = 0; y < (height / 2).round(); y++) {
-      for (int x = 0; x < (width / 2).round(); x++) {
-        final int uIndex = y * uRowStride + x * uPixelStride;
-        final int vIndex = y * vRowStride + x * vPixelStride;
-
-        if (vIndex < vPlane.length) {
-          nv21[nvIndex++] = vPlane[vIndex];
-        }
-        if (uIndex < uPlane.length) {
-          nv21[nvIndex++] = uPlane[uIndex];
-        }
-      }
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
     }
-
-    return nv21;
+    return allBytes.done().buffer.asUint8List();
   }
 
   @override

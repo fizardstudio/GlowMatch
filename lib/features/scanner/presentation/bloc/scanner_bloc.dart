@@ -4,7 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, WriteBuffer;
 import 'package:flutter/material.dart' show Size;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -635,43 +635,11 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   }
 
   Uint8List _combineYuvPlanes(CameraImage image) {
-    final int width = image.width;
-    final int height = image.height;
-    final int ySize = width * height;
-    final int uvSize = (width * height / 2).round();
-    
-    final Uint8List nv21 = Uint8List(ySize + uvSize);
-    
-    // Copy Y plane
-    final Uint8List yPlane = image.planes[0].bytes;
-    nv21.setRange(0, ySize, yPlane);
-    
-    // Interleave VU planes
-    final Uint8List uPlane = image.planes[1].bytes;
-    final Uint8List vPlane = image.planes[2].bytes;
-    
-    final int uRowStride = image.planes[1].bytesPerRow;
-    final int vRowStride = image.planes[2].bytesPerRow;
-    final int uPixelStride = image.planes[1].bytesPerPixel ?? 1;
-    final int vPixelStride = image.planes[2].bytesPerPixel ?? 1;
-    
-    int nvIndex = ySize;
-    
-    for (int y = 0; y < (height / 2).round(); y++) {
-      for (int x = 0; x < (width / 2).round(); x++) {
-        final int uIndex = y * uRowStride + x * uPixelStride;
-        final int vIndex = y * vRowStride + x * vPixelStride;
-        
-        if (vIndex < vPlane.length) {
-          nv21[nvIndex++] = vPlane[vIndex];
-        }
-        if (uIndex < uPlane.length) {
-          nv21[nvIndex++] = uPlane[uIndex];
-        }
-      }
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
     }
-    
-    return nv21;
+    return allBytes.done().buffer.asUint8List();
   }
 
   Future<void> _onProcessGalleryImage(
