@@ -73,6 +73,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   Color _selectedEyeshadowColor = const Color(0xFFFFCC80); // Champagne Shimmer
   double _eyeshadowOpacity = 0.0;
   bool _hasEyeliner = false;
+  double _eyelinerThickness = 0.5; // Default 50%
 
   // Filter Parameters - Nose Contour (Hidung)
   double _noseHighlightOpacity = 0.0;
@@ -1675,6 +1676,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                               eyeshadowColor: _selectedEyeshadowColor,
                                               eyeshadowOpacity: _eyeshadowOpacity,
                                               hasEyeliner: _hasEyeliner,
+                                              eyelinerThickness: _eyelinerThickness,
                                               noseHighlightOpacity: _noseHighlightOpacity,
                                               noseShadingOpacity: _noseShadingOpacity,
                                             ),
@@ -2218,6 +2220,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                         _selectedEyeshadowColor = preset.eyeshadowColor;
                                         _eyeshadowOpacity = preset.eyeshadowOpacity;
                                         _hasEyeliner = preset.hasEyeliner;
+                                        _eyelinerThickness = preset.eyelinerThickness;
                                         _selectedLightingPreset = preset.lightingPreset;
                                         _noseHighlightOpacity = preset.noseHighlightOpacity;
                                         _noseShadingOpacity = preset.noseShadingOpacity;
@@ -2667,6 +2670,37 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                           ),
                         ],
                       ),
+                      if (_hasEyeliner) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.line_weight_rounded, color: primaryColor, size: 18),
+                            const SizedBox(width: 8),
+                            Text('Ketebalan Eyeliner', style: TextStyle(color: textColor, fontSize: 11)),
+                            Expanded(
+                              child: Slider(
+                                activeColor: primaryColor,
+                                inactiveColor: cardBorderColor,
+                                value: _eyelinerThickness,
+                                min: 0.0,
+                                max: 1.0,
+                                onChanged: _showPaywall
+                                    ? null
+                                    : (val) {
+                                        setState(() {
+                                          _eyelinerThickness = val;
+                                          _activePreset = null;
+                                        });
+                                      },
+                              ),
+                            ),
+                            Text(
+                              '${(_eyelinerThickness * 100).round()}%',
+                              style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       // Palet Warna Eyeshadow
                       Text(

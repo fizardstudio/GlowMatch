@@ -103,6 +103,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   Color _selectedEyeshadowColor = const Color(0xFFFFCC80); // Champagne Shimmer
   double _eyeshadowOpacity = 0.0;
   bool _hasEyeliner = false;
+  double _eyelinerThickness = 0.5; // Default 50%
 
   // Filter Parameters - Nose Contour (Hidung)
   double _noseHighlightOpacity = 0.0;
@@ -1479,6 +1480,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           eyeshadowColor: _selectedEyeshadowColor,
                                           eyeshadowOpacity: _eyeshadowOpacity,
                                           hasEyeliner: _hasEyeliner,
+                                          eyelinerThickness: _eyelinerThickness,
                                           noseHighlightOpacity: _noseHighlightOpacity,
                                           noseShadingOpacity: _noseShadingOpacity,
                                         ),
@@ -1786,6 +1788,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                   _selectedEyeshadowColor = preset.eyeshadowColor;
                                   _eyeshadowOpacity = preset.eyeshadowOpacity;
                                   _hasEyeliner = preset.hasEyeliner;
+                                  _eyelinerThickness = preset.eyelinerThickness;
                                   _selectedLightingPreset = preset.lightingPreset;
                                   _noseHighlightOpacity = preset.noseHighlightOpacity;
                                   _noseShadingOpacity = preset.noseShadingOpacity;
@@ -2021,6 +2024,14 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           ),
                         ],
                       ),
+                      if (_hasEyeliner) ...[
+                        const SizedBox(height: 8),
+                        _buildSliderRow('Ketebalan Eyeliner', _eyelinerThickness, (val) {
+                          setState(() {
+                            _eyelinerThickness = val;
+                          });
+                        }),
+                      ],
                       const SizedBox(height: 8),
                       // Palet Warna Eyeshadow
                       SizedBox(

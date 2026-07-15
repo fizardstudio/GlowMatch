@@ -15,6 +15,7 @@ class MakeupPreset {
   final Color eyeshadowColor;
   final double eyeshadowOpacity;
   final bool hasEyeliner;
+  final double eyelinerThickness;
   final String lightingPreset;
   final double noseHighlightOpacity;
   final double noseShadingOpacity;
@@ -34,6 +35,7 @@ class MakeupPreset {
     required this.eyeshadowColor,
     required this.eyeshadowOpacity,
     required this.hasEyeliner,
+    required this.eyelinerThickness,
     required this.lightingPreset,
     required this.noseHighlightOpacity,
     required this.noseShadingOpacity,
@@ -55,6 +57,7 @@ class MakeupPreset {
       eyeshadowColor: Colors.transparent,
       eyeshadowOpacity: 0.0,
       hasEyeliner: false,
+      eyelinerThickness: 0.5,
       lightingPreset: 'Studio',
       noseHighlightOpacity: 0.0,
       noseShadingOpacity: 0.0,
@@ -74,6 +77,7 @@ class MakeupPreset {
       eyeshadowColor: Color(0xFFFFCC80), // Champagne shimmer
       eyeshadowOpacity: 0.40,
       hasEyeliner: false,
+      eyelinerThickness: 0.35,
       lightingPreset: 'Soft Glow',
       noseHighlightOpacity: 0.35,
       noseShadingOpacity: 0.00,
@@ -93,6 +97,7 @@ class MakeupPreset {
       eyeshadowColor: Color(0xFFFFA726), // Bronze gold
       eyeshadowOpacity: 0.55,
       hasEyeliner: true,
+      eyelinerThickness: 0.45,
       lightingPreset: 'Sunset Warmth',
       noseHighlightOpacity: 0.40,
       noseShadingOpacity: 0.30,
@@ -112,6 +117,7 @@ class MakeupPreset {
       eyeshadowColor: Color(0xFFB0BEC5), // Nude taupe
       eyeshadowOpacity: 0.40,
       hasEyeliner: true,
+      eyelinerThickness: 0.80,
       lightingPreset: 'Studio',
       noseHighlightOpacity: 0.55,
       noseShadingOpacity: 0.45,
@@ -131,6 +137,7 @@ class MakeupPreset {
       eyeshadowColor: Color(0xFF00E5FF), // Cyber cyan
       eyeshadowOpacity: 0.65,
       hasEyeliner: true,
+      eyelinerThickness: 0.60,
       lightingPreset: 'Cyber Neon',
       noseHighlightOpacity: 0.50,
       noseShadingOpacity: 0.35,
