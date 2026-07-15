@@ -52,7 +52,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | Status | Fitur / Optimalisasi | Rincian Fungsionalitas | Estimasi Modul Layer |
 | :---: | :--- | :--- | :--- |
 | **[ ]** | **Riasan Mata AR (Eyeshadow & Eyeliner)** | Riasan kelopak mata dan garis eyeliner presisi menggunakan kontur mata ML Kit (`leftEye` & `rightEye`). | `lib/features/premium_subscription/presentation/widgets/` |
-| **[ ]** | **Live Split Slider** | Slider geser interaktif real-time langsung di kamera live AR untuk membandingkan sisi makeup vs tanpa makeup. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
+| **[ ]** | **One-Tap Makeup Looks (Presets)** | Fitur menerapkan langsung kombinasi lipstik, blush-on, dan foundation kurasi profesional dalam sekali ketuk (misal: "Korean Glass Look", "Office Glam", "Cyber Punk"). | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 | **[ ]** | **Dynamic ML Kit Frame Throttling** | Pembatasan deteksi ML Kit ke 15-20 FPS ditambah interpolasi kanvas 60 FPS untuk menghemat baterai HP hingga 40%. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 | **[ ]** | **Pencari Kecocokan Shade Otomatis** | Auto-highlighting warna kosmetik yang serasi di katalog/kamera berdasarkan hasil scan warna kulit & undertone di Isar DB. | `lib/features/scanner/presentation/pages/results_page.dart` |
 | **[ ]** | **Tekstur Bedak Realistis (Satin/Matte/Dewy)**| Efek dasaran wajah dengan kilau specular 3D dinamis pada dahi, dagu, dan tulang hidung. | `lib/features/premium_subscription/presentation/widgets/` |
