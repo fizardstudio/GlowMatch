@@ -15,6 +15,7 @@ import '../../data/models/app_settings.dart';
 import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/utils/color_calculator.dart';
 import '../widgets/photo_makeup_painter.dart';
+import '../../data/models/makeup_preset.dart';
 import '../../../../core/utils/face_geometry_helper.dart';
 import '../../../../core/utils/widget_helper.dart';
 import 'package:flutter/rendering.dart';
@@ -97,6 +98,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   // Filter Parameters - Blush-On (Pipi)
   Color _selectedBlushColor = const Color(0xFFFF8A80); // Soft Coral
   double _blushOpacity = 0.30;
+
+  // Filter Parameters - Eye Makeup (Mata)
+  Color _selectedEyeshadowColor = const Color(0xFFFFCC80); // Champagne Shimmer
+  double _eyeshadowOpacity = 0.0;
+  bool _hasEyeliner = false;
 
   double _sliderX = 180.0; // Koordinat pembagi horizontal
 
@@ -188,6 +194,16 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     {'name': 'Pale Tangerine', 'color': const Color(0xFFFFB74D)},
     {'name': 'Warm Amber', 'color': const Color(0xFFFF8F00)},
     {'name': 'Plum Pink', 'color': const Color(0xFFBA68C8)},
+  ];
+
+  // List Warna Eyeshadow Eksklusif
+  final List<Map<String, dynamic>> _eyeshadowColors = [
+    {'name': 'Champagne Gold', 'color': const Color(0xFFFFCC80)},
+    {'name': 'Sunset Bronze', 'color': const Color(0xFFFFA726)},
+    {'name': 'Rose Shimmer', 'color': const Color(0xFFF48FB1)},
+    {'name': 'Cyber Cyan', 'color': const Color(0xFF00E5FF)},
+    {'name': 'Plum Glam', 'color': const Color(0xFFCE93D8)},
+    {'name': 'Taupe Nude', 'color': const Color(0xFFB0BEC5)},
   ];
 
   @override
@@ -653,6 +669,21 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       } else {
         _selectedFoundationColor = const Color(0xFFC79D7C); // Golden Tan
         _foundationOpacity = 0.40;
+      }
+
+      // 5. Tentukan warna eyeshadow & eyeliner
+      if (und == 'warm') {
+        _selectedEyeshadowColor = const Color(0xFFFFA726); // Sunset Bronze
+        _eyeshadowOpacity = 0.45;
+        _hasEyeliner = true;
+      } else if (und == 'cool') {
+        _selectedEyeshadowColor = const Color(0xFFF48FB1); // Rose Shimmer
+        _eyeshadowOpacity = 0.40;
+        _hasEyeliner = true;
+      } else {
+        _selectedEyeshadowColor = const Color(0xFFFFCC80); // Champagne Gold
+        _eyeshadowOpacity = 0.35;
+        _hasEyeliner = false;
       }
 
       _activePreset = 'Rekomendasi AI (${_lastMatchedSeasonalColor ?? "Personal"})';
@@ -1441,6 +1472,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           selectedLightingPreset: _selectedLightingPreset,
                                           showHarmonyHeatmap: _showHarmonyHeatmap,
                                           undertone: _lastMatchedUndertone,
+                                          eyeshadowColor: _selectedEyeshadowColor,
+                                          eyeshadowOpacity: _eyeshadowOpacity,
+                                          hasEyeliner: _hasEyeliner,
                                         ),
                                       ),
                                     ),
@@ -1663,15 +1697,119 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       ),
                       child: Row(
                         children: [
-                          _buildTabButton('Dasaran Base', 0),
-                          _buildTabButton('Lipstik', 1),
-                          _buildTabButton('Blush-On', 2),
+                          _buildTabButton('Looks', 0),
+                          _buildTabButton('Base', 1),
+                          _buildTabButton('Lipstik', 2),
+                          _buildTabButton('Pipi', 3),
+                          _buildTabButton('Mata', 4),
                         ],
                       ),
                     ),
 
                     // Sliders & Toggles khusus Tab Aktif
                     if (_activeCategoryIndex == 0) ...[
+                      // Pilihan Preset Looks & AI Recommendation
+                      const Text(
+                        'PILIH PRESET LOOKS:',
+                        style: TextStyle(color: Color(0xFFC89E88), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 48,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: MakeupPreset.presets.length + (_lastMatchedUndertone != null ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (_lastMatchedUndertone != null && index == 0) {
+                              final isSelected = _activePreset?.startsWith('Rekomendasi AI') ?? false;
+                              return GestureDetector(
+                                onTap: _applyAiRecommendation,
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFBF953F),
+                                        Color(0xFFFCF6BA),
+                                        Color(0xFFB38728),
+                                        Color(0xFFFBF5B7),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: ThemeManager.premiumGlowShadow,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 14),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Rekomendasi AI',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final presetList = MakeupPreset.presets;
+                            final presetIndex = _lastMatchedUndertone != null ? index - 1 : index;
+                            final preset = presetList[presetIndex];
+                            final String name = preset.name;
+                            final isSelected = _activePreset == name;
+
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedLipstickColor = preset.lipstickColor;
+                                  _lipstickOpacity = preset.lipstickOpacity;
+                                  _lipstickFinishing = preset.lipstickFinishing;
+                                  _selectedBlushColor = preset.blushColor;
+                                  _blushOpacity = preset.blushOpacity;
+                                  _selectedFoundationColor = preset.foundationColor;
+                                  _foundationOpacity = preset.foundationOpacity;
+                                  _showGlassSkin = preset.showGlassSkin;
+                                  _selectedEyeshadowColor = preset.eyeshadowColor;
+                                  _eyeshadowOpacity = preset.eyeshadowOpacity;
+                                  _hasEyeliner = preset.hasEyeliner;
+                                  _selectedLightingPreset = preset.lightingPreset;
+                                  _activePreset = name;
+                                });
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isSelected ? primaryColor : cardBgColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.55),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: isSelected ? ThemeManager.premiumGlowShadow : null,
+                                ),
+                                child: Text(
+                                  '${preset.icon} $name',
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : textColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ] else if (_activeCategoryIndex == 1) ...[
                       // Opacity Foundation
                       _buildSliderRow('Opasitas Base', _foundationOpacity, (val) {
                         setState(() {
@@ -1757,7 +1895,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                 },
                               ),
                       ),
-                    ] else if (_activeCategoryIndex == 1) ...[
+                    ] else if (_activeCategoryIndex == 2) ...[
                       // Opacity Lipstick & Finishing Toggle
                       Row(
                         children: [
@@ -1805,7 +1943,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           },
                         ),
                       ),
-                    ] else ...[
+                    ] else if (_activeCategoryIndex == 3) ...[
                       // Opacity Blush-On
                       _buildSliderRow('Opasitas Pipi', _blushOpacity, (val) {
                         setState(() {
@@ -1826,6 +1964,54 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                               setState(() {
                                 _selectedBlushColor = bColor['color'];
                                 if (_blushOpacity == 0.0) _blushOpacity = 0.25;
+                              });
+                            });
+                          },
+                        ),
+                      ),
+                    ] else ...[
+                      // Opacity Eyeshadow & Eyeliner Toggle
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSliderRow('Opasitas Mata', _eyeshadowOpacity, (val) {
+                              setState(() {
+                                _eyeshadowOpacity = val;
+                              });
+                            }),
+                          ),
+                          const SizedBox(width: 12),
+                          // Eyeliner Toggle
+                          Row(
+                            children: [
+                              Text('Eyeliner', style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                              Switch(
+                                activeColor: primaryColor,
+                                value: _hasEyeliner,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _hasEyeliner = val;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Palet Warna Eyeshadow
+                      SizedBox(
+                        height: 48,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _eyeshadowColors.length,
+                          itemBuilder: (context, index) {
+                            final eColor = _eyeshadowColors[index];
+                            final isSel = _selectedEyeshadowColor == eColor['color'];
+                            return _buildColorCircle(eColor['color'], eColor['name'], isSel, () {
+                              setState(() {
+                                _selectedEyeshadowColor = eColor['color'];
+                                if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
                               });
                             });
                           },

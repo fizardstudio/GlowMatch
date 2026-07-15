@@ -34,6 +34,11 @@ class PhotoMakeupPainter extends CustomPainter {
   final bool showHarmonyHeatmap;
   final String? undertone;
 
+  // Parameter Riasan Mata
+  final Color? eyeshadowColor;
+  final double eyeshadowOpacity;
+  final bool hasEyeliner;
+
   PhotoMakeupPainter({
     required this.face,
     required this.originalImageWidth,
@@ -51,6 +56,9 @@ class PhotoMakeupPainter extends CustomPainter {
     required this.selectedLightingPreset,
     required this.showHarmonyHeatmap,
     this.undertone,
+    this.eyeshadowColor,
+    required this.eyeshadowOpacity,
+    required this.hasEyeliner,
   });
 
   @override
@@ -189,6 +197,124 @@ class PhotoMakeupPainter extends CustomPainter {
 
         canvas.drawPath(finalFoundationPath, paintBase);
       }
+    }
+
+    // 1.5 RENDER EYE MAKEUP (EYESHADOW & EYELINER)
+    if ((eyeshadowColor != null && eyeshadowOpacity > 0.0) || hasEyeliner) {
+      final leftEyePoints = face!.contours[FaceContourType.leftEye]?.points;
+      final rightEyePoints = face!.contours[FaceContourType.rightEye]?.points;
+
+      final eyes = FaceGeometryHelper.getEyeCenters(face!);
+      final leftEyeCenter = eyes['left']!;
+      final rightEyeCenter = eyes['right']!;
+      
+      final vectors = FaceGeometryHelper.getFaceUnitVectors(face!, leftEyeCenter, rightEyeCenter);
+      final unitX = vectors['unitX']!;
+      final unitY = vectors['unitY']!;
+      final double eyeDistance = vectors['distance']!.x;
+
+      void drawEyeMakeup(List<Point<int>>? eyePoints, bool isLeftEyeInScreen) {
+        if (eyePoints == null || eyePoints.length < 9) return;
+
+        // Kita map semua titik kontur mata ke screen space
+        final List<Offset> mappedEye = eyePoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+
+        // Titik 0 s.d. 8 adalah kelopak mata atas
+        final List<Offset> upperLid = mappedEye.sublist(0, 9);
+
+        // 1. EYESHADOW RENDER
+        if (eyeshadowColor != null && eyeshadowOpacity > 0.0) {
+          final Path eyeshadowPath = Path();
+          final List<Offset> shiftedPoints = [];
+
+          for (int i = 0; i < upperLid.length; i++) {
+            // Hitung faktor bell-curve untuk ketebalan di tengah kelopak
+            final double bellFactor = sin(i / 8.0 * pi);
+            final double shiftAmount = eyeDistance * 0.16 * bellFactor;
+            
+            final double sx = upperLid[i].dx - unitY.x * shiftAmount;
+            final double sy = upperLid[i].dy - unitY.y * shiftAmount;
+            shiftedPoints.add(Offset(sx, sy));
+          }
+
+          // Gabungkan kelopak mata atas dengan titik yang digeser ke atas (dalam urutan terbalik)
+          eyeshadowPath.moveTo(upperLid.first.dx, upperLid.first.dy);
+          for (int i = 1; i < upperLid.length; i++) {
+            eyeshadowPath.lineTo(upperLid[i].dx, upperLid[i].dy);
+          }
+          for (int i = shiftedPoints.length - 1; i >= 0; i--) {
+            eyeshadowPath.lineTo(shiftedPoints[i].dx, shiftedPoints[i].dy);
+          }
+          eyeshadowPath.close();
+
+          // Gunakan gradient linear memudar ke atas
+          final double midEyeX = upperLid[4].dx;
+          final double midEyeY = upperLid[4].dy;
+          final double midShiftX = shiftedPoints[4].dx;
+          final double midShiftY = shiftedPoints[4].dy;
+
+          final Paint paintEyeshadow = Paint()
+            ..style = PaintingStyle.fill
+            ..shader = ui.Gradient.linear(
+              Offset(midEyeX, midEyeY),
+              Offset(midShiftX, midShiftY),
+              [
+                eyeshadowColor!.withOpacity(eyeshadowOpacity),
+                eyeshadowColor!.withOpacity(0.0),
+              ],
+            )
+            ..imageFilter = ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0);
+
+          canvas.drawPath(eyeshadowPath, paintEyeshadow);
+        }
+
+        // 2. EYELINER RENDER
+        if (hasEyeliner) {
+          final Path eyelinerPath = Path();
+          
+          eyelinerPath.moveTo(upperLid.first.dx, upperLid.first.dy);
+          for (int i = 1; i < upperLid.length; i++) {
+            eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
+          }
+
+          // Tambahkan wing extension di sudut luar mata
+          if (isLeftEyeInScreen) {
+            // Sudut luar mata di kanan layar (point 8)
+            final Offset outerCorner = upperLid.last;
+            final double wingX = outerCorner.dx + unitX.x * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.03);
+            final double wingY = outerCorner.dy + unitX.y * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.03);
+            eyelinerPath.lineTo(wingX, wingY);
+          } else {
+            // Sudut luar mata di kiri layar (point 0)
+            final Offset outerCorner = upperLid.first;
+            final double wingX = outerCorner.dx - unitX.x * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.03);
+            final double wingY = outerCorner.dy - unitX.y * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.03);
+            
+            // Re-construct eyeliner path to draw wing at point 0
+            final Path wingPath = Path();
+            wingPath.moveTo(wingX, wingY);
+            wingPath.lineTo(outerCorner.dx, outerCorner.dy);
+            for (int i = 1; i < upperLid.length; i++) {
+              wingPath.lineTo(upperLid[i].dx, upperLid[i].dy);
+            }
+            eyelinerPath.reset();
+            eyelinerPath.addPath(wingPath, Offset.zero);
+          }
+
+          final Paint paintEyeliner = Paint()
+            ..style = PaintingStyle.stroke
+            ..color = const Color(0xFF1A1A1A) // Charcoal black
+            ..strokeWidth = (eyeDistance * 0.025).clamp(1.5, 3.5)
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+
+          canvas.drawPath(eyelinerPath, paintEyeliner);
+        }
+      }
+
+      // Untuk foto 2D statis, mata kiri wajah berada di kanan layar (dari perspektif pemirsa)
+      drawEyeMakeup(leftEyePoints, true);
+      drawEyeMakeup(rightEyePoints, false);
     }
 
     // RENDER BASE MAKEUP LIGHTING PRESETS OVERLAY ON FACE
