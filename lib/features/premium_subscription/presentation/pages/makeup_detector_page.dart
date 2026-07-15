@@ -564,7 +564,7 @@ class _MakeupDetectorPageState extends State<MakeupDetectorPage> with WidgetsBin
                             }
 
                             // Blush (pipi kanan) & Kulit (Dahi) menggunakan FaceGeometryHelper
-                            final cheeks = FaceGeometryHelper.getCheekCoordinates(_detectedFace!);
+                            final cheeks = FaceGeometryHelper.getCheekboneCoordinates(_detectedFace!);
                             final forehead = FaceGeometryHelper.getForeheadCoordinate(_detectedFace!);
 
                             final int cx = cheeks['right']!.x.round();

@@ -95,7 +95,7 @@ class LipFilterPainter extends CustomPainter {
     Offset? estimatedLeftCheek;
     Offset? estimatedRightCheek;
 
-    final cheeks = FaceGeometryHelper.getCheekCoordinates(face!);
+    final cheeks = FaceGeometryHelper.getCheekboneCoordinates(face!);
     estimatedLeftCheek = mapPoint(Point(cheeks['left']!.x.round(), cheeks['left']!.y.round()));
     estimatedRightCheek = mapPoint(Point(cheeks['right']!.x.round(), cheeks['right']!.y.round()));
 

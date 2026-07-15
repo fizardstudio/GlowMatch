@@ -695,7 +695,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     }
 
     // 2. Cek kedekatan dengan Pipi (Blush-On)
-    final cheeks = FaceGeometryHelper.getCheekCoordinates(_detectedFace!);
+    final cheeks = FaceGeometryHelper.getCheekboneCoordinates(_detectedFace!);
     final leftCheek = cheeks['left'];
     final rightCheek = cheeks['right'];
     if (leftCheek != null && rightCheek != null) {

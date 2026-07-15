@@ -385,7 +385,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     }
 
     // 2. Cek Pipi
-    final cheeks = FaceGeometryHelper.getCheekCoordinates(_detectedFace!);
+    final cheeks = FaceGeometryHelper.getCheekboneCoordinates(_detectedFace!);
     final leftCheek = cheeks['left'];
     final rightCheek = cheeks['right'];
     if (leftCheek != null && rightCheek != null) {

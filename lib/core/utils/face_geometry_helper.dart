@@ -174,6 +174,31 @@ class FaceGeometryHelper {
     };
   }
 
+  /// Menghitung letak koordinat tulang pipi luar (zygomatic arch) terputar untuk penempatan blush-on profesional.
+  static Map<String, Point<double>> getCheekboneCoordinates(Face face) {
+    final eyes = getEyeCenters(face);
+    final leftEye = eyes['left']!;
+    final rightEye = eyes['right']!;
+    
+    final vectors = getFaceUnitVectors(face, leftEye, rightEye);
+    final unitX = vectors['unitX']!;
+    final unitY = vectors['unitY']!;
+    final double eyeDistance = vectors['distance']!.x;
+
+    // Tulang pipi kiri (di sisi kanan layar): geser ke bawah along unitY, dan ke luar along -unitX
+    final double leftCheekX = leftEye.x + unitY.x * (eyeDistance * 0.50) - unitX.x * (eyeDistance * 0.42);
+    final double leftCheekY = leftEye.y + unitY.y * (eyeDistance * 0.50) - unitX.y * (eyeDistance * 0.42);
+
+    // Tulang pipi kanan (di sisi kiri layar): geser ke bawah along unitY, dan ke luar along unitX
+    final double rightCheekX = rightEye.x + unitY.x * (eyeDistance * 0.50) + unitX.x * (eyeDistance * 0.42);
+    final double rightCheekY = rightEye.y + unitY.y * (eyeDistance * 0.50) + unitX.y * (eyeDistance * 0.42);
+
+    return {
+      'left': Point(leftCheekX, leftCheekY),
+      'right': Point(rightCheekX, rightCheekY),
+    };
+  }
+
   /// Menghitung letak koordinat dahi terputar yang akurat.
   static Point<double> getForeheadCoordinate(Face face) {
     final eyes = getEyeCenters(face);
