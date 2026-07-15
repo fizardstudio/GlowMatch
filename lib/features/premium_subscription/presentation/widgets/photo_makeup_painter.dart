@@ -280,36 +280,49 @@ class PhotoMakeupPainter extends CustomPainter {
             wingUnitX = -wingUnitX;
           }
 
+          // Geser titik lash line sedikit ke atas (menjauhi bola mata, menuju kelopak mata)
+          // unitY mengarah ke bawah, sehingga untuk menggeser ke atas kita kurangi dengan unitY
+          final List<Offset> lashLinePoints = [];
+          for (int i = 1; i <= 7; i++) {
+            final double shiftAmount = eyeDistance * 0.012;
+            lashLinePoints.add(Offset(
+              upperLid[i].dx - unitY.x * shiftAmount,
+              upperLid[i].dy - unitY.y * shiftAmount,
+            ));
+          }
+
           if (isEyeOnLeftOfScreen) {
             // Mata di sebelah kiri layar: Sudut luar di kiri (indeks 1), sayap ditarik ke kiri (-wingUnitX)
-            final Offset outerCorner = upperLid[1];
-            final double wingX = outerCorner.dx - wingUnitX.dx * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
-            final double wingY = outerCorner.dy - wingUnitX.dy * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
+            final Offset outerCorner = lashLinePoints.first; // shifted upperLid[1]
+            final double wingX = outerCorner.dx - wingUnitX.dx * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.015);
+            final double wingY = outerCorner.dy - wingUnitX.dy * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.015);
 
             eyelinerPath.moveTo(wingX, wingY);
             eyelinerPath.lineTo(outerCorner.dx, outerCorner.dy);
-            // Gambar lash line dari indeks 2 ke 7 (melewati tekukan saluran air mata di indeks 8)
-            for (int i = 2; i <= 7; i++) {
-              eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
-            }
+            
+            // Gambar lash line menggunakan path kurva halus (smooth bezier)
+            final Path smoothLashPath = Path();
+            buildSmoothPath(smoothLashPath, lashLinePoints);
+            eyelinerPath.addPath(smoothLashPath, Offset.zero);
           } else {
             // Mata di sebelah kanan layar: Sudut luar di kanan (indeks 7), sayap ditarik ke kanan (+wingUnitX)
-            final Offset outerCorner = upperLid[7];
-            final double wingX = outerCorner.dx + wingUnitX.dx * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
-            final double wingY = outerCorner.dy + wingUnitX.dy * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
+            final Offset outerCorner = lashLinePoints.last; // shifted upperLid[7]
+            final double wingX = outerCorner.dx + wingUnitX.dx * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.015);
+            final double wingY = outerCorner.dy + wingUnitX.dy * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.015);
 
-            // Lash line mulai dari indeks 1 (melewati tekukan saluran air mata di indeks 0) ke indeks 7
-            eyelinerPath.moveTo(upperLid[1].dx, upperLid[1].dy);
-            for (int i = 2; i <= 7; i++) {
-              eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
-            }
+            // Gambar lash line kurva halus terlebih dahulu
+            final Path smoothLashPath = Path();
+            buildSmoothPath(smoothLashPath, lashLinePoints);
+            eyelinerPath.addPath(smoothLashPath, Offset.zero);
+            
+            // Tarik sayap ke arah kanan luar
             eyelinerPath.lineTo(wingX, wingY);
           }
 
           final Paint paintEyeliner = Paint()
             ..style = PaintingStyle.stroke
             ..color = const Color(0xFF1A1A1A) // Charcoal black
-            ..strokeWidth = (eyeDistance * 0.025).clamp(1.5, 3.5)
+            ..strokeWidth = (eyeDistance * 0.020).clamp(1.2, 2.5) // Dipersempit agar lebih presisi dan natural
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round;
 
