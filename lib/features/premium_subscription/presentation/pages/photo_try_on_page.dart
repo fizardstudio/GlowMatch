@@ -1888,24 +1888,38 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       // Palet Warna Foundation dari DB
                       SizedBox(
                         height: 48,
-                        child: _filteredFoundations.isEmpty
-                            ? const Center(child: Text('Memuat data...', style: TextStyle(fontSize: 11, color: Colors.grey)))
-                            : ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _filteredFoundations.length,
-                                itemBuilder: (context, index) {
-                                  final fProd = _filteredFoundations[index];
-                                  final hexColor = _getHexColor(fProd.hexCode);
-                                  final isSel = _selectedFoundationProduct?.id == fProd.id;
-                                  return _buildColorCircle(hexColor, fProd.shadeName, isSel, () {
-                                    setState(() {
-                                      _selectedFoundationProduct = fProd;
-                                      _selectedFoundationColor = hexColor;
-                                      if (_foundationOpacity == 0.0) _foundationOpacity = 0.35; // Aktifkan ke 35%
-                                    });
-                                  });
-                                },
-                              ),
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _foundationOpacity == 0.0, () {
+                              setState(() {
+                                _foundationOpacity = 0.0;
+                                _selectedFoundationProduct = null;
+                                _activePreset = null;
+                              });
+                            }),
+                            Expanded(
+                              child: _filteredFoundations.isEmpty
+                                  ? const Center(child: Text('Memuat data...', style: TextStyle(fontSize: 11, color: Colors.grey)))
+                                  : ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: _filteredFoundations.length,
+                                      itemBuilder: (context, index) {
+                                        final fProd = _filteredFoundations[index];
+                                        final hexColor = _getHexColor(fProd.hexCode);
+                                        final isSel = _selectedFoundationProduct?.id == fProd.id && _foundationOpacity > 0.0;
+                                        return _buildColorCircle(hexColor, fProd.shadeName, isSel, () {
+                                          setState(() {
+                                            _selectedFoundationProduct = fProd;
+                                            _selectedFoundationColor = hexColor;
+                                            if (_foundationOpacity == 0.0) _foundationOpacity = 0.35; // Aktifkan ke 35%
+                                            _activePreset = null;
+                                          });
+                                        });
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
                       ),
                     ] else if (_activeCategoryIndex == 2) ...[
                       // Opacity Lipstick & Finishing Toggle
@@ -1940,19 +1954,32 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       // Palet Warna Lipstick
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _lipstickColors.length,
-                          itemBuilder: (context, index) {
-                            final lColor = _lipstickColors[index];
-                            final isSel = _selectedLipstickColor == lColor['color'];
-                            return _buildColorCircle(lColor['color'], lColor['name'], isSel, () {
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _lipstickOpacity == 0.0, () {
                               setState(() {
-                                _selectedLipstickColor = lColor['color'];
-                                if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
+                                _lipstickOpacity = 0.0;
+                                _activePreset = null;
                               });
-                            });
-                          },
+                            }),
+                            Expanded(
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _lipstickColors.length,
+                                itemBuilder: (context, index) {
+                                  final lColor = _lipstickColors[index];
+                                  final isSel = _selectedLipstickColor == lColor['color'] && _lipstickOpacity > 0.0;
+                                  return _buildColorCircle(lColor['color'], lColor['name'], isSel, () {
+                                    setState(() {
+                                      _selectedLipstickColor = lColor['color'];
+                                      if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
+                                      _activePreset = null;
+                                    });
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ] else if (_activeCategoryIndex == 3) ...[
@@ -1966,19 +1993,32 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       // Palet Warna Blush-On
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _blushColors.length,
-                          itemBuilder: (context, index) {
-                            final bColor = _blushColors[index];
-                            final isSel = _selectedBlushColor == bColor['color'];
-                            return _buildColorCircle(bColor['color'], bColor['name'], isSel, () {
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _blushOpacity == 0.0, () {
                               setState(() {
-                                _selectedBlushColor = bColor['color'];
-                                if (_blushOpacity == 0.0) _blushOpacity = 0.25;
+                                _blushOpacity = 0.0;
+                                _activePreset = null;
                               });
-                            });
-                          },
+                            }),
+                            Expanded(
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _blushColors.length,
+                                itemBuilder: (context, index) {
+                                  final bColor = _blushColors[index];
+                                  final isSel = _selectedBlushColor == bColor['color'] && _blushOpacity > 0.0;
+                                  return _buildColorCircle(bColor['color'], bColor['name'], isSel, () {
+                                    setState(() {
+                                      _selectedBlushColor = bColor['color'];
+                                      if (_blushOpacity == 0.0) _blushOpacity = 0.25;
+                                      _activePreset = null;
+                                    });
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ] else if (_activeCategoryIndex == 4) ...[
@@ -2036,19 +2076,32 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                       // Palet Warna Eyeshadow
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _eyeshadowColors.length,
-                          itemBuilder: (context, index) {
-                            final eColor = _eyeshadowColors[index];
-                            final isSel = _selectedEyeshadowColor == eColor['color'];
-                            return _buildColorCircle(eColor['color'], eColor['name'], isSel, () {
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _eyeshadowOpacity == 0.0, () {
                               setState(() {
-                                _selectedEyeshadowColor = eColor['color'];
-                                if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
+                                _eyeshadowOpacity = 0.0;
+                                _activePreset = null;
                               });
-                            });
-                          },
+                            }),
+                            Expanded(
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _eyeshadowColors.length,
+                                itemBuilder: (context, index) {
+                                  final eColor = _eyeshadowColors[index];
+                                  final isSel = _selectedEyeshadowColor == eColor['color'] && _eyeshadowOpacity > 0.0;
+                                  return _buildColorCircle(eColor['color'], eColor['name'], isSel, () {
+                                    setState(() {
+                                      _selectedEyeshadowColor = eColor['color'];
+                                      if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
+                                      _activePreset = null;
+                                    });
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -2347,6 +2400,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   }
 
   Widget _buildColorCircle(Color color, String name, bool isSel, VoidCallback onTap) {
+    final bool isClear = color == Colors.transparent || color.opacity == 0.0;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -2354,10 +2408,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: color,
+          color: isClear ? Colors.grey[200] : color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSel ? textColor : Colors.transparent,
+            color: isSel ? textColor : (isClear ? Colors.grey[400]!.withOpacity(0.3) : Colors.transparent),
             width: 2.5,
           ),
           boxShadow: [
@@ -2368,6 +2422,23 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
             ),
           ],
         ),
+        child: isClear
+            ? Center(
+                child: Icon(
+                  Icons.block_flipped,
+                  color: isSel ? textColor : Colors.grey[600],
+                  size: 16,
+                ),
+              )
+            : (isSel
+                ? Center(
+                    child: Icon(
+                      Icons.check_rounded,
+                      color: ThemeData.estimateBrightnessForColor(color) == Brightness.light ? Colors.black : Colors.white,
+                      size: 16,
+                    ),
+                  )
+                : null),
       ),
     );
   }

@@ -1211,6 +1211,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   }
 
   Widget _buildColorCircle(Color color, String name, bool isSelected, VoidCallback onTap) {
+    final bool isClear = color == Colors.transparent || color.opacity == 0.0;
     return GestureDetector(
       onTap: _showPaywall ? null : onTap,
       child: Container(
@@ -1218,14 +1219,24 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: color,
+          color: isClear ? Colors.grey[800]!.withOpacity(0.4) : color,
           shape: BoxShape.circle,
           border: Border.all(
             color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.55),
             width: isSelected ? 3 : 1,
           ),
         ),
-        child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 18) : null,
+        child: isClear
+            ? Center(
+                child: Icon(
+                  Icons.block_flipped,
+                  color: isSelected ? primaryColor : textMutedColor,
+                  size: 18,
+                ),
+              )
+            : (isSelected
+                ? const Center(child: Icon(Icons.check_rounded, color: Colors.white, size: 18))
+                : null),
       ),
     );
   }
@@ -2343,45 +2354,38 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       // Palet Warna Foundation dari DB
                       SizedBox(
                         height: 48,
-                        child: _filteredFoundations.isEmpty
-                            ? const Center(child: Text('Memuat data...', style: TextStyle(fontSize: 11, color: Colors.grey)))
-                            : ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _filteredFoundations.length,
-                                itemBuilder: (context, index) {
-                                  final fProd = _filteredFoundations[index];
-                                  final hexColor = _getHexColor(fProd.hexCode);
-                                  final isSel = _selectedFoundationProduct?.id == fProd.id;
-                                  return GestureDetector(
-                                    onTap: _showPaywall
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _selectedFoundationProduct = fProd;
-                                              _selectedFoundationColor = hexColor;
-                                              _activePreset = null;
-                                              if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
-                                            });
-                                          },
-                                    child: Container(
-                                      margin: const EdgeInsets.only(right: 14),
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: hexColor,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
-                                          width: isSel ? 3 : 1,
-                                        ),
-                                      ),
-                                      child: isSel
-                                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                                          : null,
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _foundationOpacity == 0.0, () {
+                              setState(() {
+                                _foundationOpacity = 0.0;
+                                _selectedFoundationProduct = null;
+                                _activePreset = null;
+                              });
+                            }),
+                            Expanded(
+                              child: _filteredFoundations.isEmpty
+                                  ? const Center(child: Text('Memuat data...', style: TextStyle(fontSize: 11, color: Colors.grey)))
+                                  : ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: _filteredFoundations.length,
+                                      itemBuilder: (context, index) {
+                                        final fProd = _filteredFoundations[index];
+                                        final hexColor = _getHexColor(fProd.hexCode);
+                                        final isSel = _selectedFoundationProduct?.id == fProd.id && _foundationOpacity > 0.0;
+                                        return _buildColorCircle(hexColor, fProd.shadeName, isSel, () {
+                                          setState(() {
+                                            _selectedFoundationProduct = fProd;
+                                            _selectedFoundationColor = hexColor;
+                                            if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
+                                            _activePreset = null;
+                                          });
+                                        });
+                                      },
                                     ),
-                                  );
-                                },
-                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ] else if (_activeCategoryIndex == 2) ...[
                       // Opacity Lipstick & Finishing Toggle
@@ -2444,40 +2448,32 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _lipstickColors.length,
-                          itemBuilder: (context, index) {
-                            final lColor = _lipstickColors[index];
-                            final isSel = _selectedLipstickColor == lColor['color'];
-                            return GestureDetector(
-                              onTap: _showPaywall
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _selectedLipstickColor = lColor['color'];
-                                        _activePreset = null;
-                                        if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
-                                      });
-                                    },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 14),
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: lColor['color'],
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
-                                    width: isSel ? 3 : 1,
-                                  ),
-                                ),
-                                child: isSel
-                                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                                    : null,
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _lipstickOpacity == 0.0, () {
+                              setState(() {
+                                _lipstickOpacity = 0.0;
+                                _activePreset = null;
+                              });
+                            }),
+                            Expanded(
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _lipstickColors.length,
+                                itemBuilder: (context, index) {
+                                  final lColor = _lipstickColors[index];
+                                  final isSel = _selectedLipstickColor == lColor['color'] && _lipstickOpacity > 0.0;
+                                  return _buildColorCircle(lColor['color'], lColor['name'], isSel, () {
+                                    setState(() {
+                                      _selectedLipstickColor = lColor['color'];
+                                      if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
+                                      _activePreset = null;
+                                    });
+                                  });
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
                     ] else if (_activeCategoryIndex == 3) ...[
@@ -2519,40 +2515,32 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _blushColors.length,
-                          itemBuilder: (context, index) {
-                            final bColor = _blushColors[index];
-                            final isSel = _selectedBlushColor == bColor['color'];
-                            return GestureDetector(
-                              onTap: _showPaywall
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _selectedBlushColor = bColor['color'];
-                                        _activePreset = null;
-                                        if (_blushOpacity == 0.0) _blushOpacity = 0.25;
-                                      });
-                                    },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 14),
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: bColor['color'],
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
-                                    width: isSel ? 3 : 1,
-                                  ),
-                                ),
-                                child: isSel
-                                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                                    : null,
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _blushOpacity == 0.0, () {
+                              setState(() {
+                                _blushOpacity = 0.0;
+                                _activePreset = null;
+                              });
+                            }),
+                            Expanded(
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _blushColors.length,
+                                itemBuilder: (context, index) {
+                                  final bColor = _blushColors[index];
+                                  final isSel = _selectedBlushColor == bColor['color'] && _blushOpacity > 0.0;
+                                  return _buildColorCircle(bColor['color'], bColor['name'], isSel, () {
+                                    setState(() {
+                                      _selectedBlushColor = bColor['color'];
+                                      if (_blushOpacity == 0.0) _blushOpacity = 0.25;
+                                      _activePreset = null;
+                                    });
+                                  });
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
                     ] else if (_activeCategoryIndex == 4) ...[
@@ -2710,40 +2698,32 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 48,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _eyeshadowColors.length,
-                          itemBuilder: (context, index) {
-                            final eColor = _eyeshadowColors[index];
-                            final isSel = _selectedEyeshadowColor == eColor['color'];
-                            return GestureDetector(
-                              onTap: _showPaywall
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _selectedEyeshadowColor = eColor['color'];
-                                        _activePreset = null;
-                                        if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
-                                      });
-                                    },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 14),
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: eColor['color'],
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isSel ? primaryColor : cardBorderColor.withOpacity(0.55),
-                                    width: isSel ? 3 : 1,
-                                  ),
-                                ),
-                                child: isSel
-                                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                                    : null,
+                        child: Row(
+                          children: [
+                            _buildColorCircle(Colors.transparent, 'Tidak Pakai', _eyeshadowOpacity == 0.0, () {
+                              setState(() {
+                                _eyeshadowOpacity = 0.0;
+                                _activePreset = null;
+                              });
+                            }),
+                            Expanded(
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _eyeshadowColors.length,
+                                itemBuilder: (context, index) {
+                                  final eColor = _eyeshadowColors[index];
+                                  final isSel = _selectedEyeshadowColor == eColor['color'] && _eyeshadowOpacity > 0.0;
+                                  return _buildColorCircle(eColor['color'], eColor['name'], isSel, () {
+                                    setState(() {
+                                      _selectedEyeshadowColor = eColor['color'];
+                                      if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
+                                      _activePreset = null;
+                                    });
+                                  });
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
                     ],
