@@ -226,7 +226,7 @@ class LipFilterPainter extends CustomPainter {
       final Offset rightScreenEye = mapPoint(Point(rightEyeCenter.x.round(), rightEyeCenter.y.round()));
       final double eyeDistance = (rightScreenEye - leftScreenEye).distance;
 
-      void drawEyeMakeup(List<Point<int>>? eyePoints, bool isLeftEyeInScreen) {
+      void drawEyeMakeup(List<Point<int>>? eyePoints, bool isEyeOnLeftOfScreen) {
         if (eyePoints == null || eyePoints.length < 9) return;
 
         // Kita map semua titik kontur mata ke screen space
@@ -260,17 +260,11 @@ class LipFilterPainter extends CustomPainter {
           }
           eyeshadowPath.close();
 
-          // Gunakan gradient linear memudar ke atas
-          final double midEyeX = upperLid[4].dx;
-          final double midEyeY = upperLid[4].dy;
-          final double midShiftX = shiftedPoints[4].dx;
-          final double midShiftY = shiftedPoints[4].dy;
-
           final Paint paintEyeshadow = Paint()
             ..style = PaintingStyle.fill
             ..shader = ui.Gradient.linear(
-              Offset(midEyeX, midEyeY),
-              Offset(midShiftX, midShiftY),
+              Offset(leftScreenEye.dx, leftScreenEye.dy),
+              Offset(rightScreenEye.dx, rightScreenEye.dy),
               [
                 eyeshadowColor!.withOpacity(eyeshadowOpacity),
                 eyeshadowColor!.withOpacity(0.0),
@@ -284,29 +278,37 @@ class LipFilterPainter extends CustomPainter {
         // 2. EYELINER RENDER
         if (hasEyeliner) {
           final Path eyelinerPath = Path();
+          
+          // Pastikan wingUnitX selalu mengarah ke kanan layar (dx > 0)
+          Offset wingUnitX = Offset(unitX.x, unitX.y);
+          if (wingUnitX.dx < 0) {
+            wingUnitX = -wingUnitX;
+          }
 
-          if (isLeftEyeInScreen) {
-            // Sudut luar mata di kanan layar (menggunakan point 7 untuk menghindari tekukan ujung point 8)
-            final Offset outerCorner = upperLid[7];
-            final double wingX = outerCorner.dx + unitX.x * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
-            final double wingY = outerCorner.dy + unitX.y * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
-
-            eyelinerPath.moveTo(upperLid.first.dx, upperLid.first.dy);
-            for (int i = 1; i <= 7; i++) {
-              eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
-            }
-            eyelinerPath.lineTo(wingX, wingY);
-          } else {
-            // Sudut luar mata di kiri layar (menggunakan point 1 untuk menghindari tekukan ujung point 0)
+          if (isEyeOnLeftOfScreen) {
+            // Mata di sebelah kiri layar: Sudut luar di kiri (indeks 1), sayap ditarik ke kiri (-wingUnitX)
             final Offset outerCorner = upperLid[1];
-            final double wingX = outerCorner.dx - unitX.x * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
-            final double wingY = outerCorner.dy - unitX.y * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
+            final double wingX = outerCorner.dx - wingUnitX.dx * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
+            final double wingY = outerCorner.dy - wingUnitX.dy * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
 
             eyelinerPath.moveTo(wingX, wingY);
             eyelinerPath.lineTo(outerCorner.dx, outerCorner.dy);
-            for (int i = 2; i < upperLid.length; i++) {
+            // Gambar lash line dari indeks 2 ke 7 (melewati tekukan saluran air mata di indeks 8)
+            for (int i = 2; i <= 7; i++) {
               eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
             }
+          } else {
+            // Mata di sebelah kanan layar: Sudut luar di kanan (indeks 7), sayap ditarik ke kanan (+wingUnitX)
+            final Offset outerCorner = upperLid[7];
+            final double wingX = outerCorner.dx + wingUnitX.dx * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
+            final double wingY = outerCorner.dy + wingUnitX.dy * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
+
+            // Lash line mulai dari indeks 1 (melewati tekukan saluran air mata di indeks 0) ke indeks 7
+            eyelinerPath.moveTo(upperLid[1].dx, upperLid[1].dy);
+            for (int i = 2; i <= 7; i++) {
+              eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
+            }
+            eyelinerPath.lineTo(wingX, wingY);
           }
 
           final Paint paintEyeliner = Paint()
@@ -320,10 +322,10 @@ class LipFilterPainter extends CustomPainter {
         }
       }
 
-      // Untuk kamera depan (mirrored), mata kiri wajah berada di kanan layar
-      final bool isFrontCam = lensDirection == CameraLensDirection.front;
-      drawEyeMakeup(leftEyePoints, isFrontCam ? true : false);
-      drawEyeMakeup(rightEyePoints, isFrontCam ? false : true);
+      // Deteksi posisi mata relatif terhadap layar untuk wing direction yang konsisten dan akurat
+      final bool isLeftEyeOnLeft = leftScreenEye.dx < rightScreenEye.dx;
+      drawEyeMakeup(leftEyePoints, isLeftEyeOnLeft);
+      drawEyeMakeup(rightEyePoints, !isLeftEyeOnLeft);
     }
 
     // 1.7 RENDER NOSE MAKEUP (SHADING & HIGHLIGHT)
