@@ -44,6 +44,7 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **PopScope Safe Teardown** | Pencegahan crash native FlutterJNI dengan menutup/menghentikan stream kamera secara asinkron sebelum navigasi back. | `ar_try_on_page.dart` & `scanner_page.dart` |
 | **[x]** | **Safe Exit Root Route** | Navigasi keluar aplikasi otomatis menggunakan `SystemNavigator.pop()` jika tombol kembali ditekan di halaman paling awal. | `ar_try_on_page.dart` & `scanner_page.dart` |
 | **[x]** | **Double Buffer / Blink Block** | Penyetelan bendera status `_isCameraDisposed` instan agar tidak terjadi kedipan merah (*deactivated widget error*) saat keluar. | `ar_try_on_page.dart` & `scanner_page.dart` |
+| **[x]** | **Lag-Free AR Tracking** | Pengurangan latensi deteksi wajah dengan mengalihkan ML Kit ke mode Fast dan mengoptimalkan konversi YUV di memori native (WriteBuffer) sehingga filter kosmetik menempel selaras dengan pergerakan kepala. | `ar_try_on_page.dart` & `scanner_bloc.dart` |
 
 ---
 
