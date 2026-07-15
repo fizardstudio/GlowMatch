@@ -401,17 +401,36 @@ class PhotoMakeupPainter extends CustomPainter {
         canvas.save();
         canvas.translate(center.dx, center.dy);
         
-        // Kemiringan sapuan (slanted tilt) naik ke arah pelipis/hairline agar berkesan tirus (draping)
-        // Kita miringkan ke atas sekitar 13.5 derajat (0.24 radian)
-        final double tilt = isLeft ? -0.24 : 0.24;
+        // Deteksi bentuk wajah dinamis dari bounding box ratio
+        final double boxW = face!.boundingBox.width.toDouble();
+        final double boxH = face!.boundingBox.height.toDouble();
+        final double ratio = boxH / boxW;
+
+        double tilt;
+        double width;
+        double height;
+
+        if (ratio < 1.13) {
+          // Wajah bulat/lebar: sapuan sangat miring (tirus) ke atas
+          tilt = isLeft ? -0.32 : 0.32;
+          width = faceWidth * 0.54;
+          height = faceWidth * 0.23;
+        } else if (ratio > 1.25) {
+          // Wajah lonjong/panjang: sapuan mendatar (horizontal) untuk melebarkan wajah
+          tilt = 0.0;
+          width = faceWidth * 0.56;
+          height = faceWidth * 0.28;
+        } else {
+          // Wajah oval (default): sapuan miring proporsional
+          tilt = isLeft ? -0.20 : 0.20;
+          width = faceWidth * 0.54;
+          height = faceWidth * 0.26;
+        }
+
         canvas.rotate(rollAngle + tilt);
         
-        // Ukuran blush-on disesuaikan secara profesional agar meluncur panjang (tidak bulat kerdil)
-        final double width = faceWidth * 0.54;  // Sapuan panjang menutupi area pipi hingga luar
-        final double height = faceWidth * 0.26; // Ketebalan sapuan yang proporsional
-        
         // Pipi kiri disapu ke kiri luar, pipi kanan ke kanan luar (tanpa mirroring karena foto 2D statis)
-        final double offsetX = isLeft ? -width * 0.25 : width * 0.25;
+        final double offsetX = isLeft ? -width * 0.20 : width * 0.20;
         
         final Rect bounds = Rect.fromCenter(
           center: Offset(offsetX, -smileShiftY),

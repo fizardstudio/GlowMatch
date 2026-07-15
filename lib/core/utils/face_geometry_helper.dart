@@ -185,13 +185,35 @@ class FaceGeometryHelper {
     final unitY = vectors['unitY']!;
     final double eyeDistance = vectors['distance']!.x;
 
+    // Deteksi bentuk wajah dinamis dari bounding box ratio
+    final double boxW = face.boundingBox.width.toDouble();
+    final double boxH = face.boundingBox.height.toDouble();
+    final double ratio = boxH / boxW;
+
+    double downFactor;
+    double outFactor;
+
+    if (ratio < 1.13) {
+      // Wajah Bulat/Lebar: blush-on lebih ke atas dan sedikit ke luar agar wajah terlihat ramping/tirus
+      downFactor = 0.43;
+      outFactor = 0.25;
+    } else if (ratio > 1.25) {
+      // Wajah Lonjong/Panjang: blush-on lebih mendatar dan sedikit ke arah hidung (outFactor 0.17) untuk menyeimbangkan panjang wajah
+      downFactor = 0.47;
+      outFactor = 0.17;
+    } else {
+      // Wajah Oval (Default): penempatan standar proporsional di tengah pipi mengarah keluar
+      downFactor = 0.45;
+      outFactor = 0.21;
+    }
+
     // Tulang pipi kiri (di sisi kanan layar): geser ke bawah along unitY, dan ke luar along -unitX
-    final double leftCheekX = leftEye.x + unitY.x * (eyeDistance * 0.46) - unitX.x * (eyeDistance * 0.22);
-    final double leftCheekY = leftEye.y + unitY.y * (eyeDistance * 0.46) - unitX.y * (eyeDistance * 0.22);
+    final double leftCheekX = leftEye.x + unitY.x * (eyeDistance * downFactor) - unitX.x * (eyeDistance * outFactor);
+    final double leftCheekY = leftEye.y + unitY.y * (eyeDistance * downFactor) - unitX.y * (eyeDistance * outFactor);
 
     // Tulang pipi kanan (di sisi kiri layar): geser ke bawah along unitY, dan ke luar along unitX
-    final double rightCheekX = rightEye.x + unitY.x * (eyeDistance * 0.46) + unitX.x * (eyeDistance * 0.22);
-    final double rightCheekY = rightEye.y + unitY.y * (eyeDistance * 0.46) + unitX.y * (eyeDistance * 0.22);
+    final double rightCheekX = rightEye.x + unitY.x * (eyeDistance * downFactor) + unitX.x * (eyeDistance * outFactor);
+    final double rightCheekY = rightEye.y + unitY.y * (eyeDistance * downFactor) + unitX.y * (eyeDistance * outFactor);
 
     return {
       'left': Point(leftCheekX, leftCheekY),
