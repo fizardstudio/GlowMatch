@@ -35,6 +35,8 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **AI Makeup Detector from Photo** | Deteksi otomatis warna riasan (lipstik, blush-on, foundation) dari foto unggahan galeri/kamera, lalu mencocokkannya ke shade produk komersial di database. | `lib/features/premium_subscription/presentation/pages/makeup_detector_page.dart` |
 | **[x]** | **Riasan Mata AR (Eyeshadow & Eyeliner)** | Riasan kelopak mata (gradien linear lokal, anti-bleed eyeball clip) dan garis eyeliner presisi (custom filled polygon & tapering ketebalan dinamis) menggunakan kontur mata ML Kit (`leftEye` & `rightEye`). | `lib/features/premium_subscription/presentation/widgets/` |
 | **[x]** | **One-Tap Makeup Looks (Presets)** | Fitur menerapkan langsung kombinasi lipstik, blush-on, eyeliner, eyeshadow, dan foundation kurasi profesional dalam sekali ketuk (misal: "Clean Girl", "Korean Glass Skin", "Douyin Sweetheart", "Old Money Glam"). | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
+| **[x]** | **Pencari Kecocokan Shade Otomatis** | Auto-highlighting warna kosmetik yang serasi di katalog/kamera berdasarkan hasil scan warna kulit & undertone di Isar DB. | `lib/features/scanner/presentation/pages/results_page.dart` |
+| **[x]** | **Tekstur Bedak Realistis (Satin/Matte/Dewy)**| Efek dasaran wajah dengan kilau specular 3D dinamis pada dahi, dagu, dan tulang hidung. | `lib/features/premium_subscription/presentation/widgets/` |
 
 ---
 
@@ -47,13 +49,17 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[x]** | **Safe Exit Root Route** | Navigasi keluar aplikasi otomatis menggunakan `SystemNavigator.pop()` jika tombol kembali ditekan di halaman paling awal. | `ar_try_on_page.dart` & `scanner_page.dart` |
 | **[x]** | **Double Buffer / Blink Block** | Penyetelan bendera status `_isCameraDisposed` instan agar tidak terjadi kedipan merah (*deactivated widget error*) saat keluar. | `ar_try_on_page.dart` & `scanner_page.dart` |
 | **[x]** | **Lag-Free AR Tracking** | Pengurangan latensi deteksi wajah dengan mengalihkan ML Kit ke mode Fast dan mengoptimalkan konversi YUV di memori native (WriteBuffer) sehingga filter kosmetik menempel selaras dengan pergerakan kepala. | `ar_try_on_page.dart` & `scanner_bloc.dart` |
+| **[x]** | **Dynamic ML Kit Frame Throttling** | Pembatasan deteksi ML Kit ke 15 FPS ditambah interpolasi kanvas 60 FPS menggunakan Ticker untuk menghemat baterai HP hingga 40% dan mencegah panas. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
 
 ---
 
-## 4. Rencana Fitur & Optimalisasi Mendatang (Future Roadmap)
+## 4. Persiapan Rilis Google Play Store & Rencana Masa Depan
 
-| Status | Fitur / Optimalisasi | Rincian Fungsionalitas | Estimasi Modul Layer |
+| Status | Item Persiapan Rilis | Detail Fungsionalitas / Tugas | Estimasi Modul Layer |
 | :---: | :--- | :--- | :--- |
-| **[ ]** | **Dynamic ML Kit Frame Throttling** | Pembatasan deteksi ML Kit ke 15-20 FPS ditambah interpolasi kanvas 60 FPS untuk menghemat baterai HP hingga 40%. | `lib/features/premium_subscription/presentation/pages/ar_try_on_page.dart` |
-| **[ ]** | **Pencari Kecocokan Shade Otomatis** | Auto-highlighting warna kosmetik yang serasi di katalog/kamera berdasarkan hasil scan warna kulit & undertone di Isar DB. | `lib/features/scanner/presentation/pages/results_page.dart` |
-| **[ ]** | **Tekstur Bedak Realistis (Satin/Matte/Dewy)**| Efek dasaran wajah dengan kilau specular 3D dinamis pada dahi, dagu, dan tulang hidung. | `lib/features/premium_subscription/presentation/widgets/` |
+| **[ ]** | **Integrasi Pembayaran Resmi (IAP)** | Integrasi dengan SDK Google Play Billing (menggunakan RevenueCat atau package `in_app_purchase`) untuk pemrosesan langganan Premium. | `lib/features/premium_subscription/` |
+| **[ ]** | **Kebijakan Privasi Data Wajah (Offline Disclosures)** | Menyediakan dokumen Privacy Policy publik yang menegaskan pemrosesan wajah 100% lokal offline (on-device) tanpa pengiriman data ke server luar. | Syarat Wajib Google Console |
+| **[ ]** | **Fitur Cadangan Data (Backup & Restore)** | Fitur ekspor/impor data pouch kosmetik lokal ke Google Drive pengguna dalam format JSON agar data aman saat ganti ponsel. | `lib/features/pouch/` |
+| **[ ]** | **Onboarding Screen & Panduan Pengguna** | Slide pengenalan aplikasi saat dibuka pertama kali yang memandu cara scan wajah dengan cahaya optimal dan cara mengelola pouch. | `lib/features/scanner/` |
+| **[ ]** | **Social Sharing (Growth Hacking)** | Tombol membagikan hasil foto makeup AR/2D Try-on langsung ke Instagram/TikTok dengan watermark promosi GlowMatch. | `lib/features/premium_subscription/` |
+| **[ ]** | **Notifikasi Expiry Pouch Otomatis** | Sistem background task scheduler untuk notifikasi lokal saat produk pouch kosmetik mendekati kadaluwarsa (PAO). | `lib/features/pouch/` |
