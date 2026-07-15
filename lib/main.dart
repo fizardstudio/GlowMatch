@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/database_service.dart';
+import 'core/utils/notification_helper.dart';
 import 'core/theme/theme_manager.dart';
 import 'features/catalog/data/repositories/shade_matcher_repository_impl.dart';
 import 'features/scanner/presentation/bloc/scanner_bloc.dart';
@@ -16,6 +17,9 @@ void main() async {
   // Inisialisasi Database Isar lokal dan lakukan seeding data
   final dbService = DatabaseService();
   await dbService.init();
+
+  // Inisialisasi sistem notifikasi lokal luring
+  await NotificationHelper.init();
 
   runApp(MyApp(dbService: dbService));
 }

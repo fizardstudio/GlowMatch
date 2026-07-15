@@ -999,6 +999,72 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
     );
   }
 
+  Future<void> _shareCurrentMakeupLook() async {
+    if (!_isPremium && !_showPaywall) {
+      setState(() {
+        _showPaywall = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSavingLook = true;
+      _isCapturing = true;
+    });
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 120));
+
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal mendapatkan rendering area wajah.");
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
+
+      if (pngBytes == null) {
+        throw Exception("Gagal mengodekan gambar.");
+      }
+
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("shareImage", {
+        "bytes": pngBytes,
+        "filename": "glowmatch_riasan_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+              content: const Text('Foto hasil riasan berhasil dibagikan! 📸🌟'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal membagikan foto.");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membagikan: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingLook = false;
+          _isCapturing = false;
+        });
+      }
+    }
+  }
+
   Future<void> _saveCurrentMakeupLook() async {
     if (!_isPremium && !_showPaywall) {
       setState(() {
@@ -1810,6 +1876,21 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         actions: [
           if (!_showPaywall) ...[
             IconButton(
+              icon: Icon(Icons.camera_alt_rounded, color: textColor),
+              tooltip: 'Simpan Foto ke Galeri',
+              onPressed: _saveCurrentMakeupLook,
+            ),
+            IconButton(
+              icon: Icon(Icons.share_rounded, color: textColor),
+              tooltip: 'Bagikan Riasan',
+              onPressed: _shareCurrentMakeupLook,
+            ),
+            IconButton(
+              icon: Icon(Icons.videocam_rounded, color: textColor),
+              tooltip: 'Buat & Bagikan Boomerang',
+              onPressed: _exportBoomerangGif,
+            ),
+            IconButton(
               icon: Icon(
                 _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
                 color: _isSplitMode ? primaryColor : textColor,
@@ -1906,6 +1987,33 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                               eyelinerThickness: _eyelinerThickness,
                                               noseHighlightOpacity: _noseHighlightOpacity,
                                               noseShadingOpacity: _noseShadingOpacity,
+                                            ),
+                                          ),
+                                        ),
+                                      if (_isCapturing)
+                                        Positioned(
+                                          bottom: 20,
+                                          right: 20,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.6),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 12),
+                                                const SizedBox(width: 4),
+                                                const Text(
+                                                  'GlowMatch AI - Temukan Shade Wajahmu!',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),

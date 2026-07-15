@@ -1322,6 +1322,72 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     }
   }
 
+  Future<void> _shareCurrentMakeupLook() async {
+    if (!_isPremium && !_isDemoActive) {
+      setState(() {
+        _showPaywall = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSavingLook = true;
+      _isCapturing = true;
+    });
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 120));
+
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal mendapatkan rendering area wajah.");
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
+
+      if (pngBytes == null) {
+        throw Exception("Gagal mengodekan gambar.");
+      }
+
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("shareImage", {
+        "bytes": pngBytes,
+        "filename": "glowmatch_riasan_${DateTime.now().millisecondsSinceEpoch}",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+              content: const Text('Foto hasil riasan berhasil dibagikan! 📸🌟'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal membagikan foto.");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membagikan: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingLook = false;
+          _isCapturing = false;
+        });
+      }
+    }
+  }
+
   // Menghitung ukuran Fitted Image (BoxFit.contain)
   Size _getFittedImageSize(double maxWidth, double maxHeight, double imgWidth, double imgHeight) {
     if (imgWidth == 0 || imgHeight == 0) return Size.zero;
@@ -1521,6 +1587,33 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                         fit: BoxFit.fill,
                                       ),
                                     ),
+                                    if (_isCapturing)
+                                      Positioned(
+                                        bottom: 12,
+                                        right: 12,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.6),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.auto_awesome, color: primaryColor, size: 10),
+                                              const SizedBox(width: 4),
+                                              const Text(
+                                                'GlowMatch AI - Temukan Shade Wajahmu!',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
 
 // Layer Gambar Riasan (CustomPaint)
                                   if (!_showPaywall)
@@ -2209,7 +2302,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                             onPressed: _showLookSummarySheet,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Expanded(
                           flex: 2,
                           child: OutlinedButton.icon(
@@ -2217,11 +2310,28 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                               foregroundColor: textColor,
                               side:  BorderSide(color: primaryColor),
                               minimumSize: const Size(0, 44),
+                              padding: EdgeInsets.zero,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            icon:  Icon(Icons.favorite_rounded, size: 16, color: primaryColor),
-                            label: const Text('Simpan Look', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                            icon:  Icon(Icons.save_alt_rounded, size: 14, color: primaryColor),
+                            label: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
                             onPressed: _saveCurrentMakeupLook,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: textColor,
+                              side:  BorderSide(color: primaryColor),
+                              minimumSize: const Size(0, 44),
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon:  Icon(Icons.share_rounded, size: 14, color: primaryColor),
+                            label: const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
+                            onPressed: _shareCurrentMakeupLook,
                           ),
                         ),
                       ],

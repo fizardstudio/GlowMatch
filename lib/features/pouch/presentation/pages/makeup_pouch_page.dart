@@ -6,6 +6,7 @@ import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/theme/theme_manager.dart';
 import '../../../../core/utils/widget_helper.dart';
+import '../../../../core/utils/notification_helper.dart';
 import '../../data/models/pouch_item.dart';
 
 class MakeupPouchPage extends StatefulWidget {
@@ -125,8 +126,9 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
         await _isar.pouchItems.delete(item.id);
       });
       
-      // Sinkronisasi widget layar utama dinamis
+      // Sinkronisasi widget layar utama dinamis dan jadwalkan ulang notifikasi
       WidgetHelper.updateExpiryWidget();
+      NotificationHelper.scheduleAllPouchNotifications();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -166,8 +168,9 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
               await _isar.pouchItems.put(newItem);
             });
 
-            // Sinkronisasi widget layar utama dinamis
+            // Sinkronisasi widget layar utama dinamis dan jadwalkan ulang notifikasi
             WidgetHelper.updateExpiryWidget();
+            NotificationHelper.scheduleAllPouchNotifications();
 
             _loadPouchItems();
           },
