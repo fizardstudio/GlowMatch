@@ -222,7 +222,9 @@ class LipFilterPainter extends CustomPainter {
       final vectors = FaceGeometryHelper.getFaceUnitVectors(face!, leftEyeCenter, rightEyeCenter);
       final unitX = vectors['unitX']!;
       final unitY = vectors['unitY']!;
-      final double eyeDistance = vectors['distance']!.x;
+      final Offset leftScreenEye = mapPoint(Point(leftEyeCenter.x.round(), leftEyeCenter.y.round()));
+      final Offset rightScreenEye = mapPoint(Point(rightEyeCenter.x.round(), rightEyeCenter.y.round()));
+      final double eyeDistance = (rightScreenEye - leftScreenEye).distance;
 
       void drawEyeMakeup(List<Point<int>>? eyePoints, bool isLeftEyeInScreen) {
         if (eyePoints == null || eyePoints.length < 9) return;
@@ -282,34 +284,29 @@ class LipFilterPainter extends CustomPainter {
         // 2. EYELINER RENDER
         if (hasEyeliner) {
           final Path eyelinerPath = Path();
-          
-          eyelinerPath.moveTo(upperLid.first.dx, upperLid.first.dy);
-          for (int i = 1; i < upperLid.length; i++) {
-            eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
-          }
 
-          // Tambahkan wing extension di sudut luar mata
           if (isLeftEyeInScreen) {
-            // Sudut luar mata di kanan layar (point 8)
-            final Offset outerCorner = upperLid.last;
-            final double wingX = outerCorner.dx + unitX.x * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.03);
-            final double wingY = outerCorner.dy + unitX.y * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.03);
+            // Sudut luar mata di kanan layar (menggunakan point 7 untuk menghindari tekukan ujung point 8)
+            final Offset outerCorner = upperLid[7];
+            final double wingX = outerCorner.dx + unitX.x * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
+            final double wingY = outerCorner.dy + unitX.y * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
+
+            eyelinerPath.moveTo(upperLid.first.dx, upperLid.first.dy);
+            for (int i = 1; i <= 7; i++) {
+              eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
+            }
             eyelinerPath.lineTo(wingX, wingY);
           } else {
-            // Sudut luar mata di kiri layar (point 0)
-            final Offset outerCorner = upperLid.first;
-            final double wingX = outerCorner.dx - unitX.x * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.03);
-            final double wingY = outerCorner.dy - unitX.y * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.03);
-            
-            // Re-construct eyeliner path to draw wing at point 0
-            final Path wingPath = Path();
-            wingPath.moveTo(wingX, wingY);
-            wingPath.lineTo(outerCorner.dx, outerCorner.dy);
-            for (int i = 1; i < upperLid.length; i++) {
-              wingPath.lineTo(upperLid[i].dx, upperLid[i].dy);
+            // Sudut luar mata di kiri layar (menggunakan point 1 untuk menghindari tekukan ujung point 0)
+            final Offset outerCorner = upperLid[1];
+            final double wingX = outerCorner.dx - unitX.x * (eyeDistance * 0.09) - unitY.x * (eyeDistance * 0.02);
+            final double wingY = outerCorner.dy - unitX.y * (eyeDistance * 0.09) - unitY.y * (eyeDistance * 0.02);
+
+            eyelinerPath.moveTo(wingX, wingY);
+            eyelinerPath.lineTo(outerCorner.dx, outerCorner.dy);
+            for (int i = 2; i < upperLid.length; i++) {
+              eyelinerPath.lineTo(upperLid[i].dx, upperLid[i].dy);
             }
-            eyelinerPath.reset();
-            eyelinerPath.addPath(wingPath, Offset.zero);
           }
 
           final Paint paintEyeliner = Paint()
@@ -777,6 +774,11 @@ class LipFilterPainter extends CustomPainter {
         oldDelegate.sliderX != sliderX ||
         oldDelegate.selectedLightingPreset != selectedLightingPreset ||
         oldDelegate.showHarmonyHeatmap != showHarmonyHeatmap ||
-        oldDelegate.undertone != undertone;
+        oldDelegate.undertone != undertone ||
+        oldDelegate.eyeshadowColor != eyeshadowColor ||
+        oldDelegate.eyeshadowOpacity != eyeshadowOpacity ||
+        oldDelegate.hasEyeliner != hasEyeliner ||
+        oldDelegate.noseHighlightOpacity != noseHighlightOpacity ||
+        oldDelegate.noseShadingOpacity != noseShadingOpacity;
   }
 }
