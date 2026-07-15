@@ -186,12 +186,12 @@ class FaceGeometryHelper {
     final double eyeDistance = vectors['distance']!.x;
 
     // Tulang pipi kiri (di sisi kanan layar): geser ke bawah along unitY, dan ke luar along -unitX
-    final double leftCheekX = leftEye.x + unitY.x * (eyeDistance * 0.50) - unitX.x * (eyeDistance * 0.42);
-    final double leftCheekY = leftEye.y + unitY.y * (eyeDistance * 0.50) - unitX.y * (eyeDistance * 0.42);
+    final double leftCheekX = leftEye.x + unitY.x * (eyeDistance * 0.46) - unitX.x * (eyeDistance * 0.22);
+    final double leftCheekY = leftEye.y + unitY.y * (eyeDistance * 0.46) - unitX.y * (eyeDistance * 0.22);
 
     // Tulang pipi kanan (di sisi kiri layar): geser ke bawah along unitY, dan ke luar along unitX
-    final double rightCheekX = rightEye.x + unitY.x * (eyeDistance * 0.50) + unitX.x * (eyeDistance * 0.42);
-    final double rightCheekY = rightEye.y + unitY.y * (eyeDistance * 0.50) + unitX.y * (eyeDistance * 0.42);
+    final double rightCheekX = rightEye.x + unitY.x * (eyeDistance * 0.46) + unitX.x * (eyeDistance * 0.22);
+    final double rightCheekY = rightEye.y + unitY.y * (eyeDistance * 0.46) + unitX.y * (eyeDistance * 0.22);
 
     return {
       'left': Point(leftCheekX, leftCheekY),
