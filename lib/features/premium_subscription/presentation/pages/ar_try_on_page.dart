@@ -1354,6 +1354,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _isCameraInitialized = false;
+        _activeRotation = null; // Reset kalibrasi rotasi agar dikalibrasi ulang untuk kamera baru!
         _cameraLensDirection = _cameraLensDirection == CameraLensDirection.front
             ? CameraLensDirection.back
             : CameraLensDirection.front;

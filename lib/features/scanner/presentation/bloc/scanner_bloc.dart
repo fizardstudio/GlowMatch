@@ -179,6 +179,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     } catch (_) {}
     _cameraController = null;
 
+    _activeRotation = null; // Reset kalibrasi rotasi agar dikalibrasi ulang untuk kamera baru!
     _currentLensDirection = _currentLensDirection == CameraLensDirection.front
         ? CameraLensDirection.back
         : CameraLensDirection.front;
