@@ -286,41 +286,64 @@ class LipFilterPainter extends CustomPainter {
           }
 
           // Geser titik lash line sedikit ke atas (menjauhi bola mata, menuju kelopak mata)
-          // unitY mengarah ke bawah, sehingga untuk menggeser ke atas kita kurangi dengan unitY
-          final List<Offset> lashLinePoints = [];
-          for (int i = 1; i <= 7; i++) {
-            final double shiftAmount = eyeDistance * 0.012;
-            lashLinePoints.add(Offset(
-              upperLid[i].dx - unitY.x * shiftAmount,
-              upperLid[i].dy - unitY.y * shiftAmount,
-            ));
+          final Offset unitYOffset = Offset(unitY.x, unitY.y) * (eyeDistance * 0.012);
+
+          // Tentukan apakah urutan koordinat Point 0 berada di sebelah kiri Point 8 pada layar
+          final bool isP0OnLeft = upperLid[0].dx < upperLid[8].dx;
+
+          // Urutkan titik kelopak mata atas dari kiri ke kanan layar (indeks 1 s.d. 7)
+          final List<Offset> sortedLash = [];
+          if (isP0OnLeft) {
+            for (int i = 1; i <= 7; i++) {
+              sortedLash.add(upperLid[i] - unitYOffset);
+            }
+          } else {
+            for (int i = 7; i >= 1; i--) {
+              sortedLash.add(upperLid[i] - unitYOffset);
+            }
           }
 
+          // Hitung posisi sudut dalam mata (dekat hidung) secara presisi dengan Y-clamping untuk mencegah lekukan kail ke bawah
+          final Offset p0Shifted = upperLid[0] - unitYOffset;
+          final Offset p1Shifted = upperLid[1] - unitYOffset;
+          final Offset p7Shifted = upperLid[7] - unitYOffset;
+          final Offset p8Shifted = upperLid[8] - unitYOffset;
+
+          final Offset leftInnerCorner = isP0OnLeft
+              ? Offset(p0Shifted.dx, min(p0Shifted.dy, p1Shifted.dy))
+              : Offset(p8Shifted.dx, min(p8Shifted.dy, p7Shifted.dy));
+
+          final Offset rightInnerCorner = isP0OnLeft
+              ? Offset(p8Shifted.dx, min(p8Shifted.dy, p7Shifted.dy))
+              : Offset(p0Shifted.dx, min(p0Shifted.dy, p1Shifted.dy));
+
           if (isEyeOnLeftOfScreen) {
-            // Mata di sebelah kiri layar: Sudut luar di kiri (indeks 1), sayap ditarik ke kiri (-wingUnitX)
-            final Offset outerCorner = lashLinePoints.first; // shifted upperLid[1]
+            // Mata di sebelah kiri layar: Sudut luar di kiri (sortedLash.first), sayap ditarik ke kiri (-wingUnitX)
+            final Offset outerCorner = sortedLash.first;
             final double wingX = outerCorner.dx - wingUnitX.dx * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.015);
             final double wingY = outerCorner.dy - wingUnitX.dy * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.015);
 
             eyelinerPath.moveTo(wingX, wingY);
             eyelinerPath.lineTo(outerCorner.dx, outerCorner.dy);
-            
-            // Gambar lash line menggunakan path kurva halus (smooth bezier)
+
+            // Sambungkan garis kelopak mata halus hingga ke sudut dalam dekat hidung (rightInnerCorner)
+            final List<Offset> pointsToSmooth = [...sortedLash, rightInnerCorner];
             final Path smoothLashPath = Path();
-            buildSmoothPath(smoothLashPath, lashLinePoints);
+            buildSmoothPath(smoothLashPath, pointsToSmooth);
             eyelinerPath.addPath(smoothLashPath, Offset.zero);
           } else {
-            // Mata di sebelah kanan layar: Sudut luar di kanan (indeks 7), sayap ditarik ke kanan (+wingUnitX)
-            final Offset outerCorner = lashLinePoints.last; // shifted upperLid[7]
+            // Mata di sebelah kanan layar: Sudut luar di kanan (sortedLash.last), sayap ditarik ke kanan (+wingUnitX)
+            final Offset outerCorner = sortedLash.last;
             final double wingX = outerCorner.dx + wingUnitX.dx * (eyeDistance * 0.08) - unitY.x * (eyeDistance * 0.015);
             final double wingY = outerCorner.dy + wingUnitX.dy * (eyeDistance * 0.08) - unitY.y * (eyeDistance * 0.015);
 
-            // Gambar lash line kurva halus terlebih dahulu
+            // Gambar kelopak mata halus dimulai dari sudut dalam dekat hidung (leftInnerCorner) hingga ke sudut luar
+            final List<Offset> pointsToSmooth = [leftInnerCorner, ...sortedLash];
             final Path smoothLashPath = Path();
-            buildSmoothPath(smoothLashPath, lashLinePoints);
+            buildSmoothPath(smoothLashPath, pointsToSmooth);
             eyelinerPath.addPath(smoothLashPath, Offset.zero);
-            
-            // Tarik sayap ke arah kanan luar
+
+            // Tarik garis sayap luar
             eyelinerPath.lineTo(wingX, wingY);
           }
 
