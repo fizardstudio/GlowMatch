@@ -413,10 +413,10 @@ class PhotoMakeupPainter extends CustomPainter {
           
           final Paint paintTipCircle = Paint()
             ..style = PaintingStyle.fill
-            ..color = const Color(0xFFFFFFFF).withOpacity(noseHighlightOpacity)
-            ..imageFilter = ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0);
+            ..color = const Color(0xFFFFFDF5).withOpacity(noseHighlightOpacity * 0.65)
+            ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
 
-          canvas.drawCircle(noseTip, faceWidth * 0.015, paintTipCircle);
+          canvas.drawCircle(noseTip, faceWidth * 0.009, paintTipCircle);
         }
       }
     }
