@@ -40,6 +40,10 @@ class LipFilterPainter extends CustomPainter {
   final double eyeshadowOpacity;
   final bool hasEyeliner;
 
+  // Parameter Hidung (Contour & Highlight)
+  final double noseHighlightOpacity;
+  final double noseShadingOpacity;
+
   LipFilterPainter({
     required this.face,
     required this.imageWidth,
@@ -60,6 +64,8 @@ class LipFilterPainter extends CustomPainter {
     this.eyeshadowColor,
     required this.eyeshadowOpacity,
     required this.hasEyeliner,
+    required this.noseHighlightOpacity,
+    required this.noseShadingOpacity,
   });
 
   @override
@@ -321,6 +327,104 @@ class LipFilterPainter extends CustomPainter {
       final bool isFrontCam = lensDirection == CameraLensDirection.front;
       drawEyeMakeup(leftEyePoints, isFrontCam ? true : false);
       drawEyeMakeup(rightEyePoints, isFrontCam ? false : true);
+    }
+
+    // 1.7 RENDER NOSE MAKEUP (SHADING & HIGHLIGHT)
+    if (noseHighlightOpacity > 0.0 || noseShadingOpacity > 0.0) {
+      final noseBridgePoints = face!.contours[FaceContourType.noseBridge]?.points;
+      if (noseBridgePoints != null && noseBridgePoints.isNotEmpty) {
+        // Map all nose bridge points to screen space
+        final List<Offset> mappedBridge = noseBridgePoints.map((p) => mapPoint(Point(p.x, p.y))).toList();
+
+        // Calculate face geometry metrics to make rendering relative
+        final double bridgeLength = (mappedBridge.last - mappedBridge.first).distance;
+        final double strokeW = faceWidth * 0.024;
+
+        // Obtain horizontal orientation vector of the face (unitX)
+        Offset unitX = const Offset(1, 0);
+        final eyes = FaceGeometryHelper.getEyeCenters(face!);
+        final leftEyeCenter = eyes['left'];
+        final rightEyeCenter = eyes['right'];
+        if (leftEyeCenter != null && rightEyeCenter != null) {
+          final vectors = FaceGeometryHelper.getFaceUnitVectors(face!, leftEyeCenter, rightEyeCenter);
+          if (vectors['unitX'] != null) {
+            unitX = Offset(vectors['unitX']!.x, vectors['unitX']!.y);
+          }
+        }
+
+        // 1. NOSE SHADING (CONTOUR)
+        if (noseShadingOpacity > 0.0) {
+          final Path leftShadingPath = Path();
+          final Path rightShadingPath = Path();
+
+          final double sideShift = faceWidth * 0.040; // distance from center line to sides
+
+          // Draw the parallel lines down the sides of the bridge
+          leftShadingPath.moveTo(
+            mappedBridge.first.dx - unitX.dx * sideShift,
+            mappedBridge.first.dy - unitX.dy * sideShift,
+          );
+          rightShadingPath.moveTo(
+            mappedBridge.first.dx + unitX.dx * sideShift,
+            mappedBridge.first.dy + unitX.dy * sideShift,
+          );
+
+          for (int i = 1; i < mappedBridge.length; i++) {
+            leftShadingPath.lineTo(
+              mappedBridge[i].dx - unitX.dx * sideShift,
+              mappedBridge[i].dy - unitX.dy * sideShift,
+            );
+            rightShadingPath.lineTo(
+              mappedBridge[i].dx + unitX.dx * sideShift,
+              mappedBridge[i].dy + unitX.dy * sideShift,
+            );
+          }
+
+          // Shading Paint: Cool-toned soft contour brown with strong blur filter
+          final Paint paintShading = Paint()
+            ..style = PaintingStyle.stroke
+            ..color = const Color(0xFF7D5F52).withOpacity(noseShadingOpacity * 0.75)
+            ..strokeWidth = faceWidth * 0.038
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+
+          // Apply Gaussian Blur to blend the shading smoothly
+          paintShading.imageFilter = ui.ImageFilter.blur(sigmaX: 5.5, sigmaY: 5.5);
+
+          canvas.drawPath(leftShadingPath, paintShading);
+          canvas.drawPath(rightShadingPath, paintShading);
+        }
+
+        // 2. NOSE HIGHLIGHT
+        if (noseHighlightOpacity > 0.0) {
+          // A. Nose Bridge Highlight Line
+          final Path highlightPath = Path();
+          highlightPath.moveTo(mappedBridge.first.dx, mappedBridge.first.dy);
+          for (int i = 1; i < mappedBridge.length - 1; i++) {
+            highlightPath.lineTo(mappedBridge[i].dx, mappedBridge[i].dy);
+          }
+
+          // Creamy warm-white bright highlight
+          final Paint paintHighlightLine = Paint()
+            ..style = PaintingStyle.stroke
+            ..color = const Color(0xFFFFFDF5).withOpacity(noseHighlightOpacity * 0.5)
+            ..strokeWidth = strokeW
+            ..strokeCap = StrokeCap.round
+            ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
+
+          canvas.drawPath(highlightPath, paintHighlightLine);
+
+          // B. Nose Tip Highlight (The button/dot highlight at the tip of the nose)
+          final Offset noseTip = mappedBridge.last;
+          
+          final Paint paintTipCircle = Paint()
+            ..style = PaintingStyle.fill
+            ..color = const Color(0xFFFFFFFF).withOpacity(noseHighlightOpacity)
+            ..imageFilter = ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0);
+
+          canvas.drawCircle(noseTip, faceWidth * 0.015, paintTipCircle);
+        }
+      }
     }
 
     // RENDER BASE MAKEUP LIGHTING PRESETS OVERLAY ON FACE

@@ -74,6 +74,10 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   double _eyeshadowOpacity = 0.0;
   bool _hasEyeliner = false;
 
+  // Filter Parameters - Nose Contour (Hidung)
+  double _noseHighlightOpacity = 0.0;
+  double _noseShadingOpacity = 0.0;
+
   double _sliderX = 180.0; // Koordinat pembagi horizontal (default diatur di didChangeDependencies)
   bool _isSliderInitialized = false;
   bool _showControls = true;
@@ -348,6 +352,18 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         _selectedEyeshadowColor = const Color(0xFFFFCC80); // Champagne Gold
         _eyeshadowOpacity = 0.35;
         _hasEyeliner = false;
+      }
+
+      // 6. Tentukan shading & highlight hidung
+      if (und == 'warm') {
+        _noseHighlightOpacity = 0.40;
+        _noseShadingOpacity = 0.35;
+      } else if (und == 'cool') {
+        _noseHighlightOpacity = 0.45;
+        _noseShadingOpacity = 0.30;
+      } else {
+        _noseHighlightOpacity = 0.35;
+        _noseShadingOpacity = 0.25;
       }
 
       _activePreset = 'Rekomendasi AI (${_lastMatchedSeasonalColor ?? "Personal"})';
@@ -1659,6 +1675,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                               eyeshadowColor: _selectedEyeshadowColor,
                                               eyeshadowOpacity: _eyeshadowOpacity,
                                               hasEyeliner: _hasEyeliner,
+                                              noseHighlightOpacity: _noseHighlightOpacity,
+                                              noseShadingOpacity: _noseShadingOpacity,
                                             ),
                                           ),
                                         ),
@@ -2090,11 +2108,32 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  'MATA',
+                                  'HIDUNG',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: _activeCategoryIndex == 4 ? Colors.white : textMutedColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _activeCategoryIndex = 5),
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _activeCategoryIndex == 5 ? primaryColor : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'MATA',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _activeCategoryIndex == 5 ? Colors.white : textMutedColor,
                                   ),
                                 ),
                               ),
@@ -2180,6 +2219,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                         _eyeshadowOpacity = preset.eyeshadowOpacity;
                                         _hasEyeliner = preset.hasEyeliner;
                                         _selectedLightingPreset = preset.lightingPreset;
+                                        _noseHighlightOpacity = preset.noseHighlightOpacity;
+                                        _noseShadingOpacity = preset.noseShadingOpacity;
                                         _activePreset = name;
                                       });
                                     },
@@ -2510,6 +2551,66 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                             );
                           },
                         ),
+                      ),
+                    ] else if (_activeCategoryIndex == 4) ...[
+                      // Opacity Nose Highlight Slider
+                      Row(
+                        children: [
+                          Icon(Icons.light_mode_rounded, color: primaryColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Highlight Hidung', style: TextStyle(color: textColor, fontSize: 11)),
+                          Expanded(
+                            child: Slider(
+                              activeColor: primaryColor,
+                              inactiveColor: cardBorderColor,
+                              value: _noseHighlightOpacity,
+                              min: 0.0,
+                              max: 1.0,
+                              onChanged: _showPaywall
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _noseHighlightOpacity = val;
+                                        _activePreset = null;
+                                      });
+                                    },
+                            ),
+                          ),
+                          Text(
+                            '${(_noseHighlightOpacity * 100).round()}%',
+                            style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Opacity Nose Shading Slider
+                      Row(
+                        children: [
+                          Icon(Icons.brush_rounded, color: primaryColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Shading Hidung  ', style: TextStyle(color: textColor, fontSize: 11)),
+                          Expanded(
+                            child: Slider(
+                              activeColor: primaryColor,
+                              inactiveColor: cardBorderColor,
+                              value: _noseShadingOpacity,
+                              min: 0.0,
+                              max: 1.0,
+                              onChanged: _showPaywall
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _noseShadingOpacity = val;
+                                        _activePreset = null;
+                                      });
+                                    },
+                            ),
+                          ),
+                          Text(
+                            '${(_noseShadingOpacity * 100).round()}%',
+                            style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                          ),
+                        ],
                       ),
                     ] else ...[
                       // Opacity Eyeshadow & Eyeliner Toggle

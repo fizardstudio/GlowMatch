@@ -16,6 +16,8 @@ class MakeupPreset {
   final double eyeshadowOpacity;
   final bool hasEyeliner;
   final String lightingPreset;
+  final double noseHighlightOpacity;
+  final double noseShadingOpacity;
 
   const MakeupPreset({
     required this.name,
@@ -33,6 +35,8 @@ class MakeupPreset {
     required this.eyeshadowOpacity,
     required this.hasEyeliner,
     required this.lightingPreset,
+    required this.noseHighlightOpacity,
+    required this.noseShadingOpacity,
   });
 
   static List<MakeupPreset> get presets => [
@@ -52,6 +56,8 @@ class MakeupPreset {
       eyeshadowOpacity: 0.0,
       hasEyeliner: false,
       lightingPreset: 'Studio',
+      noseHighlightOpacity: 0.0,
+      noseShadingOpacity: 0.0,
     ),
     const MakeupPreset(
       name: 'Korean Dewy',
@@ -69,6 +75,8 @@ class MakeupPreset {
       eyeshadowOpacity: 0.40,
       hasEyeliner: false,
       lightingPreset: 'Soft Glow',
+      noseHighlightOpacity: 0.35,
+      noseShadingOpacity: 0.00,
     ),
     const MakeupPreset(
       name: 'Sunset Peach',
@@ -86,6 +94,8 @@ class MakeupPreset {
       eyeshadowOpacity: 0.55,
       hasEyeliner: true,
       lightingPreset: 'Sunset Warmth',
+      noseHighlightOpacity: 0.40,
+      noseShadingOpacity: 0.30,
     ),
     const MakeupPreset(
       name: 'Classic Glam',
@@ -103,6 +113,8 @@ class MakeupPreset {
       eyeshadowOpacity: 0.40,
       hasEyeliner: true,
       lightingPreset: 'Studio',
+      noseHighlightOpacity: 0.55,
+      noseShadingOpacity: 0.45,
     ),
     const MakeupPreset(
       name: 'Cyber Neon',
@@ -120,6 +132,8 @@ class MakeupPreset {
       eyeshadowOpacity: 0.65,
       hasEyeliner: true,
       lightingPreset: 'Cyber Neon',
+      noseHighlightOpacity: 0.50,
+      noseShadingOpacity: 0.35,
     ),
   ];
 }

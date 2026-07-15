@@ -104,6 +104,10 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   double _eyeshadowOpacity = 0.0;
   bool _hasEyeliner = false;
 
+  // Filter Parameters - Nose Contour (Hidung)
+  double _noseHighlightOpacity = 0.0;
+  double _noseShadingOpacity = 0.0;
+
   double _sliderX = 180.0; // Koordinat pembagi horizontal
 
   // Scanned history data
@@ -1475,6 +1479,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           eyeshadowColor: _selectedEyeshadowColor,
                                           eyeshadowOpacity: _eyeshadowOpacity,
                                           hasEyeliner: _hasEyeliner,
+                                          noseHighlightOpacity: _noseHighlightOpacity,
+                                          noseShadingOpacity: _noseShadingOpacity,
                                         ),
                                       ),
                                     ),
@@ -1701,7 +1707,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           _buildTabButton('Base', 1),
                           _buildTabButton('Lipstik', 2),
                           _buildTabButton('Pipi', 3),
-                          _buildTabButton('Mata', 4),
+                          _buildTabButton('Hidung', 4),
+                          _buildTabButton('Mata', 5),
                         ],
                       ),
                     ),
@@ -1780,6 +1787,8 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                   _eyeshadowOpacity = preset.eyeshadowOpacity;
                                   _hasEyeliner = preset.hasEyeliner;
                                   _selectedLightingPreset = preset.lightingPreset;
+                                  _noseHighlightOpacity = preset.noseHighlightOpacity;
+                                  _noseShadingOpacity = preset.noseShadingOpacity;
                                   _activePreset = name;
                                 });
                               },
@@ -1969,6 +1978,20 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           },
                         ),
                       ),
+                    ] else if (_activeCategoryIndex == 4) ...[
+                      // Opacity Nose Highlight Slider
+                      _buildSliderRow('Highlight Hidung', _noseHighlightOpacity, (val) {
+                        setState(() {
+                          _noseHighlightOpacity = val;
+                        });
+                      }),
+                      const SizedBox(height: 8),
+                      // Opacity Nose Shading Slider
+                      _buildSliderRow('Shading Hidung', _noseShadingOpacity, (val) {
+                        setState(() {
+                          _noseShadingOpacity = val;
+                        });
+                      }),
                     ] else ...[
                       // Opacity Eyeshadow & Eyeliner Toggle
                       Row(
