@@ -29,6 +29,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   bool _isDetecting = false;
   CameraLensDirection _currentLensDirection = CameraLensDirection.front;
   InputImageRotation? _activeRotation;
+  int _lastFrameTimeMs = 0;
 
   ScannerBloc({
     required ShadeMatcherRepository shadeMatcherRepository,
@@ -121,6 +122,9 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     try {
       await _cameraController!.startImageStream((CameraImage image) {
         if (_isDetecting) return;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now - _lastFrameTimeMs < 65) return;
+        _lastFrameTimeMs = now;
         _isDetecting = true;
 
         final lightingResult = _analyzeLighting(image);

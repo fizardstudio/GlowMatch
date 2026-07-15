@@ -82,6 +82,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   // Filter Parameters - Base Makeup (Foundation)
   Color _selectedFoundationColor = const Color(0xFFF3D3C4); // Fair Nude
   double _foundationOpacity = 0.0; // Default 0% (tidak aktif)
+  String _foundationFinishing = 'dewy'; // 'matte', 'satin', 'dewy'
   
   // Data foundation dari database Isar luring
   List<ProductShade> _dbFoundations = [];
@@ -248,6 +249,40 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       }
     } catch (e) {
       debugPrint("Error loading foundations from Isar: $e");
+    }
+    _tryAutoSelectFoundation();
+  }
+
+  void _tryAutoSelectFoundation() {
+    if (_lastMatchedShadeName != null && _dbFoundations.isNotEmpty && _selectedFoundationProduct == null) {
+      try {
+        final match = _dbFoundations.firstWhere(
+          (f) => f.shadeName.toLowerCase().trim() == _lastMatchedShadeName!.toLowerCase().trim()
+        );
+        setState(() {
+          _selectedFoundationProduct = match;
+          _selectedFoundationColor = _getHexColor(match.hexCode);
+          if (_foundationOpacity == 0.0) _foundationOpacity = 0.35; // Default opacity when applied
+          _selectedBrandFilter = match.brand;
+          _applyFoundationFilter();
+        });
+        debugPrint("AUTO_SELECT_FOUNDATION: Auto-selected scanned shade: ${match.shadeName}");
+      } catch (_) {
+        try {
+          final match = _dbFoundations.firstWhere(
+            (f) => f.shadeName.toLowerCase().contains(_lastMatchedShadeName!.toLowerCase()) ||
+                   _lastMatchedShadeName!.toLowerCase().contains(f.shadeName.toLowerCase())
+          );
+          setState(() {
+            _selectedFoundationProduct = match;
+            _selectedFoundationColor = _getHexColor(match.hexCode);
+            if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
+            _selectedBrandFilter = match.brand;
+            _applyFoundationFilter();
+          });
+          debugPrint("AUTO_SELECT_FOUNDATION: Auto-selected parsed shade: ${match.shadeName}");
+        } catch (_) {}
+      }
     }
   }
 
@@ -588,6 +623,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         _lastMatchedSeasonalColor = settings.lastMatchedSeasonalColor;
         _lastMatchedSkinTone = settings.lastMatchedSkinTone;
       });
+      _tryAutoSelectFoundation();
     }
   }
 
@@ -598,6 +634,33 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       onTap: () {
         setState(() {
           _lipstickFinishing = label.toLowerCase();
+          _activePreset = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? primaryColor : cardBgColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSel ? Colors.white : textMutedColor,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFoundationFinishingButton(String label, bool isSel) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _foundationFinishing = label.toLowerCase();
+          _showGlassSkin = label.toLowerCase() != 'matte';
           _activePreset = null;
         });
       },
@@ -1476,6 +1539,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           blushColor: _selectedBlushColor,
                                           blushOpacity: _blushOpacity,
                                           showGlassSkin: _showGlassSkin,
+                                          foundationFinishing: _foundationFinishing,
                                           sliderX: _isCapturing || !_isSplitMode ? 0.0 : _sliderX,
                                           selectedLightingPreset: _selectedLightingPreset,
                                           showHarmonyHeatmap: _showHarmonyHeatmap,
@@ -1788,6 +1852,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                   _selectedFoundationColor = preset.foundationColor;
                                   _foundationOpacity = preset.foundationOpacity;
                                   _showGlassSkin = preset.showGlassSkin;
+                                  _foundationFinishing = preset.showGlassSkin ? 'dewy' : 'matte';
                                   _selectedEyeshadowColor = preset.eyeshadowColor;
                                   _eyeshadowOpacity = preset.eyeshadowOpacity;
                                   _hasEyeliner = preset.hasEyeliner;
@@ -1831,6 +1896,22 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           _foundationOpacity = val;
                         });
                       }),
+                      const SizedBox(height: 6),
+                      // Finishing Foundation
+                      Row(
+                        children: [
+                          Text(
+                            'Finishing:',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildFoundationFinishingButton('Matte', _foundationFinishing == 'matte'),
+                          const SizedBox(width: 6),
+                          _buildFoundationFinishingButton('Satin', _foundationFinishing == 'satin'),
+                          const SizedBox(width: 6),
+                          _buildFoundationFinishingButton('Dewy', _foundationFinishing == 'dewy'),
+                        ],
+                      ),
                       const SizedBox(height: 6),
                       // Dropdown filter Merek Foundation
                       Row(
@@ -2404,45 +2485,80 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
   Widget _buildColorCircle(Color color, String name, bool isSel, VoidCallback onTap) {
     final bool isClear = color == Colors.transparent || color.opacity == 0.0;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: isClear ? Colors.grey[200] : color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSel ? textColor : (isClear ? Colors.grey[400]!.withOpacity(0.3) : Colors.transparent),
-            width: 2.5,
+    final bool isMatched = _lastMatchedShadeName != null && 
+        (name.toLowerCase().trim() == _lastMatchedShadeName!.toLowerCase().trim() ||
+         name.toLowerCase().contains(_lastMatchedShadeName!.toLowerCase()) ||
+         _lastMatchedShadeName!.toLowerCase().contains(name.toLowerCase()));
+
+    Widget circle = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: isClear ? Colors.grey[200] : color,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSel ? textColor : (isClear ? Colors.grey[400]!.withOpacity(0.3) : Colors.transparent),
+          width: 2.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 3,
+            spreadRadius: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 3,
-              spreadRadius: 1,
+        ],
+      ),
+      child: isClear
+          ? Center(
+              child: Icon(
+                Icons.block_flipped,
+                color: isSel ? textColor : Colors.grey[600],
+                size: 16,
+              ),
+            )
+          : (isSel
+              ? Center(
+                  child: Icon(
+                    Icons.check_rounded,
+                    color: ThemeData.estimateBrightnessForColor(color) == Brightness.light ? Colors.black : Colors.white,
+                    size: 16,
+                  ),
+                )
+              : null),
+    );
+
+    if (isMatched && !isClear) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            circle,
+            Positioned(
+              top: -2,
+              right: 2,
+              child: Container(
+                padding: const EdgeInsets.all(1),
+                decoration: const BoxDecoration(
+                  color: Colors.amber,
+                  shape: BoxShape.circle,
+                ),
+                child: const Text(
+                  '✨',
+                  style: TextStyle(fontSize: 8),
+                ),
+              ),
             ),
           ],
         ),
-        child: isClear
-            ? Center(
-                child: Icon(
-                  Icons.block_flipped,
-                  color: isSel ? textColor : Colors.grey[600],
-                  size: 16,
-                ),
-              )
-            : (isSel
-                ? Center(
-                    child: Icon(
-                      Icons.check_rounded,
-                      color: ThemeData.estimateBrightnessForColor(color) == Brightness.light ? Colors.black : Colors.white,
-                      size: 16,
-                    ),
-                  )
-                : null),
-      ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: circle,
     );
   }
 

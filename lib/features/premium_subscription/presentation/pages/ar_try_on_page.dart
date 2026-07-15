@@ -29,7 +29,7 @@ class ArTryOnPage extends StatefulWidget {
   State<ArTryOnPage> createState() => _ArTryOnPageState();
 }
 
-class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
+class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool get isDark => ThemeManager.isDark;
   Color get textColor => ThemeManager.textColor;
   Color get textMutedColor => ThemeManager.textMutedColor;
@@ -99,6 +99,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   // Foundation/Base fields
   Color _selectedFoundationColor = const Color(0xFFF3D3C4);
   double _foundationOpacity = 0.0;
+  String _foundationFinishing = 'dewy'; // 'matte', 'satin', 'dewy'
   List<ProductShade> _dbFoundations = [];
   List<ProductShade> _filteredFoundations = [];
   List<String> _brands = ['Semua Merek'];
@@ -119,6 +120,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
   double _exportProgress = 0.0;
   int _faceLostFrames = 0;
   InputImageRotation? _activeRotation;
+  int _lastFrameTimeMs = 0;
+  late final Ticker _ticker;
+  Rect? _smoothedBox;
+  final Map<FaceContourType, List<Point<int>>> _smoothedContours = {};
+  double? _smoothedSmiling;
+  SmoothedFace? _smoothedFace;
 
   // Preset Looks List
   final List<Map<String, dynamic>> _presetLooks = [
@@ -211,6 +218,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     _checkPremiumStatus();
     _loadFoundationsFromDb();
     _initializeCamera();
+    _ticker = createTicker(_onTick);
+    _ticker.start();
   }
 
   @override
@@ -247,6 +256,40 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint("Error loading foundations from Isar: $e");
+    }
+    _tryAutoSelectFoundation();
+  }
+
+  void _tryAutoSelectFoundation() {
+    if (_lastMatchedShadeName != null && _dbFoundations.isNotEmpty && _selectedFoundationProduct == null) {
+      try {
+        final match = _dbFoundations.firstWhere(
+          (f) => f.shadeName.toLowerCase().trim() == _lastMatchedShadeName!.toLowerCase().trim()
+        );
+        setState(() {
+          _selectedFoundationProduct = match;
+          _selectedFoundationColor = _getHexColor(match.hexCode);
+          if (_foundationOpacity == 0.0) _foundationOpacity = 0.35; // Default opacity when applied
+          _selectedBrandFilter = match.brand;
+          _applyFoundationFilter();
+        });
+        debugPrint("AUTO_SELECT_FOUNDATION: Auto-selected scanned shade: ${match.shadeName}");
+      } catch (_) {
+        try {
+          final match = _dbFoundations.firstWhere(
+            (f) => f.shadeName.toLowerCase().contains(_lastMatchedShadeName!.toLowerCase()) ||
+                   _lastMatchedShadeName!.toLowerCase().contains(f.shadeName.toLowerCase())
+          );
+          setState(() {
+            _selectedFoundationProduct = match;
+            _selectedFoundationColor = _getHexColor(match.hexCode);
+            if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
+            _selectedBrandFilter = match.brand;
+            _applyFoundationFilter();
+          });
+          debugPrint("AUTO_SELECT_FOUNDATION: Auto-selected parsed shade: ${match.shadeName}");
+        } catch (_) {}
+      }
     }
   }
 
@@ -393,6 +436,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         _lastMatchedSeasonalColor = settings.lastMatchedSeasonalColor;
         _lastMatchedSkinTone = settings.lastMatchedSkinTone;
       });
+      _tryAutoSelectFoundation();
     }
   }
 
@@ -1184,6 +1228,33 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildFoundationFinishingButton(String label, bool isSel) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _foundationFinishing = label.toLowerCase();
+          _showGlassSkin = label.toLowerCase() != 'matte';
+          _activePreset = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isSel ? Colors.white : textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSliderRow(String label, double value, ValueChanged<double> onChanged) {
     return Row(
       children: [
@@ -1213,32 +1284,67 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
 
   Widget _buildColorCircle(Color color, String name, bool isSelected, VoidCallback onTap) {
     final bool isClear = color == Colors.transparent || color.opacity == 0.0;
+    final bool isMatched = _lastMatchedShadeName != null && 
+        (name.toLowerCase().trim() == _lastMatchedShadeName!.toLowerCase().trim() ||
+         name.toLowerCase().contains(_lastMatchedShadeName!.toLowerCase()) ||
+         _lastMatchedShadeName!.toLowerCase().contains(name.toLowerCase()));
+
+    Widget circle = Container(
+      margin: const EdgeInsets.only(right: 14),
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: isClear ? Colors.grey[800]!.withOpacity(0.4) : color,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.55),
+          width: isSelected ? 3 : 1,
+        ),
+      ),
+      child: isClear
+          ? Center(
+              child: Icon(
+                Icons.block_flipped,
+                color: isSelected ? primaryColor : textMutedColor,
+                size: 18,
+              ),
+            )
+          : (isSelected
+              ? const Center(child: Icon(Icons.check_rounded, color: Colors.white, size: 18))
+              : null),
+    );
+
+    if (isMatched && !isClear) {
+      return GestureDetector(
+        onTap: _showPaywall ? null : onTap,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            circle,
+            Positioned(
+              top: -3,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.amber,
+                  shape: BoxShape.circle,
+                ),
+                child: const Text(
+                  '✨',
+                  style: TextStyle(fontSize: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: _showPaywall ? null : onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 14),
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isClear ? Colors.grey[800]!.withOpacity(0.4) : color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.55),
-            width: isSelected ? 3 : 1,
-          ),
-        ),
-        child: isClear
-            ? Center(
-                child: Icon(
-                  Icons.block_flipped,
-                  color: isSelected ? primaryColor : textMutedColor,
-                  size: 18,
-                ),
-              )
-            : (isSelected
-                ? const Center(child: Icon(Icons.check_rounded, color: Colors.white, size: 18))
-                : null),
-      ),
+      child: circle,
     );
   }
 
@@ -1321,9 +1427,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
         _isCameraInitialized = true;
       });
 
-      // Mulai streaming frame kamera untuk Face Mesh Detector
+      // Mulai streaming frame kamera untuk Face Mesh Detector dengan Throttling ke ~15 FPS (65ms)
       _cameraController!.startImageStream((CameraImage image) {
         if (_isProcessingFrame) return;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now - _lastFrameTimeMs < 65) return;
+        _lastFrameTimeMs = now;
         _isProcessingFrame = true;
         _processFrame(image);
       });
@@ -1362,6 +1471,79 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
     }
     
     await _initializeCamera();
+  }
+
+  void _onTick(Duration elapsed) {
+    if (!mounted || _cameraController == null || !_isCameraInitialized) return;
+
+    if (_detectedFace == null) {
+      if (_smoothedFace != null) {
+        setState(() {
+          _smoothedFace = null;
+          _smoothedBox = null;
+          _smoothedContours.clear();
+          _smoothedSmiling = null;
+        });
+      }
+      return;
+    }
+
+    final double lerpFactor = 0.35; // Buttery smooth response factor
+
+    // 1. Lerp bounding box
+    final targetBox = _detectedFace!.boundingBox;
+    _smoothedBox = _smoothedBox == null
+        ? targetBox
+        : Rect.fromLTRB(
+            ui.lerpDouble(_smoothedBox!.left, targetBox.left, lerpFactor)!,
+            ui.lerpDouble(_smoothedBox!.top, targetBox.top, lerpFactor)!,
+            ui.lerpDouble(_smoothedBox!.right, targetBox.right, lerpFactor)!,
+            ui.lerpDouble(_smoothedBox!.bottom, targetBox.bottom, lerpFactor)!,
+          );
+
+    // 2. Lerp contours
+    final Map<FaceContourType, FaceContour?> newContours = {};
+    for (final type in FaceContourType.values) {
+      final targetContour = _detectedFace!.contours[type];
+      if (targetContour == null) continue;
+
+      final targetPoints = targetContour.points;
+      List<Point<int>> currentPoints = _smoothedContours[type] ?? [];
+
+      if (currentPoints.length != targetPoints.length) {
+        currentPoints = List<Point<int>>.from(targetPoints);
+      } else {
+        for (int i = 0; i < targetPoints.length; i++) {
+          final double newX = ui.lerpDouble(currentPoints[i].x.toDouble(), targetPoints[i].x.toDouble(), lerpFactor)!;
+          final double newY = ui.lerpDouble(currentPoints[i].y.toDouble(), targetPoints[i].y.toDouble(), lerpFactor)!;
+          currentPoints[i] = Point<int>(newX.round(), newY.round());
+        }
+      }
+      _smoothedContours[type] = currentPoints;
+      newContours[type] = SmoothedFaceContour(type: type, points: currentPoints);
+    }
+
+    // 3. Lerp smiling probability
+    final targetSmiling = _detectedFace!.smilingProbability;
+    if (targetSmiling != null) {
+      _smoothedSmiling = ui.lerpDouble(_smoothedSmiling ?? targetSmiling, targetSmiling, lerpFactor);
+    }
+
+    // 4. Construct SmoothedFace
+    final newSmoothedFace = SmoothedFace(
+      boundingBox: _smoothedBox!,
+      contours: newContours,
+      smilingProbability: _smoothedSmiling,
+      leftEyeOpenProbability: _detectedFace!.leftEyeOpenProbability,
+      rightEyeOpenProbability: _detectedFace!.rightEyeOpenProbability,
+      headEulerAngleX: _detectedFace!.headEulerAngleX,
+      headEulerAngleY: _detectedFace!.headEulerAngleY,
+      headEulerAngleZ: _detectedFace!.headEulerAngleZ,
+    );
+
+    setState(() {
+      _smoothedFace = newSmoothedFace;
+    });
   }
 
   Future<void> _processFrame(CameraImage image) async {
@@ -1497,6 +1679,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _ticker.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _stopDemoTimer();
     if (_cameraController != null) {
@@ -1697,7 +1880,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                         Positioned.fill(
                                           child: CustomPaint(
                                             painter: LipFilterPainter(
-                                              face: _detectedFace,
+                                              face: _smoothedFace,
                                               imageWidth: _imageWidth,
                                               imageHeight: _imageHeight,
                                               lensDirection: _cameraController!.description.lensDirection,
@@ -1711,6 +1894,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                               foundationColor: _selectedFoundationColor,
                                               foundationOpacity: _foundationOpacity,
                                               showGlassSkin: _showGlassSkin,
+                                              foundationFinishing: _foundationFinishing,
                                               sliderX: painterSliderX,
                                               selectedLightingPreset: _selectedLightingPreset,
                                               showHarmonyHeatmap: _showHarmonyHeatmap,
@@ -2259,6 +2443,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                                         _selectedFoundationColor = preset.foundationColor;
                                         _foundationOpacity = preset.foundationOpacity;
                                         _showGlassSkin = preset.showGlassSkin;
+                                        _foundationFinishing = preset.showGlassSkin ? 'dewy' : 'matte';
                                         _selectedEyeshadowColor = preset.eyeshadowColor;
                                         _eyeshadowOpacity = preset.eyeshadowOpacity;
                                         _hasEyeliner = preset.hasEyeliner;
@@ -2325,7 +2510,25 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
+                      // Finishing Foundation
+                      Row(
+                        children: [
+                          Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Finishing:',
+                            style: TextStyle(fontSize: 11, color: textColor),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildFoundationFinishingButton('Matte', _foundationFinishing == 'matte'),
+                          const SizedBox(width: 6),
+                          _buildFoundationFinishingButton('Satin', _foundationFinishing == 'satin'),
+                          const SizedBox(width: 6),
+                          _buildFoundationFinishingButton('Dewy', _foundationFinishing == 'dewy'),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       // Dropdown filter Merek Foundation
                       Row(
                         children: [
@@ -2785,4 +2988,59 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+class SmoothedFace implements Face {
+  @override
+  final Rect boundingBox;
+  
+  @override
+  final Map<FaceContourType, FaceContour?> contours;
+  
+  @override
+  final Map<FaceLandmarkType, FaceLandmark?> landmarks;
+  
+  @override
+  final double? smilingProbability;
+  
+  @override
+  final double? leftEyeOpenProbability;
+  
+  @override
+  final double? rightEyeOpenProbability;
+  
+  @override
+  final double? headEulerAngleX;
+  
+  @override
+  final double? headEulerAngleY;
+  
+  @override
+  final double? headEulerAngleZ;
+  
+  @override
+  final int? trackingId;
+
+  SmoothedFace({
+    required this.boundingBox,
+    required this.contours,
+    this.landmarks = const {},
+    this.smilingProbability,
+    this.leftEyeOpenProbability,
+    this.rightEyeOpenProbability,
+    this.headEulerAngleX,
+    this.headEulerAngleY,
+    this.headEulerAngleZ,
+    this.trackingId,
+  });
+}
+
+class SmoothedFaceContour implements FaceContour {
+  @override
+  final FaceContourType type;
+  
+  @override
+  final List<Point<int>> points;
+
+  SmoothedFaceContour({required this.type, required this.points});
 }

@@ -27,6 +27,7 @@ class LipFilterPainter extends CustomPainter {
 
   // Glass Skin & Highlighter
   final bool showGlassSkin;
+  final String foundationFinishing; // 'matte', 'satin', 'dewy'
 
   final double sliderX;
 
@@ -58,6 +59,7 @@ class LipFilterPainter extends CustomPainter {
     this.foundationColor,
     required this.foundationOpacity,
     required this.showGlassSkin,
+    this.foundationFinishing = 'dewy',
     required this.sliderX,
     required this.selectedLightingPreset,
     required this.showHarmonyHeatmap,
@@ -559,10 +561,22 @@ class LipFilterPainter extends CustomPainter {
       }
     }
 
-    // 2. RENDER DEWY GLASS SKIN GLOW
-    if (showGlassSkin && estimatedLeftCheek != null && estimatedRightCheek != null) {
-      final double glowRadius = faceWidth * 0.22;
+    // 2. RENDER DEWY GLASS SKIN GLOW / SATIN HIGHLIGHTS
+    if (showGlassSkin && foundationFinishing != 'matte' && estimatedLeftCheek != null && estimatedRightCheek != null) {
+      final bool isDewy = foundationFinishing == 'dewy';
       
+      final double cheekRadius = faceWidth * (isDewy ? 0.18 : 0.22);
+      final double cheekOpacity = isDewy ? 0.22 : 0.12;
+
+      final double foreheadRadius = faceWidth * (isDewy ? 0.20 : 0.24);
+      final double foreheadOpacity = isDewy ? 0.15 : 0.08;
+
+      final double noseRadius = faceWidth * (isDewy ? 0.04 : 0.06);
+      final double noseOpacity = isDewy ? 0.25 : 0.15;
+
+      final double chinRadius = faceWidth * (isDewy ? 0.08 : 0.10);
+      final double chinOpacity = isDewy ? 0.12 : 0.08;
+
       final Paint paintGlow = Paint()
         ..style = PaintingStyle.fill
         ..blendMode = BlendMode.srcOver;
@@ -570,37 +584,67 @@ class LipFilterPainter extends CustomPainter {
       // Glow Pipi Kiri
       paintGlow.shader = ui.Gradient.radial(
         estimatedLeftCheek,
-        glowRadius,
+        cheekRadius,
         [
-          Colors.white.withOpacity(0.18),
+          Colors.white.withOpacity(cheekOpacity),
           Colors.white.withOpacity(0.0),
         ],
       );
-      canvas.drawCircle(estimatedLeftCheek, glowRadius, paintGlow);
+      canvas.drawCircle(estimatedLeftCheek, cheekRadius, paintGlow);
 
       // Glow Pipi Kanan
       paintGlow.shader = ui.Gradient.radial(
         estimatedRightCheek,
-        glowRadius,
+        cheekRadius,
         [
-          Colors.white.withOpacity(0.18),
+          Colors.white.withOpacity(cheekOpacity),
           Colors.white.withOpacity(0.0),
         ],
       );
-      canvas.drawCircle(estimatedRightCheek, glowRadius, paintGlow);
+      canvas.drawCircle(estimatedRightCheek, cheekRadius, paintGlow);
 
       // Glow Dahi
       final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
       final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
       paintGlow.shader = ui.Gradient.radial(
         mappedForehead,
-        glowRadius * 1.2,
+        foreheadRadius,
         [
-          Colors.white.withOpacity(0.15),
+          Colors.white.withOpacity(foreheadOpacity),
           Colors.white.withOpacity(0.0),
         ],
       );
-      canvas.drawCircle(mappedForehead, glowRadius * 1.2, paintGlow);
+      canvas.drawCircle(mappedForehead, foreheadRadius, paintGlow);
+
+      // Glow Ujung Hidung
+      final noseBridgePoints = face!.contours[FaceContourType.noseBridge]?.points;
+      if (noseBridgePoints != null && noseBridgePoints.isNotEmpty) {
+        final mappedNoseTip = mapPoint(Point(noseBridgePoints.last.x.round(), noseBridgePoints.last.y.round()));
+        paintGlow.shader = ui.Gradient.radial(
+          mappedNoseTip,
+          noseRadius,
+          [
+            Colors.white.withOpacity(noseOpacity),
+            Colors.white.withOpacity(0.0),
+          ],
+        );
+        canvas.drawCircle(mappedNoseTip, noseRadius, paintGlow);
+      }
+
+      // Glow Dagu
+      final facePoints = face!.contours[FaceContourType.face]?.points;
+      if (facePoints != null && facePoints.length > 18) {
+        final mappedChin = mapPoint(Point(facePoints[18].x.round(), facePoints[18].y.round()));
+        paintGlow.shader = ui.Gradient.radial(
+          mappedChin,
+          chinRadius,
+          [
+            Colors.white.withOpacity(chinOpacity),
+            Colors.white.withOpacity(0.0),
+          ],
+        );
+        canvas.drawCircle(mappedChin, chinRadius, paintGlow);
+      }
     }
 
     // 3. GAMBAR FILTER LIPSTIK (BIBIR)
@@ -830,6 +874,7 @@ class LipFilterPainter extends CustomPainter {
         oldDelegate.foundationColor != foundationColor ||
         oldDelegate.foundationOpacity != foundationOpacity ||
         oldDelegate.showGlassSkin != showGlassSkin ||
+        oldDelegate.foundationFinishing != foundationFinishing ||
         oldDelegate.sliderX != sliderX ||
         oldDelegate.selectedLightingPreset != selectedLightingPreset ||
         oldDelegate.showHarmonyHeatmap != showHarmonyHeatmap ||

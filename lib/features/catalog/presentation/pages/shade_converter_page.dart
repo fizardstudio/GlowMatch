@@ -5,6 +5,8 @@ import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/theme/theme_manager.dart';
 import '../../../../core/utils/color_calculator.dart';
 import '../../domain/repositories/shade_matcher_repository.dart';
+import '../../../../core/network/database_service.dart';
+import '../../../../features/premium_subscription/data/models/app_settings.dart';
 
 class ShadeConverterPage extends StatefulWidget {
   final ShadeMatcherRepository repository;
@@ -46,10 +48,64 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
   Future<void> _loadData() async {
     try {
       final shades = await widget.repository.getAllProductShades();
+      
+      String? matchedBrand;
+      String? matchedProduct;
+      List<String> sourceProds = [];
+      List<ProductShade> sourceSds = [];
+      ProductShade? matchedShade;
+
+      try {
+        final isar = DatabaseService().isar;
+        final settings = await isar.appSettings.get(0);
+        if (settings != null && settings.lastMatchedShadeName != null) {
+          final lastShadeName = settings.lastMatchedShadeName!;
+          ProductShade? found;
+          try {
+            found = shades.firstWhere(
+              (s) => s.shadeName.toLowerCase().trim() == lastShadeName.toLowerCase().trim()
+            );
+          } catch (_) {
+            try {
+              found = shades.firstWhere(
+                (s) => s.shadeName.toLowerCase().contains(lastShadeName.toLowerCase()) ||
+                       lastShadeName.toLowerCase().contains(s.shadeName.toLowerCase())
+              );
+            } catch (_) {}
+          }
+          if (found != null) {
+            matchedBrand = found.brand;
+            sourceProds = shades
+                .where((s) => s.brand == found!.brand)
+                .map((s) => s.productName)
+                .toSet()
+                .toList()
+              ..sort();
+            matchedProduct = found.productName;
+            sourceSds = shades
+                .where((s) => s.brand == found!.brand && s.productName == found.productName)
+                .toList();
+            matchedShade = found;
+            debugPrint("SHADE_CONVERTER: Auto-selected scanned shade: ${found.shadeName}");
+          }
+        }
+      } catch (e) {
+        debugPrint("Error loading AppSettings in ShadeConverterPage: $e");
+      }
+
       setState(() {
         _allShades = shades;
         _sourceBrands = shades.map((s) => s.brand).toSet().toList()..sort();
         _targetBrands = shades.map((s) => s.brand).toSet().toList()..sort();
+        
+        if (matchedBrand != null) {
+          _selectedSourceBrand = matchedBrand;
+          _sourceProducts = sourceProds;
+          _selectedSourceProduct = matchedProduct;
+          _sourceShades = sourceSds;
+          _selectedSourceShade = matchedShade;
+        }
+
         _isLoading = false;
       });
     } catch (_) {
