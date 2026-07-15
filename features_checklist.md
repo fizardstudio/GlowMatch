@@ -61,5 +61,5 @@ Daftar ceklist ini mencatat seluruh modul dan fitur aplikasi GlowMatch untuk mem
 | **[ ]** | **Kebijakan Privasi Data Wajah (Offline Disclosures)** | Menyediakan dokumen Privacy Policy publik yang menegaskan pemrosesan wajah 100% lokal offline (on-device) tanpa pengiriman data ke server luar. | Syarat Wajib Google Console |
 | **[ ]** | **Fitur Cadangan Data (Backup & Restore)** | Fitur ekspor/impor data pouch kosmetik lokal ke Google Drive pengguna dalam format JSON agar data aman saat ganti ponsel. | `lib/features/pouch/` |
 | **[ ]** | **Onboarding Screen & Panduan Pengguna** | Slide pengenalan aplikasi saat dibuka pertama kali yang memandu cara scan wajah dengan cahaya optimal dan cara mengelola pouch. | `lib/features/scanner/` |
-| **[ ]** | **Social Sharing (Growth Hacking)** | Tombol membagikan hasil foto makeup AR/2D Try-on langsung ke Instagram/TikTok dengan watermark promosi GlowMatch. | `lib/features/premium_subscription/` |
-| **[ ]** | **Notifikasi Expiry Pouch Otomatis** | Sistem background task scheduler untuk notifikasi lokal saat produk pouch kosmetik mendekati kadaluwarsa (PAO). | `lib/features/pouch/` |
+| **[x]** | **Social Sharing (Growth Hacking)** | Tombol membagikan hasil foto makeup AR/2D Try-on langsung ke Instagram/TikTok dengan watermark promosi GlowMatch. | `lib/features/premium_subscription/` |
+| **[x]** | **Notifikasi Expiry Pouch Otomatis** | Sistem background task scheduler untuk notifikasi lokal saat produk pouch kosmetik mendekati kadaluwarsa (PAO). | `lib/features/pouch/` |
