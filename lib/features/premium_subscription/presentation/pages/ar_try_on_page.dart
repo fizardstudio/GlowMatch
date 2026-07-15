@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:glowmatch/core/theme/theme_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
