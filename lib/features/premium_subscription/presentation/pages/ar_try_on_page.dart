@@ -111,6 +111,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   final GlobalKey _repaintBoundaryKey = GlobalKey();
   bool _isSavingLook = false;
   bool _isCapturing = false;
+  bool _isCapturingComparison = false;
 
   String _selectedLightingPreset = 'Natural'; // 'Natural', 'Golden Hour', 'Studio Light', 'Cyber Neon'
   bool _showHarmonyHeatmap = false;
@@ -128,6 +129,64 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   final Map<FaceContourType, List<Point<int>>> _smoothedContours = {};
   double? _smoothedSmiling;
   SmoothedFace? _smoothedFace;
+
+  bool get _isCameraReady => _isCameraInitialized && (Platform.isAndroid || _cameraController != null);
+
+  MethodChannel? _nativeViewChannel;
+  String? _nativeFaceShape;
+  double? _nativeSmilingProbability;
+
+  void _onPlatformViewCreated(int id) {
+    _nativeViewChannel = MethodChannel('com.glowmatch.glowmatch/camera_view_$id');
+    _nativeViewChannel!.setMethodCallHandler((call) async {
+      if (call.method == 'onFaceDetected') {
+        final args = call.arguments as Map;
+        final String shape = args['faceShape'];
+        final double smile = (args['smilingProbability'] as num).toDouble();
+        if (mounted) {
+          setState(() {
+            _nativeFaceShape = shape;
+            _nativeSmilingProbability = smile;
+          });
+        }
+      } else if (call.method == 'onFaceLost') {
+        if (mounted) {
+          setState(() {
+            _nativeFaceShape = null;
+            _nativeSmilingProbability = null;
+          });
+        }
+      }
+    });
+    _updateNativeParams();
+  }
+
+  void _updateNativeParams() {
+    if (_nativeViewChannel == null || !Platform.isAndroid) return;
+    
+    final double computedBlushOpacity = _detectedFace?.smilingProbability != null
+        ? (_blushOpacity * (1.0 + _detectedFace!.smilingProbability! * 0.45)).clamp(0.0, 1.0)
+        : _blushOpacity;
+
+    _nativeViewChannel!.invokeMethod('updateParams', {
+      'lipstickColor': _selectedLipstickColor.value,
+      'lipstickOpacity': _lipstickOpacity,
+      'lipstickFinishing': _lipstickFinishing,
+      'blushColor': _selectedBlushColor.value,
+      'blushOpacity': computedBlushOpacity,
+      'foundationColor': _selectedFoundationColor.value,
+      'foundationOpacity': _foundationOpacity,
+      'eyeshadowColor': _selectedEyeshadowColor.value,
+      'eyeshadowOpacity': _eyeshadowOpacity,
+      'hasEyeliner': _hasEyeliner,
+      'eyelinerThickness': _eyelinerThickness,
+      'noseHighlightOpacity': _noseHighlightOpacity,
+      'noseShadingOpacity': _noseShadingOpacity,
+      'showContourGuide': _showContourGuide,
+      'foundationFinishing': _foundationFinishing,
+      'sliderX': _isSplitMode ? (_sliderX * MediaQuery.of(context).devicePixelRatio) : 0.0,
+    });
+  }
 
   // Preset Looks List
   final List<Map<String, dynamic>> _presetLooks = [
@@ -1210,16 +1269,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
     }
   }
 
-  Future<void> _exportBoomerangGif() async {
+  Future<void> _exportComparisonPhoto() async {
     if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
 
     setState(() {
-      _isExportingBoomerang = true;
-      _exportProgress = 0.0;
-      _isCapturing = true; // Sembunyikan garis slider saat pemotretan
+      _isExportingBoomerang = true; // Gunakan flag ini agar dialog progress loading muncul
+      _exportProgress = 0.20;
+      _isCapturing = true; 
+      _isCapturingComparison = true;
     });
 
-    final List<Uint8List> frames = [];
     final double originalSliderX = _sliderX;
     final bool originalSplitMode = _isSplitMode;
 
@@ -1231,54 +1290,136 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
       final double width = boundary.size.width;
 
-      // 1. Ambil Snapshot Riasan Penuh (sliderX = 0)
+      // Set slider ke tengah persis
       setState(() {
         _isSplitMode = true;
-        _sliderX = 0;
+        _sliderX = width / 2;
       });
-      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Tunggu render frame stabil
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      setState(() {
+        _exportProgress = 0.60;
+      });
 
-      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 1.8);
-      final int frameW = uiImageMakeup.width;
-      final int frameH = uiImageMakeup.height;
+      // Capture snapshot
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
 
-      final ByteData? byteDataMakeup = await uiImageMakeup.toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (byteDataMakeup == null) {
-        throw Exception("Gagal mengodekan frame dandan.");
+      if (pngBytes == null) {
+        throw Exception("Gagal mengodekan gambar.");
       }
-      final Uint8List makeupBytes = byteDataMakeup.buffer.asUint8List();
 
       setState(() {
-        _exportProgress = 0.20;
+        _exportProgress = 0.90;
       });
 
-      // 2. Ambil Snapshot Wajah Asli Tanpa Riasan (sliderX = width)
+      // Share image
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("shareImage", {
+        "bytes": pngBytes,
+        "filename": "glowmatch_perbandingan_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/png",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Foto Perbandingan Before/After berhasil dibagikan! 📸✨'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal membagikan foto.");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat foto perbandingan: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
       setState(() {
+        _sliderX = originalSliderX;
+        _isSplitMode = originalSplitMode;
+        _isCapturing = false;
+        _isCapturingComparison = false;
+        _isExportingBoomerang = false;
+      });
+    }
+  }
+
+  Future<void> _exportBoomerangGif() async {
+    if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
+
+    setState(() {
+      _isExportingBoomerang = true;
+      _exportProgress = 0.10;
+      _isCapturing = true; // Sembunyikan garis slider asli saat capture
+      _isCapturingComparison = false;
+    });
+
+    final double originalSliderX = _sliderX;
+    final bool originalSplitMode = _isSplitMode;
+
+    try {
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal menginisialisasi area dandan.");
+      }
+
+      final double width = boundary.size.width;
+
+      // 1. Ambil Snapshot A: Wajah Asli Tanpa Makeup (sliderX = width)
+      setState(() {
+        _isSplitMode = true;
         _sliderX = width;
       });
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 150));
 
-      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 1.8);
-      final ByteData? byteDataRaw = await uiImageRaw.toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (byteDataRaw == null) {
-        throw Exception("Gagal mengodekan frame wajah asli.");
+      final ui.Image rawImage = await boundary.toImage(pixelRatio: 1.5);
+      final int frameW = rawImage.width;
+      final int frameH = rawImage.height;
+
+      final ByteData? rawByteData = await rawImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (rawByteData == null) {
+        throw Exception("Gagal mengambil gambar wajah asli.");
       }
-      final Uint8List rawBytes = byteDataRaw.buffer.asUint8List();
+      final Uint8List rawBytes = rawByteData.buffer.asUint8List();
 
       setState(() {
-        _exportProgress = 0.45;
+        _exportProgress = 0.40;
       });
 
-      await Future.delayed(const Duration(milliseconds: 50));
+      // 2. Ambil Snapshot B: Wajah Dengan Makeup Penuh (sliderX = 0.0)
+      setState(() {
+        _isSplitMode = true;
+        _sliderX = 0.0;
+      });
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      final ui.Image makeupImage = await boundary.toImage(pixelRatio: 1.5);
+      final ByteData? makeupByteData = await makeupImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (makeupByteData == null) {
+        throw Exception("Gagal mengambil gambar riasan.");
+      }
+      final Uint8List makeupBytes = makeupByteData.buffer.asUint8List();
 
       setState(() {
-        _exportProgress = 0.50; // Mulai memproses di latar belakang
+        _exportProgress = 0.60;
       });
 
-      // Jalankan kompresi dan encoding GIF di background Isolate menggunakan compute agar UI tidak hang/lag
+      // 3. Lakukan encoding GIF langsung via compute dengan sangat cepat di background
       final List<int> gifBytes = await compute(
-        encodeBoomerangGifInBackground,
-        BoomerangGifParams(
+        _encodeBoomerangGifData,
+        _BoomerangEncodeParams(
           width: frameW,
           height: frameH,
           rawBytes: rawBytes,
@@ -1287,7 +1428,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       );
 
       setState(() {
-        _exportProgress = 0.95;
+        _exportProgress = 0.90;
       });
 
       const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
@@ -1596,6 +1737,14 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   }
 
   Future<void> _initializeCamera() async {
+    if (Platform.isAndroid) {
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
+      return;
+    }
     try {
       final cameras = await availableCameras();
       final targetCamera = cameras.firstWhere(
@@ -1625,11 +1774,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         _isCameraInitialized = true;
       });
 
-      // Mulai streaming frame kamera untuk Face Mesh Detector dengan Throttling ke ~15 FPS (65ms)
+      // Mulai streaming frame kamera untuk Face Mesh Detector dengan Throttling ke ~30 FPS (33ms)
       _cameraController!.startImageStream((CameraImage image) {
         if (_isProcessingFrame) return;
         final now = DateTime.now().millisecondsSinceEpoch;
-        if (now - _lastFrameTimeMs < 65) return;
+        if (now - _lastFrameTimeMs < 33) return;
         _lastFrameTimeMs = now;
         _isProcessingFrame = true;
         _processFrame(image);
@@ -1647,6 +1796,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   }
 
   Future<void> _toggleCameraDirection() async {
+    if (Platform.isAndroid) {
+      if (mounted) {
+        setState(() {
+          _cameraLensDirection = _cameraLensDirection == CameraLensDirection.front
+              ? CameraLensDirection.back
+              : CameraLensDirection.front;
+        });
+      }
+      return;
+    }
     if (_cameraController == null) return;
     
     // Matikan streaming dan bersihkan controller yang sekarang
@@ -1686,10 +1845,30 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       return;
     }
 
-    final double lerpFactor = 0.35; // Buttery smooth response factor
+    double lerpFactor = 0.35; // Default lerp factor
+    final targetBox = _detectedFace!.boundingBox;
+
+    if (_smoothedBox != null) {
+      final double targetCenterX = (targetBox.left + targetBox.right) / 2;
+      final double targetCenterY = (targetBox.top + targetBox.bottom) / 2;
+      final double smoothedCenterX = (_smoothedBox!.left + _smoothedBox!.right) / 2;
+      final double smoothedCenterY = (_smoothedBox!.top + _smoothedBox!.bottom) / 2;
+
+      // Hitung jarak gerakan wajah dalam piksel koordinat kamera
+      final double distanceMoved = sqrt(
+        pow(targetCenterX - smoothedCenterX, 2) + 
+        pow(targetCenterY - smoothedCenterY, 2)
+      );
+
+      // Skala dinamis: gerakan cepat -> lerp tinggi (nempel), diam -> lerp rendah (bebas getaran)
+      if (distanceMoved > 2.0) {
+        lerpFactor = (0.25 + (distanceMoved * 0.05)).clamp(0.25, 0.95);
+      } else {
+        lerpFactor = 0.25; // Tenang saat diam agar tidak getar
+      }
+    }
 
     // 1. Lerp bounding box
-    final targetBox = _detectedFace!.boundingBox;
     _smoothedBox = _smoothedBox == null
         ? targetBox
         : Rect.fromLTRB(
@@ -1931,6 +2110,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
   @override
   Widget build(BuildContext context) {
+    if (Platform.isAndroid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateNativeParams();
+      });
+    }
     final Size screenSize = MediaQuery.of(context).size;
 
     return PopScope(
@@ -2010,18 +2194,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         children: [
           // 1. Wilayah Kamera Preview (Full Screen)
           Positioned.fill(
-            child: _isCameraInitialized && _cameraController != null && !_isCameraDisposed
+            child: _isCameraInitialized && !_isCameraDisposed
                 ? LayoutBuilder(
                     builder: (context, constraints) {
                       final double cameraAreaWidth = constraints.maxWidth;
                       final double cameraAreaHeight = constraints.maxHeight;
-
-                      final double rawAspectRatio = _cameraController!.value.aspectRatio; // landscape (e.g. 1.333)
-                      final double previewWidth = cameraAreaWidth;
-                      final double previewHeight = cameraAreaWidth * rawAspectRatio;
-
-                      // Hitung faktor skala dari BoxFit.cover
-                      final double scaleFactor = max(cameraAreaWidth / previewWidth, cameraAreaHeight / previewHeight);
 
                       // Inisialisasi sliderX ke tengah lebar area jika belum di-set
                       if (!_isSliderInitialized) {
@@ -2029,8 +2206,20 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                         _isSliderInitialized = true;
                       }
 
+                      final double previewWidth = !Platform.isAndroid && _cameraController != null
+                          ? cameraAreaWidth
+                          : 0.0;
+                      final double previewHeight = !Platform.isAndroid && _cameraController != null
+                          ? cameraAreaWidth * _cameraController!.value.aspectRatio
+                          : 0.0;
+
+                      // Hitung faktor skala dari BoxFit.cover
+                      final double scaleFactor = !Platform.isAndroid && _cameraController != null
+                          ? max(cameraAreaWidth / previewWidth, cameraAreaHeight / previewHeight)
+                          : 1.0;
+
                       // Hitung sliderX untuk painter di dalam FittedBox agar posisinya sinkron dengan garis pembagi di layar
-                      final double painterSliderX = _isSplitMode 
+                      final double painterSliderX = !Platform.isAndroid && _cameraController != null && _isSplitMode 
                           ? (( _sliderX - cameraAreaWidth / 2 ) / scaleFactor + previewWidth / 2)
                           : 0.0;
 
@@ -2041,16 +2230,149 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                             children: [
                               // Camera & Overlays (FittedBox cover)
                               Positioned.fill(
-                                child: ClipRect(
-                                  child: FittedBox(
-                                    fit: BoxFit.cover,
-                                    child: SizedBox(
-                                      width: previewWidth,
-                                      height: previewHeight,
-                                      child: Stack(
+                                child: Platform.isAndroid
+                                    ? Stack(
                                         fit: StackFit.expand,
                                         children: [
-                                          CameraPreview(_cameraController!),
+                                          AndroidView(
+                                            viewType: 'com.glowmatch.glowmatch/camera_view',
+                                            onPlatformViewCreated: _onPlatformViewCreated,
+                                            creationParams: <String, dynamic>{
+                                              'lipstickColor': _selectedLipstickColor.value,
+                                              'lipstickOpacity': _lipstickOpacity,
+                                              'lipstickFinishing': _lipstickFinishing,
+                                              'blushColor': _selectedBlushColor.value,
+                                              'blushOpacity': _blushOpacity,
+                                              'foundationColor': _selectedFoundationColor.value,
+                                              'foundationOpacity': _foundationOpacity,
+                                              'eyeshadowColor': _selectedEyeshadowColor.value,
+                                              'eyeshadowOpacity': _eyeshadowOpacity,
+                                              'hasEyeliner': _hasEyeliner,
+                                              'eyelinerThickness': _eyelinerThickness,
+                                              'noseHighlightOpacity': _noseHighlightOpacity,
+                                              'noseShadingOpacity': _noseShadingOpacity,
+                                              'showContourGuide': _showContourGuide,
+                                              'foundationFinishing': _foundationFinishing,
+                                              'isCapturing': _isCapturing,
+                                              'sliderX': _isSplitMode ? _sliderX : 0.0,
+                                            },
+                                            creationParamsCodec: const StandardMessageCodec(),
+                                          ),
+                                          if (_isCapturing && _showWatermarkSetting)
+                                            Positioned(
+                                              bottom: 24,
+                                              left: 0,
+                                              right: 0,
+                                              child: Center(
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black.withOpacity(0.6),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 12),
+                                                      const SizedBox(width: 4),
+                                                      const Text(
+                                                        'GlowMatch AI - Temukan Shade Wajahmu!',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          if (_isCapturingComparison) ...[
+                                            // 1. Banner Atas
+                                            Positioned(
+                                              top: 24,
+                                              left: 0,
+                                              right: 0,
+                                              child: Center(
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                                  decoration: BoxDecoration(
+                                                    color: primaryColor,
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    boxShadow: ThemeManager.premiumGlowShadow,
+                                                  ),
+                                                  child: const Text(
+                                                    'GLOWMATCH AR COMPARISON',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: 2,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            // 2. Label "SEBELUM" (Kiri)
+                                            Positioned(
+                                              top: 40,
+                                              left: 48,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black54,
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(color: Colors.white24),
+                                                ),
+                                                child: const Text(
+                                                  'SEBELUM',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 2,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            // 3. Label "SESUDAH" (Kanan)
+                                            Positioned(
+                                              top: 40,
+                                              right: 48,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: primaryColor.withOpacity(0.85),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(color: Colors.white24),
+                                                ),
+                                                child: const Text(
+                                                  'SESUDAH',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 2,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      )
+                                    : (_cameraController == null
+                                        ? const Center(child: CircularProgressIndicator())
+                                        : ClipRect(
+                                            child: FittedBox(
+                                              fit: BoxFit.cover,
+                                              child: SizedBox(
+                                                width: previewWidth,
+                                                height: previewHeight,
+                                                child: Stack(
+                                                  fit: StackFit.expand,
+                                                  children: [
+                                                    CameraPreview(_cameraController!),
 
                                       // Layer Rendering Lipstik & Blush-On CustomPaint
                                       if (!_showPaywall)
@@ -2083,6 +2405,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                               noseHighlightOpacity: _noseHighlightOpacity,
                                               noseShadingOpacity: _noseShadingOpacity,
                                               showContourGuide: _showContourGuide,
+                                              isCapturing: _isCapturing,
                                             ),
                                           ),
                                         ),
@@ -2116,12 +2439,68 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                             ),
                                           ),
                                         ),
+                                      // Layer Overlay Before/After Khusus saat Menyimpan Foto Perbandingan
+                                      if (_isCapturingComparison) ...[
+                                        // 1. Garis Pembagi Tengah
+                                        Positioned(
+                                          top: 0,
+                                          bottom: 0,
+                                          left: previewWidth / 2 - 1,
+                                          child: Container(
+                                            width: 2,
+                                            color: const Color(0xFFE5C185), // Warna emas khas GlowMatch
+                                          ),
+                                        ),
+                                        // 2. Label "SEBELUM" (Kiri)
+                                        Positioned(
+                                          top: 40,
+                                          left: 48,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.65),
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: Colors.white24),
+                                            ),
+                                            child: const Text(
+                                              'SEBELUM',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // 3. Label "SESUDAH" (Kanan)
+                                        Positioned(
+                                          top: 40,
+                                          right: 48,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: primaryColor.withOpacity(0.85),
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: Colors.white24),
+                                            ),
+                                            child: const Text(
+                                              'SESUDAH',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
+                            ))),
 
                           // Handle Slider Pembagi Layar Vertikal yang Bisa Digeser
                           if (!_showPaywall && _isSplitMode && !_isCapturing)
@@ -2215,86 +2594,142 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                               ),
                             ),
 
-                          // Live Face Shape & Contour Guidance Banner
-                          if (!_showPaywall && _detectedFace != null && !_isCapturing)
+                          // Floating HUD Row of Badges (Always visible when paywall is not showing and not capturing)
+                          if (!_showPaywall && !_isCapturing)
                             Positioned(
-                              top: 20,
-                              left: 20,
-                              right: 20,
-                              child: Center(
-                                child: Container(
-                                  constraints: const BoxConstraints(maxWidth: 360),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: cardBgColor.withOpacity(_showContourGuide ? 0.92 : 0.85),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: primaryColor.withOpacity(0.4), width: 1.5),
-                                    boxShadow: ThemeManager.premiumGlowShadow,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'round'
-                                                ? Icons.blur_circular_rounded
-                                                : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'long'
-                                                    ? Icons.crop_portrait_rounded
-                                                    : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'square'
-                                                        ? Icons.crop_square_rounded
-                                                        : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'heart'
-                                                            ? Icons.favorite_rounded
-                                                            : Icons.face_rounded,
-                                            color: primaryColor,
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Wajah: ${FaceGeometryHelper.classifyFaceShape(_detectedFace!).toUpperCase()}',
-                                            style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.5,
+                              top: _isDemoActive ? 62 : 20,
+                              left: 16,
+                              right: 16,
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Wrap(
+                                  spacing: 10,
+                                  runSpacing: 8,
+                                  alignment: WrapAlignment.center,
+                                  children: [
+                                    // A. Lencana Deteksi Bentuk Wajah
+                                    Builder(
+                                      builder: (context) {
+                                        final String? shape = Platform.isAndroid
+                                            ? _nativeFaceShape
+                                            : (_detectedFace != null ? FaceGeometryHelper.classifyFaceShape(_detectedFace!) : null);
+                                        final bool hasFace = shape != null;
+                                        final Color badgeColor = hasFace ? primaryColor : textMutedColor.withOpacity(0.6);
+                                        
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.65),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: badgeColor.withOpacity(0.6),
+                                              width: 1.2,
                                             ),
                                           ),
-                                          if (_showContourGuide) ...[
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.amber,
-                                                borderRadius: BorderRadius.circular(6),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 6,
+                                                height: 6,
+                                                decoration: BoxDecoration(
+                                                  color: badgeColor,
+                                                  shape: BoxShape.circle,
+                                                ),
                                               ),
-                                              child: const Text(
-                                                'PANDUAN KONTUR',
-                                                style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                hasFace ? 'DETEKSI: ${shape.toUpperCase()}' : 'DETEKSI: MENCARI WAJAH...',
+                                                style: TextStyle(
+                                                  color: hasFace ? Colors.white : Colors.white70,
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    
+                                    // B. Lencana Status Panduan Kontur
+                                    if (_showContourGuide)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.65),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: const Color(0xFFE5C185).withOpacity(0.6),
+                                            width: 1.2,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFFE5C185),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'PANDUAN KONTUR: AKTIF',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 0.5,
                                               ),
                                             ),
                                           ],
-                                        ],
-                                      ),
-                                      if (_showContourGuide) ...[
-                                        const SizedBox(height: 8),
-                                        const Divider(height: 8, thickness: 1),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _getContourTip(FaceGeometryHelper.classifyFaceShape(_detectedFace!)),
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: textColor.withOpacity(0.9),
-                                            fontSize: 10,
-                                            height: 1.45,
-                                            fontWeight: FontWeight.w600,
-                                          ),
                                         ),
-                                      ],
-                                    ],
-                                  ),
+                                      ),
+                                  ],
                                 ),
                               ),
+                            ),
+
+                          // 2. Tips Panduan Kontur (hanya muncul di bawah HUD saat panduan kontur aktif & wajah terdeteksi)
+                          if (!_showPaywall && _showContourGuide && (Platform.isAndroid ? _nativeFaceShape != null : _detectedFace != null) && !_isCapturing)
+                            Builder(
+                              builder: (context) {
+                                final String currentShape = Platform.isAndroid
+                                    ? (_nativeFaceShape ?? 'oval')
+                                    : FaceGeometryHelper.classifyFaceShape(_detectedFace!);
+
+                                return Positioned(
+                                  top: _isDemoActive ? 104 : 62,
+                                  left: 20,
+                                  right: 20,
+                                  child: Center(
+                                    child: Container(
+                                      constraints: const BoxConstraints(maxWidth: 360),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: cardBgColor.withOpacity(0.92),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: primaryColor.withOpacity(0.4), width: 1.5),
+                                        boxShadow: ThemeManager.premiumGlowShadow,
+                                      ),
+                                      child: Text(
+                                        _getContourTip(currentShape),
+                                        style: TextStyle(
+                                          color: textColor.withOpacity(0.9),
+                                          fontSize: 10,
+                                          height: 1.45,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
                             ),
 
                           // Overlay Dialog Paywall Premium Glassmorphism
@@ -2425,7 +2860,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
           ),
 
           // 2. Tombol Show/Hide Floating Panel (Hanya melayang saat panel ditutup)
-          if (!_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall && !_isCapturing)
+          if (!_showControls && _isCameraReady && !_showPaywall && !_isCapturing)
             Positioned(
               bottom: 24,
               right: 16,
@@ -2453,7 +2888,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
             ),
 
           // 2.5. Floating Action Panel (Tombol Melayang di Kanan Layar agar Tangan Pengguna Tidak Menghalangi Kamera)
-          if (_isCameraInitialized && _cameraController != null && !_showPaywall && !_isCapturing)
+          if (_isCameraReady && !_showPaywall && !_isCapturing)
             Positioned(
               top: kToolbarHeight + 40,
               right: 16,
@@ -2481,10 +2916,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                     onPressed: _saveCurrentMakeupLook,
                   ),
                   _buildFloatingActionButton(
-                    icon: Icons.videocam_rounded,
-                    tooltip: 'Buat & Bagikan Boomerang',
-                    onPressed: _exportBoomerangGif,
+                    icon: Icons.compare_rounded,
+                    tooltip: 'Bagikan Foto Perbandingan Before/After',
+                    onPressed: _exportComparisonPhoto,
                   ),
+
                   _buildFloatingActionButton(
                     icon: Icons.share_rounded,
                     tooltip: 'Bagikan Riasan',
@@ -2495,7 +2931,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
             ),
 
           // 3. Wilayah Kontrol Filter Bawah (Floats at bottom with premium card styling)
-          if (_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall && !_isCapturing)
+          if (_showControls && _isCameraReady && !_showPaywall && !_isCapturing)
             Positioned(
               bottom: 0,
               left: 0,
@@ -3020,6 +3456,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                               setState(() {
                                 _showContourGuide = val;
                               });
+                              _updateNativeParams();
                             },
                           ),
                         ],
@@ -3333,7 +3770,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Membuat Animasi Boomerang...',
+                          'Membuat Foto Perbandingan...',
                           style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         const SizedBox(height: 8),
@@ -3442,13 +3879,12 @@ class SmoothedFaceContour implements FaceContour {
 
   SmoothedFaceContour({required this.type, required this.points});
 }
-
-class BoomerangGifParams {
+class _BoomerangEncodeParams {
   final int width;
   final int height;
   final Uint8List rawBytes;
   final Uint8List makeupBytes;
-  BoomerangGifParams({
+  _BoomerangEncodeParams({
     required this.width,
     required this.height,
     required this.rawBytes,
@@ -3457,20 +3893,27 @@ class BoomerangGifParams {
 }
 
 @pragma('vm:entry-point')
-List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
-  final List<Uint8List> frames = [];
+List<int> _encodeBoomerangGifData(_BoomerangEncodeParams params) {
   final int width = params.width;
   final int height = params.height;
   final int bytesPerRow = width * 4;
+  final List<Uint8List> frames = [];
 
-  // Generate 4 frames (optimalkan jumlah frame agar encoding sangat cepat & tidak OOM)
-  final List<double> steps = [0.0, 0.33, 0.66, 1.0];
-  for (int i = 0; i < steps.length; i++) {
-    final double splitFactor = steps[i];
-    final int splitCol = (width * splitFactor).toInt();
+  // 5 frame transisi: 0%, 25%, 50%, 75%, 100% makeup
+  final List<double> factors = [0.0, 0.25, 0.50, 0.75, 1.0];
+
+  final int goldR = 0xE5;
+  final int goldG = 0xC1;
+  final int goldB = 0x85;
+  final int goldA = 0xFF;
+
+  for (int i = 0; i < factors.length; i++) {
+    final double f = factors[i];
+    final int splitCol = (width * (1.0 - f)).toInt();
     final int splitBytes = splitCol * 4;
-    
+
     final Uint8List frameBytes = Uint8List(width * height * 4);
+
     for (int y = 0; y < height; y++) {
       final int rowOffset = y * bytesPerRow;
       if (splitBytes > 0) {
@@ -3490,12 +3933,33 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
         );
       }
     }
+
+    // Gambar garis divider emas (slider) setebal 2px jika di posisi transisi tengah (25%, 50%, 75%)
+    if (f > 0.0 && f < 1.0 && splitCol > 0 && splitCol < width) {
+      for (int y = 0; y < height; y++) {
+        final int pixelOffset = (y * width + splitCol) * 4;
+        if (pixelOffset + 3 < frameBytes.length) {
+          frameBytes[pixelOffset] = goldR;
+          frameBytes[pixelOffset + 1] = goldG;
+          frameBytes[pixelOffset + 2] = goldB;
+          frameBytes[pixelOffset + 3] = goldA;
+        }
+        final int pixelOffset2 = (y * width + splitCol + 1) * 4;
+        if (pixelOffset2 + 3 < frameBytes.length) {
+          frameBytes[pixelOffset2] = goldR;
+          frameBytes[pixelOffset2 + 1] = goldG;
+          frameBytes[pixelOffset2 + 2] = goldB;
+          frameBytes[pixelOffset2 + 3] = goldA;
+        }
+      }
+    }
+
     frames.add(frameBytes);
   }
 
-  // Compile GIF using package:image
+  // Kompilasi GIF menggunakan package:image
   final img.Image gifAnim = img.Image(width: width, height: height, numChannels: 4);
-  gifAnim.frameDuration = 200; // Perlambat durasi per frame karena jumlah frame lebih sedikit
+  gifAnim.frameDuration = 220; // Jeda 220ms per frame agar animasi seimbang
 
   for (int fIndex = 0; fIndex < frames.length; fIndex++) {
     final img.Image frameImg = img.Image.fromBytes(
@@ -3504,7 +3968,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
       bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
-    frameImg.frameDuration = 200;
+    frameImg.frameDuration = 220;
     if (fIndex == 0) {
       gifAnim.frames[0] = frameImg;
     } else {
@@ -3512,7 +3976,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
     }
   }
 
-  // Ping-pong frames untuk efek Boomerang
+  // Ping-pong frames untuk efek bolak-balik Boomerang (frame 4, 3, 2)
   for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
     final img.Image frameImg = img.Image.fromBytes(
       width: width,
@@ -3520,11 +3984,15 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
       bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
-    frameImg.frameDuration = 200;
+    frameImg.frameDuration = 220;
     gifAnim.addFrame(frameImg);
   }
 
-  // Gunakan samplingFactor: 30 untuk mempercepat kuantisasi warna ( neural network palette training )
-  final gifEncoder = img.GifEncoder(samplingFactor: 30);
+  // Set samplingFactor ke 10 dan aktifkan dithering Floyd-Steinberg untuk gradasi warna wajah & watermark super tajam
+  final gifEncoder = img.GifEncoder(
+    samplingFactor: 10,
+    dither: img.DitherKernel.floydSteinberg,
+    ditherSerpentine: true,
+  );
   return gifEncoder.encode(gifAnim);
 }

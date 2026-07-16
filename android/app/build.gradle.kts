@@ -24,6 +24,13 @@ android {
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        externalNativeBuild {
+            cmake {
+                cppFlags("-std=c++17")
+                arguments("-DANDROID_STL=c++_shared")
+            }
+        }
     }
 
     buildTypes {
@@ -32,6 +39,13 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 }
@@ -47,5 +61,17 @@ flutter {
 }
 
 dependencies {
+    // CameraX
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    
+    // ML Kit Face Detection
+    implementation("com.google.mlkit:face-detection:16.1.6")
+
+    // Guava (Required by CameraX ListenableFuture)
+    implementation("com.google.guava:guava:31.1-android")
+
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

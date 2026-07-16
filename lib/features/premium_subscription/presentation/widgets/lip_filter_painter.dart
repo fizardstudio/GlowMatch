@@ -48,6 +48,7 @@ class LipFilterPainter extends CustomPainter {
   
   // Panduan Kontur AR Overlay
   final bool showContourGuide;
+  final bool isCapturing;
 
   LipFilterPainter({
     required this.face,
@@ -74,6 +75,7 @@ class LipFilterPainter extends CustomPainter {
     required this.noseHighlightOpacity,
     required this.noseShadingOpacity,
     required this.showContourGuide,
+    required this.isCapturing,
   });
 
   @override
@@ -99,18 +101,13 @@ class LipFilterPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Rect.fromLTRB(sliderX, 0, size.width, size.height));
 
-    // Helper untuk menggambar kurva Bezier agar pinggiran kosmetik mulus (Path Smoothing)
+    // Menghubungkan titik secara presisi agar riasan menempel pas pada koordinat wajah
     void buildSmoothPath(Path path, List<Offset> pointsList) {
       if (pointsList.isEmpty) return;
       path.moveTo(pointsList.first.dx, pointsList.first.dy);
-      for (int i = 0; i < pointsList.length - 1; i++) {
-        final p1 = pointsList[i];
-        final p2 = pointsList[i + 1];
-        final xc = (p1.dx + p2.dx) / 2;
-        final yc = (p1.dy + p2.dy) / 2;
-        path.quadraticBezierTo(p1.dx, p1.dy, xc, yc);
+      for (int i = 1; i < pointsList.length; i++) {
+        path.lineTo(pointsList[i].dx, pointsList[i].dy);
       }
-      path.lineTo(pointsList.last.dx, pointsList.last.dy);
     }
 
     // Estimasi posisi pipi untuk blush-on (menggunakan logika 100% identik dengan uji rias 2D yang sangat bagus)
@@ -211,7 +208,7 @@ class LipFilterPainter extends CustomPainter {
         final paintBase = Paint()
           ..color = foundationColor!.withOpacity(foundationOpacity)
           ..style = PaintingStyle.fill
-          ..blendMode = BlendMode.srcOver
+          ..blendMode = BlendMode.softLight
           ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
 
         canvas.drawPath(finalFoundationPath, paintBase);
@@ -283,6 +280,7 @@ class LipFilterPainter extends CustomPainter {
             // Gradient linear vertikal lokal untuk masing-masing kelopak mata (memudar ke atas)
             final Paint paintEyeshadow = Paint()
               ..style = PaintingStyle.fill
+              ..blendMode = BlendMode.softLight
               ..shader = ui.Gradient.linear(
                 upperLid[4], // Tengah kelopak mata bawah
                 shiftedPoints[4], // Tengah kelopak mata atas yang digeser
@@ -448,7 +446,8 @@ class LipFilterPainter extends CustomPainter {
             ..color = const Color(0xFF7D5F52).withOpacity(noseShadingOpacity * 0.75)
             ..strokeWidth = faceWidth * 0.038
             ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round;
+            ..strokeJoin = StrokeJoin.round
+            ..blendMode = BlendMode.multiply;
 
           // Apply Gaussian Blur to blend the shading smoothly
           paintShading.imageFilter = ui.ImageFilter.blur(sigmaX: 5.5, sigmaY: 5.5);
@@ -472,6 +471,7 @@ class LipFilterPainter extends CustomPainter {
             ..color = const Color(0xFFFFFDF5).withOpacity(noseHighlightOpacity * 0.5)
             ..strokeWidth = strokeW
             ..strokeCap = StrokeCap.round
+            ..blendMode = BlendMode.screen
             ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
 
           canvas.drawPath(highlightPath, paintHighlightLine);
@@ -482,6 +482,7 @@ class LipFilterPainter extends CustomPainter {
           final Paint paintTipCircle = Paint()
             ..style = PaintingStyle.fill
             ..color = const Color(0xFFFFFDF5).withOpacity(noseHighlightOpacity * 0.65)
+            ..blendMode = BlendMode.screen
             ..imageFilter = ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5);
 
           canvas.drawCircle(noseTip, faceWidth * 0.009, paintTipCircle);
@@ -571,7 +572,7 @@ class LipFilterPainter extends CustomPainter {
       
       final Paint paintGlow = Paint()
         ..style = PaintingStyle.fill
-        ..blendMode = BlendMode.srcOver;
+        ..blendMode = BlendMode.screen;
 
       // Glow Pipi Kiri & Kanan (Hanya muncul jika blushOpacity > 0.0 dan blushColor != null)
       if (blushColor != null && blushOpacity > 0.0) {
@@ -679,7 +680,7 @@ class LipFilterPainter extends CustomPainter {
       // Atur finishing lipstik (Matte vs Glossy) dengan gradien warna alami untuk efek 3D
       final paintLip = Paint()
         ..style = PaintingStyle.fill
-        ..blendMode = BlendMode.srcOver
+        ..blendMode = lipstickFinishing == 'glossy' ? BlendMode.color : BlendMode.multiply
         ..imageFilter = ui.ImageFilter.blur(sigmaX: 1.4, sigmaY: 1.4);
 
       if (lipstickFinishing == 'glossy') {
@@ -787,6 +788,7 @@ class LipFilterPainter extends CustomPainter {
         
         final paintCheek = Paint()
           ..style = PaintingStyle.fill
+          ..blendMode = BlendMode.softLight
           // Menggunakan blur terkalibrasi (sigma 9.5) agar warna tidak larut/hilang, tetapi tepi tetap halus airbrush
           ..imageFilter = ui.ImageFilter.blur(sigmaX: 9.5, sigmaY: 8.0)
           ..shader = RadialGradient(
@@ -1025,6 +1027,7 @@ class LipFilterPainter extends CustomPainter {
         oldDelegate.hasEyeliner != hasEyeliner ||
         oldDelegate.eyelinerThickness != eyelinerThickness ||
         oldDelegate.noseHighlightOpacity != noseHighlightOpacity ||
+        oldDelegate.isCapturing != isCapturing ||
         oldDelegate.noseShadingOpacity != noseShadingOpacity;
   }
 }

@@ -59,6 +59,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   bool _isLoadingImage = false;
   bool _isSavingLook = false;
   bool _isCapturing = false;
+  bool _isCapturingComparison = false;
   Face? _detectedFace;
   ui.Image? _decodedImage;
   int _originalWidth = 0;
@@ -1051,16 +1052,16 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     );
   }
 
-  Future<void> _exportBoomerangGif() async {
+  Future<void> _exportComparisonPhoto() async {
     if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
 
     setState(() {
-      _isExportingBoomerang = true;
-      _exportProgress = 0.0;
-      _isCapturing = true; // Sembunyikan garis slider saat pemotretan
+      _isExportingBoomerang = true; // Gunakan flag ini agar dialog progress loading muncul
+      _exportProgress = 0.20;
+      _isCapturing = true; 
+      _isCapturingComparison = true;
     });
 
-    final List<Uint8List> frames = [];
     final double originalSliderX = _sliderX;
     final bool originalSplitMode = _isSplitMode;
 
@@ -1072,54 +1073,136 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
       final double width = boundary.size.width;
 
-      // 1. Ambil Snapshot Riasan Penuh (sliderX = 0)
+      // Set slider ke tengah persis
       setState(() {
         _isSplitMode = true;
-        _sliderX = 0;
+        _sliderX = width / 2;
       });
-      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Tunggu render frame stabil
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      setState(() {
+        _exportProgress = 0.60;
+      });
 
-      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 1.8);
-      final int frameW = uiImageMakeup.width;
-      final int frameH = uiImageMakeup.height;
+      // Capture snapshot
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List? pngBytes = byteData?.buffer.asUint8List();
 
-      final ByteData? byteDataMakeup = await uiImageMakeup.toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (byteDataMakeup == null) {
-        throw Exception("Gagal mengodekan frame dandan.");
+      if (pngBytes == null) {
+        throw Exception("Gagal mengodekan gambar.");
       }
-      final Uint8List makeupBytes = byteDataMakeup.buffer.asUint8List();
 
       setState(() {
-        _exportProgress = 0.20;
+        _exportProgress = 0.90;
       });
 
-      // 2. Ambil Snapshot Wajah Asli Tanpa Riasan (sliderX = width)
+      // Share image
+      const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
+      final bool success = await platform.invokeMethod<bool>("shareImage", {
+        "bytes": pngBytes,
+        "filename": "glowmatch_perbandingan_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/png",
+      }) ?? false;
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Foto Perbandingan Before/After berhasil dibagikan! 📸✨'),
+              backgroundColor: primaryColor,
+            ),
+          );
+        } else {
+          throw Exception("Gagal membagikan foto.");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat foto perbandingan: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
       setState(() {
+        _sliderX = originalSliderX;
+        _isSplitMode = originalSplitMode;
+        _isCapturing = false;
+        _isCapturingComparison = false;
+        _isExportingBoomerang = false;
+      });
+    }
+  }
+
+  Future<void> _exportBoomerangGif() async {
+    if (_detectedFace == null || _showPaywall || _isExportingBoomerang) return;
+
+    setState(() {
+      _isExportingBoomerang = true;
+      _exportProgress = 0.10;
+      _isCapturing = true; // Sembunyikan garis slider asli saat capture
+      _isCapturingComparison = false;
+    });
+
+    final double originalSliderX = _sliderX;
+    final bool originalSplitMode = _isSplitMode;
+
+    try {
+      final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Gagal menginisialisasi area dandan.");
+      }
+
+      final double width = boundary.size.width;
+
+      // 1. Ambil Snapshot A: Wajah Asli Tanpa Makeup (sliderX = width)
+      setState(() {
+        _isSplitMode = true;
         _sliderX = width;
       });
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 150));
 
-      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 1.8);
-      final ByteData? byteDataRaw = await uiImageRaw.toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (byteDataRaw == null) {
-        throw Exception("Gagal mengodekan frame wajah asli.");
+      final ui.Image rawImage = await boundary.toImage(pixelRatio: 1.5);
+      final int frameW = rawImage.width;
+      final int frameH = rawImage.height;
+
+      final ByteData? rawByteData = await rawImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (rawByteData == null) {
+        throw Exception("Gagal mengambil gambar wajah asli.");
       }
-      final Uint8List rawBytes = byteDataRaw.buffer.asUint8List();
+      final Uint8List rawBytes = rawByteData.buffer.asUint8List();
 
       setState(() {
-        _exportProgress = 0.45;
+        _exportProgress = 0.40;
       });
 
-      await Future.delayed(const Duration(milliseconds: 50));
+      // 2. Ambil Snapshot B: Wajah Dengan Makeup Penuh (sliderX = 0.0)
+      setState(() {
+        _isSplitMode = true;
+        _sliderX = 0.0;
+      });
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      final ui.Image makeupImage = await boundary.toImage(pixelRatio: 1.5);
+      final ByteData? makeupByteData = await makeupImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (makeupByteData == null) {
+        throw Exception("Gagal mengambil gambar riasan.");
+      }
+      final Uint8List makeupBytes = makeupByteData.buffer.asUint8List();
 
       setState(() {
-        _exportProgress = 0.50; // Mulai memproses di latar belakang
+        _exportProgress = 0.60;
       });
 
-      // Jalankan kompresi dan encoding GIF di background Isolate menggunakan compute agar UI tidak hang/lag
+      // 3. Lakukan encoding GIF langsung via compute dengan sangat cepat di background
       final List<int> gifBytes = await compute(
-        encodeBoomerangGifInBackground,
-        BoomerangGifParams(
+        _encodeBoomerangGifData,
+        _BoomerangEncodeParams(
           width: frameW,
           height: frameH,
           rawBytes: rawBytes,
@@ -1128,7 +1211,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       );
 
       setState(() {
-        _exportProgress = 0.95;
+        _exportProgress = 0.90;
       });
 
       const platform = MethodChannel("com.fizardstudio.glowmatch/widget");
@@ -1150,7 +1233,6 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
           throw Exception("Gagal membagikan animasi.");
         }
       }
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1375,6 +1457,63 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         });
       }
     }
+  }
+
+  void _showShareMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBgColor.withOpacity(0.97),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            border: Border.all(color: cardBorderColor, width: 1.5),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Pilih Metode Bagikan 📤',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(Icons.share_rounded, color: primaryColor),
+                title: Text('Bagikan Riasan Penuh', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                subtitle: Text('Bagikan foto selfie Anda dengan riasan lengkap', style: TextStyle(color: textMutedColor, fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareCurrentMakeupLook();
+                },
+              ),
+              Divider(color: cardBorderColor),
+              ListTile(
+                leading: Icon(Icons.compare_rounded, color: primaryColor),
+                title: Text('Bagikan Perbandingan Before/After', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                subtitle: Text('Bagikan foto perbandingan wajah asli vs terias', style: TextStyle(color: textMutedColor, fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _exportComparisonPhoto();
+                },
+              ),
+
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _shareCurrentMakeupLook() async {
@@ -1661,7 +1800,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           blushOpacity: _blushOpacity,
                                           showGlassSkin: _showGlassSkin,
                                           foundationFinishing: _foundationFinishing,
-                                          sliderX: _isCapturing || !_isSplitMode ? 0.0 : _sliderX,
+                                          sliderX: _isExportingBoomerang || _isCapturingComparison ? _sliderX : (_isCapturing || !_isSplitMode ? 0.0 : _sliderX),
                                           selectedLightingPreset: _selectedLightingPreset,
                                           showHarmonyHeatmap: _showHarmonyHeatmap,
                                           undertone: _lastMatchedUndertone,
@@ -1706,6 +1845,64 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                         ),
                                       ),
                                     ),
+
+                                  // Layer Overlay Before/After Khusus saat Menyimpan Foto Perbandingan
+                                  if (_isCapturingComparison) ...[
+                                    // 1. Garis Pembagi Tengah
+                                    Positioned(
+                                      top: 0,
+                                      bottom: 0,
+                                      left: fittedSize.width / 2 - 1,
+                                      child: Container(
+                                        width: 2,
+                                        color: const Color(0xFFE5C185), // Warna emas khas GlowMatch
+                                      ),
+                                    ),
+                                    // 2. Label "SEBELUM" (Kiri)
+                                    Positioned(
+                                      top: 24,
+                                      left: 44,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.65),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.white24),
+                                        ),
+                                        child: const Text(
+                                          'SEBELUM',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // 3. Label "SESUDAH" (Kanan)
+                                    Positioned(
+                                      top: 24,
+                                      right: 44,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: primaryColor.withOpacity(0.85),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.white24),
+                                        ),
+                                        child: const Text(
+                                          'SESUDAH',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
 
                                   // Slider Garis Pembagi
                                   if (!_showPaywall && !_isCapturing)
@@ -2479,7 +2676,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                             ),
                             icon:  Icon(Icons.share_rounded, size: 14, color: primaryColor),
                             label: const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
-                            onPressed: _shareCurrentMakeupLook,
+                            onPressed: _showShareMenu,
                           ),
                         ),
                       ],
@@ -2536,7 +2733,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Membuat Animasi Boomerang...',
+                          'Membuat Foto Perbandingan...',
                           style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         const SizedBox(height: 8),
@@ -2839,13 +3036,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     );
   }
 }
-
-class BoomerangGifParams {
+class _BoomerangEncodeParams {
   final int width;
   final int height;
   final Uint8List rawBytes;
   final Uint8List makeupBytes;
-  BoomerangGifParams({
+  _BoomerangEncodeParams({
     required this.width,
     required this.height,
     required this.rawBytes,
@@ -2854,20 +3050,27 @@ class BoomerangGifParams {
 }
 
 @pragma('vm:entry-point')
-List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
-  final List<Uint8List> frames = [];
+List<int> _encodeBoomerangGifData(_BoomerangEncodeParams params) {
   final int width = params.width;
   final int height = params.height;
   final int bytesPerRow = width * 4;
+  final List<Uint8List> frames = [];
 
-  // Generate 4 frames (optimalkan jumlah frame agar encoding sangat cepat & tidak OOM)
-  final List<double> steps = [0.0, 0.33, 0.66, 1.0];
-  for (int i = 0; i < steps.length; i++) {
-    final double splitFactor = steps[i];
-    final int splitCol = (width * splitFactor).toInt();
+  // 5 frame transisi: 0%, 25%, 50%, 75%, 100% makeup
+  final List<double> factors = [0.0, 0.25, 0.50, 0.75, 1.0];
+
+  final int goldR = 0xE5;
+  final int goldG = 0xC1;
+  final int goldB = 0x85;
+  final int goldA = 0xFF;
+
+  for (int i = 0; i < factors.length; i++) {
+    final double f = factors[i];
+    final int splitCol = (width * (1.0 - f)).toInt();
     final int splitBytes = splitCol * 4;
-    
+
     final Uint8List frameBytes = Uint8List(width * height * 4);
+
     for (int y = 0; y < height; y++) {
       final int rowOffset = y * bytesPerRow;
       if (splitBytes > 0) {
@@ -2887,12 +3090,33 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
         );
       }
     }
+
+    // Gambar garis divider emas (slider) setebal 2px jika di posisi transisi tengah (25%, 50%, 75%)
+    if (f > 0.0 && f < 1.0 && splitCol > 0 && splitCol < width) {
+      for (int y = 0; y < height; y++) {
+        final int pixelOffset = (y * width + splitCol) * 4;
+        if (pixelOffset + 3 < frameBytes.length) {
+          frameBytes[pixelOffset] = goldR;
+          frameBytes[pixelOffset + 1] = goldG;
+          frameBytes[pixelOffset + 2] = goldB;
+          frameBytes[pixelOffset + 3] = goldA;
+        }
+        final int pixelOffset2 = (y * width + splitCol + 1) * 4;
+        if (pixelOffset2 + 3 < frameBytes.length) {
+          frameBytes[pixelOffset2] = goldR;
+          frameBytes[pixelOffset2 + 1] = goldG;
+          frameBytes[pixelOffset2 + 2] = goldB;
+          frameBytes[pixelOffset2 + 3] = goldA;
+        }
+      }
+    }
+
     frames.add(frameBytes);
   }
 
-  // Compile GIF using package:image
+  // Kompilasi GIF menggunakan package:image
   final img.Image gifAnim = img.Image(width: width, height: height, numChannels: 4);
-  gifAnim.frameDuration = 200; // Perlambat durasi per frame karena jumlah frame lebih sedikit
+  gifAnim.frameDuration = 220; // Jeda 220ms per frame agar animasi seimbang
 
   for (int fIndex = 0; fIndex < frames.length; fIndex++) {
     final img.Image frameImg = img.Image.fromBytes(
@@ -2901,7 +3125,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
       bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
-    frameImg.frameDuration = 200;
+    frameImg.frameDuration = 220;
     if (fIndex == 0) {
       gifAnim.frames[0] = frameImg;
     } else {
@@ -2909,7 +3133,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
     }
   }
 
-  // Ping-pong frames untuk efek Boomerang
+  // Ping-pong frames untuk efek bolak-balik Boomerang (frame 4, 3, 2)
   for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
     final img.Image frameImg = img.Image.fromBytes(
       width: width,
@@ -2917,11 +3141,15 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
       bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
-    frameImg.frameDuration = 200;
+    frameImg.frameDuration = 220;
     gifAnim.addFrame(frameImg);
   }
 
-  // Gunakan samplingFactor: 30 untuk mempercepat kuantisasi warna ( neural network palette training )
-  final gifEncoder = img.GifEncoder(samplingFactor: 30);
+  // Set samplingFactor ke 10 dan aktifkan dithering Floyd-Steinberg untuk gradasi warna wajah & watermark super tajam
+  final gifEncoder = img.GifEncoder(
+    samplingFactor: 10,
+    dither: img.DitherKernel.floydSteinberg,
+    ditherSerpentine: true,
+  );
   return gifEncoder.encode(gifAnim);
 }

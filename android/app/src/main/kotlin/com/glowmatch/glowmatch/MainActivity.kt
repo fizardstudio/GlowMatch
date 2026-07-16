@@ -10,6 +10,12 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "com.glowmatch.glowmatch/camera_view",
+            GlowMatchCameraViewFactory(flutterEngine.dartExecutor.binaryMessenger, this)
+        )
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "updateWidgetData" -> {
