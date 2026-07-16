@@ -125,6 +125,12 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
       );
 
       await _cameraController!.initialize();
+
+      // Mengaktifkan autofokus secara eksplisit jika didukung
+      try {
+        await _cameraController!.setFocusMode(FocusMode.auto);
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
@@ -150,10 +156,16 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
       // 1. Ekstrak teks secara luring
       final String extractedText = await SkincareOcrParser.extractTextFromImage(imagePath);
       
-      // 2. Parse kandungan bahan aktif
-      final List<SkincareIngredient> matched = SkincareOcrParser.parseIngredients(extractedText);
+      // 2. Parse seluruh kandungan komposisi secara detail (baik terdaftar di DB maupun umum)
+      final List<Map<String, dynamic>> allIngredients = SkincareOcrParser.parseAllIngredientsWithMatches(extractedText);
       
-      // 3. Hitung skor kecocokan
+      // 3. Ambil daftar bahan aktif yang cocok untuk perhitungan skor
+      final List<SkincareIngredient> matched = allIngredients
+          .map((item) => item['matched'] as SkincareIngredient?)
+          .whereType<SkincareIngredient>()
+          .toList();
+      
+      // 4. Hitung skor kecocokan
       final Map<String, dynamic> result = SkincareOcrParser.calculateCompatibility(
         matchedIngredients: matched,
         skinTypeKey: _selectedSkinType,
@@ -163,7 +175,7 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
         setState(() {
           _isAnalyzing = false;
         });
-        _showAnalysisResultSheet(matched, result);
+        _showAnalysisResultSheet(allIngredients, result);
       }
     } catch (_) {
       if (mounted) {
@@ -175,6 +187,101 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
         );
       }
     }
+  }
+
+  // Mengontrol Senter (Flashlight/Torch)
+  bool _isTorchOn = false;
+  Future<void> _toggleTorch() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+    try {
+      final newMode = _isTorchOn ? FlashMode.off : FlashMode.torch;
+      await _cameraController!.setFlashMode(newMode);
+      setState(() {
+        _isTorchOn = !_isTorchOn;
+      });
+    } catch (_) {}
+  }
+
+  // Menangani Ketukan Layar untuk Fokus (Tap-to-Focus)
+  Future<void> _onTapToFocus(TapUpDetails details, BoxConstraints constraints) async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+    
+    final double x = details.localPosition.dx / constraints.maxWidth;
+    final double y = details.localPosition.dy / constraints.maxHeight;
+    
+    try {
+      await _cameraController!.setFocusPoint(Offset(x, y));
+      await _cameraController!.setFocusMode(FocusMode.auto);
+    } catch (_) {
+      // Abaikan jika fokus titik tidak didukung
+    }
+  }
+
+  // Menampilkan detail info kandungan dalam dialog saat ditap
+  void _showIngredientDetailDialog(BuildContext context, SkincareIngredient ingredient) {
+    final isDark = ThemeManager.isDark;
+    final textColor = ThemeManager.textColor;
+    final textMutedColor = ThemeManager.textMutedColor;
+    final primaryColor = ThemeManager.primaryColor;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.science_rounded, color: primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                ingredient.name,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              ingredient.category,
+              style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              ingredient.description,
+              style: TextStyle(color: textColor, fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Risiko Iritasi:', style: TextStyle(color: textMutedColor, fontSize: 11)),
+                Row(
+                  children: List.generate(5, (idx) {
+                    return Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: idx < ingredient.irritationScore
+                          ? (ingredient.irritationScore >= 4 ? Colors.red : Colors.orange)
+                          : textMutedColor.withOpacity(0.2),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Tutup', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   // Mengambil gambar dari Kamera
@@ -206,12 +313,18 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
   }
 
   // Tampilkan Bottom Sheet dengan Hasil Analisis Premium
-  void _showAnalysisResultSheet(List<SkincareIngredient> ingredients, Map<String, dynamic> analysis) {
+  void _showAnalysisResultSheet(List<Map<String, dynamic>> allIngredients, Map<String, dynamic> analysis) {
     final isDark = ThemeManager.isDark;
     final textColor = ThemeManager.textColor;
     final textMutedColor = ThemeManager.textMutedColor;
     final cardBgColor = ThemeManager.cardBgColor;
     final primaryColor = ThemeManager.primaryColor;
+
+    // Filter kandungan aktif yang cocok saja untuk daftar rincian di bawah
+    final List<SkincareIngredient> activeIngredients = allIngredients
+        .map((item) => item['matched'] as SkincareIngredient?)
+        .whereType<SkincareIngredient>()
+        .toList();
 
     showModalBottomSheet(
       context: context,
@@ -359,13 +472,116 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 24),
+
+                            // 2.5. Seluruh Komposisi yang Terdeteksi
+                            Text(
+                              'Seluruh Komposisi Terdeteksi (${allIngredients.length})',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Ketuk kandungan yang disorot untuk melihat penjelasan manfaatnya',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: textMutedColor,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (allIngredients.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  'Gagal memisahkan teks kemasan secara individual.',
+                                  style: TextStyle(color: textMutedColor, fontSize: 11, fontStyle: FontStyle.italic),
+                                ),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: allIngredients.map((item) {
+                                  final String name = item['name'];
+                                  final SkincareIngredient? matched = item['matched'];
+
+                                  Color chipBgColor = isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF7F3F0);
+                                  Color chipTextColor = textColor;
+                                  BorderSide borderSide = BorderSide(color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFEFE8E3));
+                                  IconData? icon;
+
+                                  if (matched != null) {
+                                    final double comp = matched.compatibility[_selectedSkinType] ?? 0.0;
+                                    if (comp > 0) {
+                                      chipBgColor = Colors.green.withOpacity(0.12);
+                                      chipTextColor = Colors.green;
+                                      borderSide = BorderSide(color: Colors.green.withOpacity(0.4));
+                                      icon = Icons.check_circle_outline_rounded;
+                                    } else if (comp < 0) {
+                                      chipBgColor = Colors.red.withOpacity(0.12);
+                                      chipTextColor = Colors.red;
+                                      borderSide = BorderSide(color: Colors.red.withOpacity(0.4));
+                                      icon = Icons.cancel_outlined;
+                                    } else if (matched.irritationScore >= 3) {
+                                      chipBgColor = Colors.orange.withOpacity(0.12);
+                                      chipTextColor = Colors.orange;
+                                      borderSide = BorderSide(color: Colors.orange.withOpacity(0.4));
+                                      icon = Icons.warning_amber_rounded;
+                                    }
+                                  }
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      if (matched != null) {
+                                        _showIngredientDetailDialog(context, matched);
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('$name: Kandungan pendukung/pembawa hidrasi umum.'),
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: chipBgColor,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.fromBorderSide(borderSide),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (icon != null) ...[
+                                            Icon(icon, color: chipTextColor, size: 12),
+                                            const SizedBox(width: 4),
+                                          ],
+                                          Text(
+                                            name,
+                                            style: TextStyle(
+                                              color: chipTextColor,
+                                              fontSize: 11,
+                                              fontWeight: matched != null ? FontWeight.bold : FontWeight.normal,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                             const SizedBox(height: 28),
-                            // 3. Daftar Kandungan Terdeteksi
+
+                            // 3. Daftar Kandungan Aktif Terdeteksi
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Kandungan Bahan Aktif (${ingredients.length})',
+                                  'Rincian Bahan Aktif (${activeIngredients.length})',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -386,7 +602,7 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                               ],
                             ),
                             const SizedBox(height: 12),
-                            if (ingredients.isEmpty)
+                            if (activeIngredients.isEmpty)
                               Center(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 32),
@@ -407,9 +623,9 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: ingredients.length,
+                                itemCount: activeIngredients.length,
                                 itemBuilder: (context, index) {
-                                  final ing = ingredients[index];
+                                  final ing = activeIngredients[index];
                                   final double comp = ing.compatibility[_selectedSkinType] ?? 0.0;
                                   
                                   Color compColor = textMutedColor;
@@ -583,7 +799,15 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                         ? Stack(
                             fit: StackFit.expand,
                             children: [
-                              CameraPreview(_cameraController!),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTapUp: (details) => _onTapToFocus(details, constraints),
+                                    child: CameraPreview(_cameraController!),
+                                  );
+                                },
+                              ),
                               
                               // Viewfinder Overlay Grid
                               LayoutBuilder(
@@ -658,6 +882,28 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                                             ),
                                           );
                                         },
+                                      ),
+                                      // Torch Toggle Button
+                                      Positioned(
+                                        top: 16,
+                                        right: 16,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(30),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                            child: Container(
+                                              color: Colors.black.withOpacity(0.4),
+                                              child: IconButton(
+                                                icon: Icon(
+                                                  _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                                  color: _isTorchOn ? Colors.yellow : Colors.white,
+                                                  size: 22,
+                                                ),
+                                                onPressed: _toggleTorch,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                       // Helper Text Overlay
                                       Positioned(
