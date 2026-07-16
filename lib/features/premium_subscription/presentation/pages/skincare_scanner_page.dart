@@ -1184,7 +1184,7 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                         if (_searchSuggestions.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(top: 4),
-                            maxHeight: 180,
+                            constraints: const BoxConstraints(maxHeight: 180),
                             decoration: BoxDecoration(
                               color: isDark ? const Color(0xFF1E293B) : Colors.white,
                               borderRadius: BorderRadius.circular(16),
