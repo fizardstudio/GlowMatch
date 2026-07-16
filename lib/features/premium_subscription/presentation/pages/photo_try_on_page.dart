@@ -2843,23 +2843,61 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 class BoomerangGifParams {
   final int width;
   final int height;
-  final List<Uint8List> frames;
+  final Uint8List rawBytes;
+  final Uint8List makeupBytes;
   BoomerangGifParams({
     required this.width,
     required this.height,
-    required this.frames,
+    required this.rawBytes,
+    required this.makeupBytes,
   });
 }
 
 List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
-  final img.Image gifAnim = img.Image(width: params.width, height: params.height, numChannels: 4);
+  final List<Uint8List> frames = [];
+  final int width = params.width;
+  final int height = params.height;
+  final int bytesPerRow = width * 4;
+
+  // Generate 6 frames
+  final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  for (int i = 0; i < steps.length; i++) {
+    final double splitFactor = steps[i];
+    final int splitCol = (width * splitFactor).toInt();
+    final int splitBytes = splitCol * 4;
+    
+    final Uint8List frameBytes = Uint8List(width * height * 4);
+    for (int y = 0; y < height; y++) {
+      final int rowOffset = y * bytesPerRow;
+      if (splitBytes > 0) {
+        frameBytes.setRange(
+          rowOffset,
+          rowOffset + splitBytes,
+          params.rawBytes,
+          rowOffset,
+        );
+      }
+      if (splitBytes < bytesPerRow) {
+        frameBytes.setRange(
+          rowOffset + splitBytes,
+          rowOffset + bytesPerRow,
+          params.makeupBytes,
+          rowOffset + splitBytes,
+        );
+      }
+    }
+    frames.add(frameBytes);
+  }
+
+  // Compile GIF using package:image
+  final img.Image gifAnim = img.Image(width: width, height: height, numChannels: 4);
   gifAnim.frameDuration = 150;
 
-  for (int fIndex = 0; fIndex < params.frames.length; fIndex++) {
+  for (int fIndex = 0; fIndex < frames.length; fIndex++) {
     final img.Image frameImg = img.Image.fromBytes(
-      width: params.width,
-      height: params.height,
-      bytes: params.frames[fIndex].buffer,
+      width: width,
+      height: height,
+      bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
     frameImg.frameDuration = 150;
@@ -2870,12 +2908,12 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
     }
   }
 
-  // Ping-pong frames
-  for (int fIndex = params.frames.length - 2; fIndex > 0; fIndex--) {
+  // Ping-pong frames for Boomerang effect
+  for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
     final img.Image frameImg = img.Image.fromBytes(
-      width: params.width,
-      height: params.height,
-      bytes: params.frames[fIndex].buffer,
+      width: width,
+      height: height,
+      bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
     frameImg.frameDuration = 150;
