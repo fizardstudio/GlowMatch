@@ -46,3 +46,6 @@ app.*.map.json
 
 # Release Binaries
 *.ipa
+
+# Environment Variables
+.env
