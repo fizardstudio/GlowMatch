@@ -18,4 +18,7 @@ class AppSettings {
   List<int> lastMatchedCommercialShadeIds = [];
   bool showWatermark = true;
   String? lastSelectedSkinType;
+
+  int dailyOcrScanCount = 0;
+  DateTime? lastOcrScanDate;
 }

@@ -29,7 +29,6 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   bool _canPop = false;
   bool _isCoupleMode = false;
   bool _isPremium = false;
-  bool _hasUsedCoupleTrial = false;
   
   bool _isCameraPermissionGranted = false;
   bool _isPermissionChecking = true;
@@ -133,7 +132,6 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
     if (settings != null) {
       setState(() {
         _isPremium = settings.isPremium;
-        _hasUsedCoupleTrial = settings.hasUsedCoupleTrial;
       });
     }
   }
@@ -358,21 +356,6 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
             setState(() {
               _isPickingImage = false;
             });
-            // Jika dalam mode Couple dan pengguna bukan premium, tandai trial telah digunakan
-            if (state.isCoupleMode && !_isPremium) {
-              final isar = DatabaseService().isar;
-              isar.appSettings.get(0).then((settingsObj) async {
-                final settings = settingsObj ?? (AppSettings()..id = 0..isPremium = false);
-                settings.hasUsedCoupleTrial = true;
-                await isar.writeTxn(() async {
-                  await isar.appSettings.put(settings);
-                });
-                setState(() {
-                  _hasUsedCoupleTrial = true;
-                });
-              });
-            }
-
             // Arahkan ke halaman hasil saat sukses
             Navigator.push(
               context,
@@ -708,7 +691,7 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                               GestureDetector(
                                 onTap: () async {
                                   await _checkPremiumStatus();
-                                  if (!_isPremium && _hasUsedCoupleTrial) {
+                                  if (!_isPremium) {
                                     _showCouplePremiumUnlockDialog();
                                   } else {
                                     setState(() {
@@ -749,12 +732,12 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                               decoration: BoxDecoration(
-                                                color: _hasUsedCoupleTrial ? const Color(0xFFE5A93B) : Colors.greenAccent,
+                                                color: const Color(0xFFE5A93B),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
-                                              child: Text(
-                                                _hasUsedCoupleTrial ? 'PRO' : 'TRIAL',
-                                                style: const TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                                              child: const Text(
+                                                'PRO',
+                                                style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
                                               ),
                                             ),
                                           ]

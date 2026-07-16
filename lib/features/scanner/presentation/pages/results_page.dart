@@ -706,7 +706,9 @@ class _ResultsPageState extends State<ResultsPage> {
                     ),
                   ),
                   Text(
-                    '${filteredMatches.length} Produk',
+                    _isPremium 
+                        ? '${filteredMatches.length} Produk' 
+                        : (filteredMatches.length > 2 ? '2 dari ${filteredMatches.length} Produk' : '${filteredMatches.length} Produk'),
                     style: TextStyle(
                       color: textMutedColor.withOpacity(0.5),
                       fontSize: 12,
@@ -722,9 +724,72 @@ class _ResultsPageState extends State<ResultsPage> {
                   : ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredMatches.length,
+                      itemCount: _isPremium ? filteredMatches.length : (filteredMatches.length > 2 ? 3 : filteredMatches.length),
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
+                        if (!_isPremium && index == 2) {
+                          return Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: cardBgColor,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: primaryColor.withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                              boxShadow: ThemeManager.premiumGlowShadow,
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.lock_rounded, color: primaryColor, size: 24),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${filteredMatches.length - 2}+ Opsi Produk Lainnya Terkunci',
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Upgrade ke Premium sekarang untuk membuka rekomendasi brand kosmetik lokal & internasional lainnya.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: textMutedColor,
+                                    fontSize: 11,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                    ),
+                                    onPressed: _showPremiumUnlockDialog,
+                                    child: const Text(
+                                      'Buka Semua Rekomendasi (Premium)',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
                         final match = filteredMatches[index];
                         final ProductShade product = match['product'] as ProductShade;
                         final double matchPercentage = match['matchPercentage'] as double;
@@ -1041,9 +1106,14 @@ class _ResultsPageState extends State<ResultsPage> {
 
   Widget _buildFilterButton(String label, String value, IconData icon) {
     final bool isSelected = _selectedFilter == value;
+    final bool isLocked = !_isPremium && value != 'natural';
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          if (isLocked) {
+            _showPremiumUnlockDialog();
+            return;
+          }
           setState(() {
             _selectedFilter = value;
           });
@@ -1067,8 +1137,8 @@ class _ResultsPageState extends State<ResultsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                icon,
-                color: isSelected ? Colors.white : textMutedColor,
+                isLocked ? Icons.lock_outline_rounded : icon,
+                color: isSelected ? Colors.white : (isLocked ? Colors.amber : textMutedColor),
                 size: 18,
               ),
               const SizedBox(height: 6),

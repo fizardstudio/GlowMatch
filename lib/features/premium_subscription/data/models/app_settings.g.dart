@@ -17,58 +17,68 @@ const AppSettingsSchema = CollectionSchema(
   name: r'AppSettings',
   id: -5633561779022347008,
   properties: {
-    r'hasUsedCoupleTrial': PropertySchema(
+    r'dailyOcrScanCount': PropertySchema(
       id: 0,
+      name: r'dailyOcrScanCount',
+      type: IsarType.long,
+    ),
+    r'hasUsedCoupleTrial': PropertySchema(
+      id: 1,
       name: r'hasUsedCoupleTrial',
       type: IsarType.bool,
     ),
     r'isPremium': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'isPremium',
       type: IsarType.bool,
     ),
     r'lastMatchedCommercialShadeIds': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'lastMatchedCommercialShadeIds',
       type: IsarType.longList,
     ),
     r'lastMatchedContrast': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'lastMatchedContrast',
       type: IsarType.double,
     ),
     r'lastMatchedFaceShape': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'lastMatchedFaceShape',
       type: IsarType.string,
     ),
     r'lastMatchedSeasonalColor': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'lastMatchedSeasonalColor',
       type: IsarType.string,
     ),
     r'lastMatchedShadeName': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'lastMatchedShadeName',
       type: IsarType.string,
     ),
     r'lastMatchedSkinTone': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'lastMatchedSkinTone',
       type: IsarType.string,
     ),
     r'lastMatchedUndertone': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'lastMatchedUndertone',
       type: IsarType.string,
     ),
+    r'lastOcrScanDate': PropertySchema(
+      id: 10,
+      name: r'lastOcrScanDate',
+      type: IsarType.dateTime,
+    ),
     r'lastSelectedSkinType': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'lastSelectedSkinType',
       type: IsarType.string,
     ),
     r'showWatermark': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'showWatermark',
       type: IsarType.bool,
     )
@@ -139,17 +149,19 @@ void _appSettingsSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.hasUsedCoupleTrial);
-  writer.writeBool(offsets[1], object.isPremium);
-  writer.writeLongList(offsets[2], object.lastMatchedCommercialShadeIds);
-  writer.writeDouble(offsets[3], object.lastMatchedContrast);
-  writer.writeString(offsets[4], object.lastMatchedFaceShape);
-  writer.writeString(offsets[5], object.lastMatchedSeasonalColor);
-  writer.writeString(offsets[6], object.lastMatchedShadeName);
-  writer.writeString(offsets[7], object.lastMatchedSkinTone);
-  writer.writeString(offsets[8], object.lastMatchedUndertone);
-  writer.writeString(offsets[9], object.lastSelectedSkinType);
-  writer.writeBool(offsets[10], object.showWatermark);
+  writer.writeLong(offsets[0], object.dailyOcrScanCount);
+  writer.writeBool(offsets[1], object.hasUsedCoupleTrial);
+  writer.writeBool(offsets[2], object.isPremium);
+  writer.writeLongList(offsets[3], object.lastMatchedCommercialShadeIds);
+  writer.writeDouble(offsets[4], object.lastMatchedContrast);
+  writer.writeString(offsets[5], object.lastMatchedFaceShape);
+  writer.writeString(offsets[6], object.lastMatchedSeasonalColor);
+  writer.writeString(offsets[7], object.lastMatchedShadeName);
+  writer.writeString(offsets[8], object.lastMatchedSkinTone);
+  writer.writeString(offsets[9], object.lastMatchedUndertone);
+  writer.writeDateTime(offsets[10], object.lastOcrScanDate);
+  writer.writeString(offsets[11], object.lastSelectedSkinType);
+  writer.writeBool(offsets[12], object.showWatermark);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -159,18 +171,20 @@ AppSettings _appSettingsDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppSettings();
-  object.hasUsedCoupleTrial = reader.readBool(offsets[0]);
+  object.dailyOcrScanCount = reader.readLong(offsets[0]);
+  object.hasUsedCoupleTrial = reader.readBool(offsets[1]);
   object.id = id;
-  object.isPremium = reader.readBool(offsets[1]);
-  object.lastMatchedCommercialShadeIds = reader.readLongList(offsets[2]) ?? [];
-  object.lastMatchedContrast = reader.readDouble(offsets[3]);
-  object.lastMatchedFaceShape = reader.readStringOrNull(offsets[4]);
-  object.lastMatchedSeasonalColor = reader.readStringOrNull(offsets[5]);
-  object.lastMatchedShadeName = reader.readStringOrNull(offsets[6]);
-  object.lastMatchedSkinTone = reader.readStringOrNull(offsets[7]);
-  object.lastMatchedUndertone = reader.readStringOrNull(offsets[8]);
-  object.lastSelectedSkinType = reader.readStringOrNull(offsets[9]);
-  object.showWatermark = reader.readBool(offsets[10]);
+  object.isPremium = reader.readBool(offsets[2]);
+  object.lastMatchedCommercialShadeIds = reader.readLongList(offsets[3]) ?? [];
+  object.lastMatchedContrast = reader.readDouble(offsets[4]);
+  object.lastMatchedFaceShape = reader.readStringOrNull(offsets[5]);
+  object.lastMatchedSeasonalColor = reader.readStringOrNull(offsets[6]);
+  object.lastMatchedShadeName = reader.readStringOrNull(offsets[7]);
+  object.lastMatchedSkinTone = reader.readStringOrNull(offsets[8]);
+  object.lastMatchedUndertone = reader.readStringOrNull(offsets[9]);
+  object.lastOcrScanDate = reader.readDateTimeOrNull(offsets[10]);
+  object.lastSelectedSkinType = reader.readStringOrNull(offsets[11]);
+  object.showWatermark = reader.readBool(offsets[12]);
   return object;
 }
 
@@ -182,15 +196,15 @@ P _appSettingsDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 1:
       return (reader.readBool(offset)) as P;
     case 2:
-      return (reader.readLongList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 3:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLongList(offset) ?? []) as P;
     case 4:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
@@ -202,6 +216,10 @@ P _appSettingsDeserializeProp<P>(
     case 9:
       return (reader.readStringOrNull(offset)) as P;
     case 10:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 11:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -301,6 +319,62 @@ extension AppSettingsQueryWhere
 
 extension AppSettingsQueryFilter
     on QueryBuilder<AppSettings, AppSettings, QFilterCondition> {
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      dailyOcrScanCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'dailyOcrScanCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      dailyOcrScanCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'dailyOcrScanCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      dailyOcrScanCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'dailyOcrScanCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      dailyOcrScanCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'dailyOcrScanCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       hasUsedCoupleTrialEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
@@ -1358,6 +1432,80 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastOcrScanDateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastOcrScanDate',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastOcrScanDateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastOcrScanDate',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastOcrScanDateEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastOcrScanDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastOcrScanDateGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastOcrScanDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastOcrScanDateLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastOcrScanDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastOcrScanDateBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastOcrScanDate',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       lastSelectedSkinTypeIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1531,6 +1679,20 @@ extension AppSettingsQueryLinks
 extension AppSettingsQuerySortBy
     on QueryBuilder<AppSettings, AppSettings, QSortBy> {
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByDailyOcrScanCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dailyOcrScanCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByDailyOcrScanCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dailyOcrScanCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByHasUsedCoupleTrial() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasUsedCoupleTrial', Sort.asc);
@@ -1640,6 +1802,19 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByLastOcrScanDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastOcrScanDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByLastOcrScanDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastOcrScanDate', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByLastSelectedSkinType() {
     return QueryBuilder.apply(this, (query) {
@@ -1670,6 +1845,20 @@ extension AppSettingsQuerySortBy
 
 extension AppSettingsQuerySortThenBy
     on QueryBuilder<AppSettings, AppSettings, QSortThenBy> {
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByDailyOcrScanCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dailyOcrScanCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByDailyOcrScanCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dailyOcrScanCount', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByHasUsedCoupleTrial() {
     return QueryBuilder.apply(this, (query) {
@@ -1792,6 +1981,19 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByLastOcrScanDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastOcrScanDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByLastOcrScanDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastOcrScanDate', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByLastSelectedSkinType() {
     return QueryBuilder.apply(this, (query) {
@@ -1822,6 +2024,13 @@ extension AppSettingsQuerySortThenBy
 
 extension AppSettingsQueryWhereDistinct
     on QueryBuilder<AppSettings, AppSettings, QDistinct> {
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByDailyOcrScanCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'dailyOcrScanCount');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByHasUsedCoupleTrial() {
     return QueryBuilder.apply(this, (query) {
@@ -1890,6 +2099,13 @@ extension AppSettingsQueryWhereDistinct
   }
 
   QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByLastOcrScanDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastOcrScanDate');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByLastSelectedSkinType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastSelectedSkinType',
@@ -1909,6 +2125,12 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettings, int, QQueryOperations> dailyOcrScanCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'dailyOcrScanCount');
     });
   }
 
@@ -1971,6 +2193,13 @@ extension AppSettingsQueryProperty
       lastMatchedUndertoneProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastMatchedUndertone');
+    });
+  }
+
+  QueryBuilder<AppSettings, DateTime?, QQueryOperations>
+      lastOcrScanDateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastOcrScanDate');
     });
   }
 

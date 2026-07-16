@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/data/models/product_shade.dart';
+import '../../../../premium_subscription/data/models/app_settings.dart';
 import '../../../../core/network/supabase_sync_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/theme/theme_manager.dart';
@@ -28,10 +29,14 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
     _loadPouchItems();
   }
 
+  bool _isPremium = false;
+
   Future<void> _loadPouchItems() async {
     try {
+      final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
       final items = await _isar.pouchItems.where().findAll();
       setState(() {
+        _isPremium = settings.isPremium;
         _pouchItems = items;
         _isLoading = false;
       });
@@ -142,6 +147,11 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
   }
 
   void _showAddProductDialog() async {
+    if (!_isPremium && _pouchItems.length >= 3) {
+      _showPouchLimitPaywallDialog();
+      return;
+    }
+
     final allCommercial = await _isar.productShades.where().findAll();
     if (!mounted) return;
 
@@ -515,6 +525,135 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showPouchLimitPaywallDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = ThemeManager.isDark;
+        final textColor = ThemeManager.textColor;
+        final textMutedColor = ThemeManager.textMutedColor;
+        final primaryColor = ThemeManager.primaryColor;
+        final cardBgColor = ThemeManager.cardBgColor;
+        final cardBorderColor = ThemeManager.cardBorderColor;
+        return AlertDialog(
+          backgroundColor: cardBgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: cardBorderColor, width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.lock_rounded, color: primaryColor, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Batas Kapasitas Pouch Habis',
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          content: Text(
+            'Pengguna Gratis hanya diperbolehkan menyimpan maksimal 3 produk kosmetik di Virtual Pouch.\n\nLangganan Premium sekarang untuk menyimpan produk kosmetik tanpa batas serta mengaktifkan notifikasi kedaluwarsa H-30!',
+            style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                _showPremiumUnlockDialog();
+              },
+              child: const Text('Aktifkan Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _activatePremium() async {
+    await _isar.writeTxn(() async {
+      final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
+      settings.isPremium = true;
+      await _isar.appSettings.put(settings);
+    });
+
+    setState(() {
+      _isPremium = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showPremiumUnlockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = ThemeManager.isDark;
+        final textColor = ThemeManager.textColor;
+        final textMutedColor = ThemeManager.textMutedColor;
+        final primaryColor = ThemeManager.primaryColor;
+        final cardBgColor = ThemeManager.cardBgColor;
+        final cardBorderColor = ThemeManager.cardBorderColor;
+        return AlertDialog(
+          backgroundColor: cardBgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: cardBorderColor, width: 1.5),
+          ),
+          title: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.stars_rounded, color: primaryColor, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                'Buka Fitur Premium',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Text(
+            'Nikmati fitur premium tanpa batasan harian, simpan produk pouch tanpa batas, hilangkan watermark, dan akses AR Makeup Contour Guide!',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.5),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                await _activatePremium();
+              },
+              child: const Text('Aktifkan Premium Permanen', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

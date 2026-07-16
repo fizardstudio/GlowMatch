@@ -292,13 +292,180 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
     );
   }
 
+  Future<bool> _checkOcrScanLimit() async {
+    if (_isPremium) return true;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
+    
+    if (settings.lastOcrScanDate == null || !settings.lastOcrScanDate!.isAfter(today.subtract(const Duration(seconds: 1)))) {
+      await _isar.writeTxn(() async {
+        settings.dailyOcrScanCount = 0;
+        settings.lastOcrScanDate = now;
+        await _isar.appSettings.put(settings);
+      });
+    }
+
+    if (settings.dailyOcrScanCount >= 3) {
+      _showOcrLimitPaywallDialog();
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _incrementOcrScanCount() async {
+    if (_isPremium) return;
+
+    final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
+    await _isar.writeTxn(() async {
+      settings.dailyOcrScanCount += 1;
+      await _isar.appSettings.put(settings);
+    });
+  }
+
+  void _showOcrLimitPaywallDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = ThemeManager.isDark;
+        final textColor = ThemeManager.textColor;
+        final textMutedColor = ThemeManager.textMutedColor;
+        final primaryColor = ThemeManager.primaryColor;
+        final cardBgColor = ThemeManager.cardBgColor;
+        final cardBorderColor = ThemeManager.cardBorderColor;
+        return AlertDialog(
+          backgroundColor: cardBgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: cardBorderColor, width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.lock_rounded, color: primaryColor, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Batas Scan Harian Habis',
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          content: Text(
+            'Pengguna Gratis hanya diperbolehkan melakukan pemindaian kamera skincare sebanyak 3 kali sehari.\n\nLangganan Premium sekarang untuk menikmati scan OCR tanpa batas serta analisis interaksi bahan aktif!',
+            style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                _showPremiumUnlockDialog();
+              },
+              child: const Text('Aktifkan Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _activatePremium() async {
+    await _isar.writeTxn(() async {
+      final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
+      settings.isPremium = true;
+      await _isar.appSettings.put(settings);
+    });
+
+    setState(() {
+      _isPremium = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showPremiumUnlockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = ThemeManager.isDark;
+        final textColor = ThemeManager.textColor;
+        final textMutedColor = ThemeManager.textMutedColor;
+        final primaryColor = ThemeManager.primaryColor;
+        final cardBgColor = ThemeManager.cardBgColor;
+        final cardBorderColor = ThemeManager.cardBorderColor;
+        return AlertDialog(
+          backgroundColor: cardBgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: cardBorderColor, width: 1.5),
+          ),
+          title: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.stars_rounded, color: primaryColor, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                'Buka Fitur Premium',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Text(
+            'Nikmati fitur premium tanpa batasan harian, deteksi interaksi bahan aktif berbahaya, hilangkan watermark, dan akses AR Makeup Contour Guide!',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.5),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                await _activatePremium();
+              },
+              child: const Text('Aktifkan Premium Permanen', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // Mengambil gambar dari Kamera
   Future<void> _captureAndScan() async {
     if (_cameraController == null || !_cameraController!.value.isInitialized) return;
 
+    final bool allowed = await _checkOcrScanLimit();
+    if (!allowed) return;
+
     try {
       final XFile imageFile = await _cameraController!.takePicture();
       await _processImageOcr(imageFile.path);
+      await _incrementOcrScanCount();
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Gagal mengambil gambar dari kamera.')),
@@ -308,10 +475,14 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
 
   // Memilih gambar dari Galeri
   Future<void> _pickAndScanFromGallery() async {
+    final bool allowed = await _checkOcrScanLimit();
+    if (!allowed) return;
+
     try {
       final XFile? imageFile = await _picker.pickImage(source: ImageSource.gallery);
       if (imageFile != null) {
         await _processImageOcr(imageFile.path);
+        await _incrementOcrScanCount();
       }
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
