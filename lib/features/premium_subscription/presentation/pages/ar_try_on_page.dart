@@ -1093,7 +1093,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         throw Exception("Gagal mendapatkan rendering area wajah.");
       }
 
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List? pngBytes = byteData?.buffer.asUint8List();
 
@@ -1105,6 +1105,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       final bool success = await platform.invokeMethod<bool>("shareImage", {
         "bytes": pngBytes,
         "filename": "glowmatch_riasan_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/png",
       }) ?? false;
 
       if (mounted) {
@@ -1159,7 +1160,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         throw Exception("Gagal mendapatkan rendering area wajah.");
       }
 
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List? pngBytes = byteData?.buffer.asUint8List();
 
@@ -1175,6 +1176,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       final bool success = await platform.invokeMethod<bool>("saveImageToGallery", {
         "bytes": pngBytes,
         "filename": "glowmatch_ar_look_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/png",
       }) ?? false;
 
       if (mounted) {
@@ -1309,6 +1311,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       final bool success = await platform.invokeMethod<bool>("shareImage", {
         "bytes": Uint8List.fromList(gifBytes),
         "filename": "glowmatch_ar_boomerang_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/gif",
       }) ?? false;
 
       if (mounted) {
@@ -1627,6 +1630,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       );
 
       await _cameraController!.initialize();
+      try {
+        await _cameraController!.setFocusMode(FocusMode.auto);
+      } catch (e) {
+        debugPrint("Gagal menyetel focus mode: $e");
+      }
 
       if (!mounted) return;
 
@@ -2433,16 +2441,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                   ),
           ),
 
-          // 2. Tombol Show/Hide Floating Panel
-          if (_isCameraInitialized && _cameraController != null && !_showPaywall)
+          // 2. Tombol Show/Hide Floating Panel (Hanya melayang saat panel ditutup)
+          if (!_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall)
             Positioned(
-              bottom: _showControls ? 300 : 24,
+              bottom: 24,
               right: 16,
               child: FloatingActionButton(
                 heroTag: 'toggle_controls_fab',
                 onPressed: () {
                   setState(() {
-                    _showControls = !_showControls;
+                    _showControls = true;
                   });
                 },
                 backgroundColor: cardBgColor.withOpacity(0.95),
@@ -2454,7 +2462,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                   ),
                 ),
                 child: Icon(
-                  _showControls ? Icons.keyboard_arrow_down_rounded : Icons.palette_outlined,
+                  Icons.palette_outlined,
                   color: textColor,
                   size: 20,
                 ),
@@ -2510,7 +2518,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
               left: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 decoration: BoxDecoration(
                   color: cardBgColor.withOpacity(0.95),
                   borderRadius: const BorderRadius.only(
@@ -2526,6 +2534,29 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Kustomisasi Riasan 💄',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _showControls = false;
+                            });
+                          },
+                          icon: Icon(Icons.keyboard_arrow_down_rounded, color: textColor),
+                          tooltip: 'Sembunyikan Panel',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     // 1. Selector Tab Kategori (Looks vs Dasaran Base vs Lipstik vs Blush-On)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),

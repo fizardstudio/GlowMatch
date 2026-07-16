@@ -1154,6 +1154,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       final bool success = await platform.invokeMethod<bool>("shareImage", {
         "bytes": Uint8List.fromList(gifBytes),
         "filename": "glowmatch_boomerang_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/gif",
       }) ?? false;
 
       if (mounted) {
@@ -1338,7 +1339,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         throw Exception("Gagal mendapatkan rendering area wajah.");
       }
 
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0); // Kualitas tinggi
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List? pngBytes = byteData?.buffer.asUint8List();
 
@@ -1355,6 +1356,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       final bool success = await platform.invokeMethod<bool>("saveImageToGallery", {
         "bytes": pngBytes,
         "filename": "glowmatch_look_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/png",
       }) ?? false;
 
       if (mounted) {
@@ -1415,7 +1417,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         throw Exception("Gagal mendapatkan rendering area wajah.");
       }
 
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List? pngBytes = byteData?.buffer.asUint8List();
 
@@ -1427,6 +1429,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       final bool success = await platform.invokeMethod<bool>("shareImage", {
         "bytes": pngBytes,
         "filename": "glowmatch_riasan_${DateTime.now().millisecondsSinceEpoch}",
+        "mimeType": "image/png",
       }) ?? false;
 
       if (mounted) {

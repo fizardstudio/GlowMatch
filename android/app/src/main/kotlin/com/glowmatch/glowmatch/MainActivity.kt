@@ -30,8 +30,9 @@ class MainActivity : FlutterActivity() {
                 "saveImageToGallery" -> {
                     val bytes = call.argument<ByteArray>("bytes")
                     val filename = call.argument<String>("filename") ?: "glowmatch_look_${System.currentTimeMillis()}"
+                    val mimeType = call.argument<String>("mimeType") ?: "image/png"
                     if (bytes != null) {
-                        val success = saveImageToGallery(bytes, filename)
+                        val success = saveImageToGallery(bytes, filename, mimeType)
                         result.success(success)
                     } else {
                         result.error("INVALID_ARGS", "Bytes cannot be null", null)
@@ -40,8 +41,9 @@ class MainActivity : FlutterActivity() {
                 "shareImage" -> {
                     val bytes = call.argument<ByteArray>("bytes")
                     val filename = call.argument<String>("filename") ?: "glowmatch_share_${System.currentTimeMillis()}"
+                    val mimeType = call.argument<String>("mimeType") ?: "image/png"
                     if (bytes != null) {
-                        val success = shareImage(bytes, filename)
+                        val success = shareImage(bytes, filename, mimeType)
                         result.success(success)
                     } else {
                         result.error("INVALID_ARGS", "Bytes cannot be null", null)
@@ -54,11 +56,12 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun saveImageToGallery(bytes: ByteArray, filename: String): Boolean {
+    private fun saveImageToGallery(bytes: ByteArray, filename: String, mimeType: String): Boolean {
         return try {
+            val extension = if (mimeType == "image/gif") "gif" else "png"
             val contentValues = android.content.ContentValues().apply {
-                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$filename.png")
-                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$filename.$extension")
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mimeType)
                 put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/GlowMatch")
             }
 
@@ -80,11 +83,12 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun shareImage(bytes: ByteArray, filename: String): Boolean {
+    private fun shareImage(bytes: ByteArray, filename: String, mimeType: String): Boolean {
         return try {
+            val extension = if (mimeType == "image/gif") "gif" else "png"
             val contentValues = android.content.ContentValues().apply {
-                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$filename.png")
-                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$filename.$extension")
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mimeType)
                 put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/GlowMatch")
             }
 
@@ -98,7 +102,7 @@ class MainActivity : FlutterActivity() {
                 }
                 
                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "image/png"
+                    type = mimeType
                     putExtra(android.content.Intent.EXTRA_STREAM, uri)
                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
