@@ -1079,7 +1079,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       });
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 0.6);
+      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 1.0);
       final int frameW = uiImageMakeup.width;
       final int frameH = uiImageMakeup.height;
 
@@ -1099,7 +1099,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       });
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 0.6);
+      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 1.0);
       final ByteData? byteDataRaw = await uiImageRaw.toByteData(format: ui.ImageByteFormat.rawRgba);
       if (byteDataRaw == null) {
         throw Exception("Gagal mengodekan frame wajah asli.");
@@ -2853,14 +2853,15 @@ class BoomerangGifParams {
   });
 }
 
+@pragma('vm:entry-point')
 List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
   final List<Uint8List> frames = [];
   final int width = params.width;
   final int height = params.height;
   final int bytesPerRow = width * 4;
 
-  // Generate 6 frames
-  final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  // Generate 4 frames (optimalkan jumlah frame agar encoding sangat cepat & tidak OOM)
+  final List<double> steps = [0.0, 0.33, 0.66, 1.0];
   for (int i = 0; i < steps.length; i++) {
     final double splitFactor = steps[i];
     final int splitCol = (width * splitFactor).toInt();
@@ -2891,7 +2892,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
 
   // Compile GIF using package:image
   final img.Image gifAnim = img.Image(width: width, height: height, numChannels: 4);
-  gifAnim.frameDuration = 150;
+  gifAnim.frameDuration = 200; // Perlambat durasi per frame karena jumlah frame lebih sedikit
 
   for (int fIndex = 0; fIndex < frames.length; fIndex++) {
     final img.Image frameImg = img.Image.fromBytes(
@@ -2900,7 +2901,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
       bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
-    frameImg.frameDuration = 150;
+    frameImg.frameDuration = 200;
     if (fIndex == 0) {
       gifAnim.frames[0] = frameImg;
     } else {
@@ -2908,7 +2909,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
     }
   }
 
-  // Ping-pong frames for Boomerang effect
+  // Ping-pong frames untuk efek Boomerang
   for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
     final img.Image frameImg = img.Image.fromBytes(
       width: width,
@@ -2916,10 +2917,11 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
       bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
-    frameImg.frameDuration = 150;
+    frameImg.frameDuration = 200;
     gifAnim.addFrame(frameImg);
   }
 
-  final gifEncoder = img.GifEncoder();
+  // Gunakan samplingFactor: 20 untuk mempercepat kuantisasi warna ( neural network palette training )
+  final gifEncoder = img.GifEncoder(samplingFactor: 20);
   return gifEncoder.encode(gifAnim);
 }
