@@ -3,6 +3,7 @@ import '../../../../core/data/models/product_shade.dart';
 import '../../../../core/data/models/standard_shade.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/utils/color_calculator.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/repositories/shade_matcher_repository.dart';
 
 class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
@@ -25,10 +26,14 @@ class ShadeMatcherRepositoryImpl implements ShadeMatcherRepository {
       allShades = await isar.productShades.where().findAll();
     }
     final List<Map<String, dynamic>> matches = [];
+    debugPrint("MATCHING_DEBUG: allShades count = ${allShades.length}");
 
     for (final shade in allShades) {
       double calibratedL = shade.l;
       double offsetL = shade.deltaLOffset;
+      if (offsetL.isNaN) {
+        offsetL = 0.0;
+      }
       
       final int totalFeedback = shade.perfectCount + shade.tooDarkCount + shade.tooLightCount;
       if (totalFeedback > 0) {
