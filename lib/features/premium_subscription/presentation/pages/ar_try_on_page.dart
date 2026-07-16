@@ -1408,6 +1408,47 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
     );
   }
 
+  Widget _buildFloatingActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    bool isSelected = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: cardBgColor.withOpacity(0.72),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected ? primaryColor : cardBorderColor.withOpacity(0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 5.5, sigmaY: 5.5),
+          child: Material(
+            color: Colors.transparent,
+            child: IconButton(
+              icon: Icon(icon, size: 20, color: isSelected ? primaryColor : textColor),
+              tooltip: tooltip,
+              onPressed: onPressed,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildColorCircle(Color color, String name, bool isSelected, VoidCallback onTap, {bool isRecommended = false}) {
     final bool isClear = color == Colors.transparent || color.opacity == 0.0;
     final bool isMatched = _lastMatchedShadeName != null && 
@@ -1934,42 +1975,6 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         backgroundColor: cardBgColor,
         elevation: 0,
         iconTheme:  IconThemeData(color: textColor),
-        actions: [
-          if (!_showPaywall) ...[
-            IconButton(
-              icon: Icon(Icons.camera_alt_rounded, color: textColor),
-              tooltip: 'Simpan Foto ke Galeri',
-              onPressed: _saveCurrentMakeupLook,
-            ),
-            IconButton(
-              icon: Icon(Icons.share_rounded, color: textColor),
-              tooltip: 'Bagikan Riasan',
-              onPressed: _shareCurrentMakeupLook,
-            ),
-            IconButton(
-              icon: Icon(Icons.videocam_rounded, color: textColor),
-              tooltip: 'Buat & Bagikan Boomerang',
-              onPressed: _exportBoomerangGif,
-            ),
-            IconButton(
-              icon: Icon(
-                _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
-                color: _isSplitMode ? primaryColor : textColor,
-              ),
-              tooltip: _isSplitMode ? 'Sembunyikan Pembanding' : 'Tampilkan Pembanding',
-              onPressed: () {
-                setState(() {
-                  _isSplitMode = !_isSplitMode;
-                });
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.flip_camera_ios_rounded, color: textColor),
-              tooltip: 'Ganti Kamera',
-              onPressed: _toggleCameraDirection,
-            ),
-          ],
-        ],
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -2086,7 +2091,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                           ),
 
                           // Handle Slider Pembagi Layar Vertikal yang Bisa Digeser
-                          if (!_showPaywall && _isSplitMode)
+                          if (!_showPaywall && _isSplitMode && !_isCapturing)
                             Positioned(
                               left: _sliderX - 25,
                               top: 0,
@@ -2136,7 +2141,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                             ),
 
                           // Watermark & Countdown untuk Mode Uji Coba Demo
-                          if (_isDemoActive && !_showPaywall)
+                          if (_isDemoActive && !_showPaywall && !_isCapturing)
                             Positioned(
                               top: 16,
                               left: 16,
@@ -2178,7 +2183,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                             ),
 
                           // Live Face Shape Badge
-                          if (!_showPaywall && _detectedFace != null)
+                          if (!_showPaywall && _detectedFace != null && !_isCapturing)
                             Positioned(
                               top: 20,
                               left: 0,
@@ -2376,6 +2381,48 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                   color: textColor,
                   size: 20,
                 ),
+              ),
+            ),
+
+          // 2.5. Floating Action Panel (Tombol Melayang di Kanan Layar agar Tangan Pengguna Tidak Menghalangi Kamera)
+          if (_isCameraInitialized && _cameraController != null && !_showPaywall)
+            Positioned(
+              top: kToolbarHeight + 40,
+              right: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildFloatingActionButton(
+                    icon: Icons.flip_camera_ios_rounded,
+                    tooltip: 'Ganti Kamera',
+                    onPressed: _toggleCameraDirection,
+                  ),
+                  _buildFloatingActionButton(
+                    icon: _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
+                    tooltip: _isSplitMode ? 'Sembunyikan Pembanding' : 'Tampilkan Pembanding',
+                    onPressed: () {
+                      setState(() {
+                        _isSplitMode = !_isSplitMode;
+                      });
+                    },
+                    isSelected: _isSplitMode,
+                  ),
+                  _buildFloatingActionButton(
+                    icon: Icons.camera_alt_rounded,
+                    tooltip: 'Simpan Foto ke Galeri',
+                    onPressed: _saveCurrentMakeupLook,
+                  ),
+                  _buildFloatingActionButton(
+                    icon: Icons.videocam_rounded,
+                    tooltip: 'Buat & Bagikan Boomerang',
+                    onPressed: _exportBoomerangGif,
+                  ),
+                  _buildFloatingActionButton(
+                    icon: Icons.share_rounded,
+                    tooltip: 'Bagikan Riasan',
+                    onPressed: _shareCurrentMakeupLook,
+                  ),
+                ],
               ),
             ),
 
