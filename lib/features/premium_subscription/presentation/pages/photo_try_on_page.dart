@@ -1079,7 +1079,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       });
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 1.0);
+      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 1.8);
       final int frameW = uiImageMakeup.width;
       final int frameH = uiImageMakeup.height;
 
@@ -1099,7 +1099,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       });
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 1.0);
+      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 1.8);
       final ByteData? byteDataRaw = await uiImageRaw.toByteData(format: ui.ImageByteFormat.rawRgba);
       if (byteDataRaw == null) {
         throw Exception("Gagal mengodekan frame wajah asli.");
@@ -2921,7 +2921,7 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
     gifAnim.addFrame(frameImg);
   }
 
-  // Gunakan samplingFactor: 20 untuk mempercepat kuantisasi warna ( neural network palette training )
-  final gifEncoder = img.GifEncoder(samplingFactor: 20);
+  // Gunakan samplingFactor: 30 untuk mempercepat kuantisasi warna ( neural network palette training )
+  final gifEncoder = img.GifEncoder(samplingFactor: 30);
   return gifEncoder.encode(gifAnim);
 }
