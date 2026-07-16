@@ -152,6 +152,9 @@ class _ResultsPageState extends State<ResultsPage> {
         settings.lastMatchedSkinTone = widget.matchedStandard.skinTone;
         settings.lastMatchedFaceShape = widget.faceShape;
         settings.lastMatchedContrast = widget.faceContrast;
+        settings.lastMatchedCommercialShadeIds = widget.commercialMatches
+            .map((m) => (m['product'] as ProductShade).id)
+            .toList();
         await isar.appSettings.put(settings);
       });
       debugPrint("SUCCESS_ISAR: Scanned shade results saved to AppSettings.");

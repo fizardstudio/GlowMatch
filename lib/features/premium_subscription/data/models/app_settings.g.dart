@@ -27,33 +27,38 @@ const AppSettingsSchema = CollectionSchema(
       name: r'isPremium',
       type: IsarType.bool,
     ),
-    r'lastMatchedContrast': PropertySchema(
+    r'lastMatchedCommercialShadeIds': PropertySchema(
       id: 2,
+      name: r'lastMatchedCommercialShadeIds',
+      type: IsarType.longList,
+    ),
+    r'lastMatchedContrast': PropertySchema(
+      id: 3,
       name: r'lastMatchedContrast',
       type: IsarType.double,
     ),
     r'lastMatchedFaceShape': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'lastMatchedFaceShape',
       type: IsarType.string,
     ),
     r'lastMatchedSeasonalColor': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'lastMatchedSeasonalColor',
       type: IsarType.string,
     ),
     r'lastMatchedShadeName': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'lastMatchedShadeName',
       type: IsarType.string,
     ),
     r'lastMatchedSkinTone': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'lastMatchedSkinTone',
       type: IsarType.string,
     ),
     r'lastMatchedUndertone': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'lastMatchedUndertone',
       type: IsarType.string,
     )
@@ -78,6 +83,7 @@ int _appSettingsEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.lastMatchedCommercialShadeIds.length * 8;
   {
     final value = object.lastMatchedFaceShape;
     if (value != null) {
@@ -119,12 +125,13 @@ void _appSettingsSerialize(
 ) {
   writer.writeBool(offsets[0], object.hasUsedCoupleTrial);
   writer.writeBool(offsets[1], object.isPremium);
-  writer.writeDouble(offsets[2], object.lastMatchedContrast);
-  writer.writeString(offsets[3], object.lastMatchedFaceShape);
-  writer.writeString(offsets[4], object.lastMatchedSeasonalColor);
-  writer.writeString(offsets[5], object.lastMatchedShadeName);
-  writer.writeString(offsets[6], object.lastMatchedSkinTone);
-  writer.writeString(offsets[7], object.lastMatchedUndertone);
+  writer.writeLongList(offsets[2], object.lastMatchedCommercialShadeIds);
+  writer.writeDouble(offsets[3], object.lastMatchedContrast);
+  writer.writeString(offsets[4], object.lastMatchedFaceShape);
+  writer.writeString(offsets[5], object.lastMatchedSeasonalColor);
+  writer.writeString(offsets[6], object.lastMatchedShadeName);
+  writer.writeString(offsets[7], object.lastMatchedSkinTone);
+  writer.writeString(offsets[8], object.lastMatchedUndertone);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -137,12 +144,13 @@ AppSettings _appSettingsDeserialize(
   object.hasUsedCoupleTrial = reader.readBool(offsets[0]);
   object.id = id;
   object.isPremium = reader.readBool(offsets[1]);
-  object.lastMatchedContrast = reader.readDouble(offsets[2]);
-  object.lastMatchedFaceShape = reader.readStringOrNull(offsets[3]);
-  object.lastMatchedSeasonalColor = reader.readStringOrNull(offsets[4]);
-  object.lastMatchedShadeName = reader.readStringOrNull(offsets[5]);
-  object.lastMatchedSkinTone = reader.readStringOrNull(offsets[6]);
-  object.lastMatchedUndertone = reader.readStringOrNull(offsets[7]);
+  object.lastMatchedCommercialShadeIds = reader.readLongList(offsets[2]) ?? [];
+  object.lastMatchedContrast = reader.readDouble(offsets[3]);
+  object.lastMatchedFaceShape = reader.readStringOrNull(offsets[4]);
+  object.lastMatchedSeasonalColor = reader.readStringOrNull(offsets[5]);
+  object.lastMatchedShadeName = reader.readStringOrNull(offsets[6]);
+  object.lastMatchedSkinTone = reader.readStringOrNull(offsets[7]);
+  object.lastMatchedUndertone = reader.readStringOrNull(offsets[8]);
   return object;
 }
 
@@ -158,9 +166,9 @@ P _appSettingsDeserializeProp<P>(
     case 1:
       return (reader.readBool(offset)) as P;
     case 2:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLongList(offset) ?? []) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 4:
       return (reader.readStringOrNull(offset)) as P;
     case 5:
@@ -168,6 +176,8 @@ P _appSettingsDeserializeProp<P>(
     case 6:
       return (reader.readStringOrNull(offset)) as P;
     case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -337,6 +347,151 @@ extension AppSettingsQueryFilter
         property: r'isPremium',
         value: value,
       ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsElementEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastMatchedCommercialShadeIds',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsElementGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastMatchedCommercialShadeIds',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsElementLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastMatchedCommercialShadeIds',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsElementBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastMatchedCommercialShadeIds',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'lastMatchedCommercialShadeIds',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'lastMatchedCommercialShadeIds',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'lastMatchedCommercialShadeIds',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'lastMatchedCommercialShadeIds',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'lastMatchedCommercialShadeIds',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastMatchedCommercialShadeIdsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'lastMatchedCommercialShadeIds',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
     });
   }
 
@@ -1439,6 +1594,13 @@ extension AppSettingsQueryWhereDistinct
   }
 
   QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByLastMatchedCommercialShadeIds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastMatchedCommercialShadeIds');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByLastMatchedContrast() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastMatchedContrast');
@@ -1504,6 +1666,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, bool, QQueryOperations> isPremiumProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isPremium');
+    });
+  }
+
+  QueryBuilder<AppSettings, List<int>, QQueryOperations>
+      lastMatchedCommercialShadeIdsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastMatchedCommercialShadeIds');
     });
   }
 

@@ -182,6 +182,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   String? _lastMatchedSeasonalColor;
   String? _lastMatchedSkinTone;
   double? _lastMatchedContrast;
+  List<int>? _lastMatchedCommercialShadeIds;
 
   // List Warna Lipstik Eksklusif
   final List<Map<String, dynamic>> _lipstickColors = [
@@ -438,6 +439,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         _lastMatchedSeasonalColor = settings.lastMatchedSeasonalColor;
         _lastMatchedSkinTone = settings.lastMatchedSkinTone;
         _lastMatchedContrast = settings.lastMatchedContrast;
+        _lastMatchedCommercialShadeIds = settings.lastMatchedCommercialShadeIds;
       });
       _tryAutoSelectFoundation();
     }
@@ -2775,14 +2777,22 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                         final fProd = _filteredFoundations[index];
                                         final hexColor = _getHexColor(fProd.hexCode);
                                         final isSel = _selectedFoundationProduct?.id == fProd.id && _foundationOpacity > 0.0;
-                                        return _buildColorCircle(hexColor, fProd.shadeName, isSel, () {
-                                          setState(() {
-                                            _selectedFoundationProduct = fProd;
-                                            _selectedFoundationColor = hexColor;
-                                            if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
-                                            _activePreset = null;
-                                          });
-                                        });
+                                        final bool isMatched = _lastMatchedCommercialShadeIds != null &&
+                                            _lastMatchedCommercialShadeIds!.contains(fProd.id);
+                                        return _buildColorCircle(
+                                          hexColor,
+                                          fProd.shadeName,
+                                          isSel,
+                                          () {
+                                            setState(() {
+                                              _selectedFoundationProduct = fProd;
+                                              _selectedFoundationColor = hexColor;
+                                              if (_foundationOpacity == 0.0) _foundationOpacity = 0.35;
+                                              _activePreset = null;
+                                            });
+                                          },
+                                          isRecommended: isMatched,
+                                        );
                                       },
                                     ),
                             ),

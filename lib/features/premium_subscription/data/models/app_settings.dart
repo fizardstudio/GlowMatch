@@ -15,4 +15,5 @@ class AppSettings {
   String? lastMatchedSkinTone;
   String? lastMatchedFaceShape;
   double lastMatchedContrast = 35.0;
+  List<int> lastMatchedCommercialShadeIds = [];
 }
