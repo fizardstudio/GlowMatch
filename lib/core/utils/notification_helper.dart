@@ -20,7 +20,7 @@ class NotificationHelper {
     );
 
     await _notificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
     );
 
     // Daftarkan channel notifikasi alarm untuk Android
@@ -61,14 +61,12 @@ class NotificationHelper {
     );
 
     await _notificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzDate,
-      platformDetails,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tzDate,
+      notificationDetails: platformDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
