@@ -1235,6 +1235,9 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
       final double width = boundary.size.width;
 
+      int? frameW;
+      int? frameH;
+
       // Ambil 6 frame bertahap dari kiri ke kanan (0% hingga 100%)
       final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
       for (int i = 0; i < steps.length; i++) {
@@ -1245,7 +1248,11 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
         await Future.delayed(const Duration(milliseconds: 150));
 
-        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.2);
+        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.8);
+        if (frameW == null) {
+          frameW = uiImage.width;
+          frameH = uiImage.height;
+        }
         final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
         if (byteData != null) {
           frames.add(byteData.buffer.asUint8List());
@@ -1260,10 +1267,9 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         _isCapturing = true;
       });
 
-      final int w = boundary.size.width.toInt();
-      final int h = boundary.size.height.toInt();
-      final int frameW = (w * 1.2).toInt();
-      final int frameH = (h * 1.2).toInt();
+      if (frameW == null || frameH == null || frames.isEmpty) {
+        throw Exception("Gagal merekam frame gambar.");
+      }
 
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -3290,6 +3296,77 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                       ),
                     ],
                   ],
+                ),
+              ),
+            ),
+
+          // 4. Spinner Modal Overlay saat menyimpan
+          if (_isSavingLook)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.55),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: cardBgColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cardBorderColor, width: 1.5),
+                      boxShadow: ThemeManager.premiumGlowShadow,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(primaryColor)),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Menyimpan Gambar ke Galeri...',
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // 5. Boomerang GIF Exporter Progress Overlay
+          if (_isExportingBoomerang)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.55),
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: cardBgColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: cardBorderColor, width: 1.5),
+                      boxShadow: ThemeManager.premiumGlowShadow,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          value: _exportProgress,
+                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          backgroundColor: cardBorderColor,
+                          strokeWidth: 4,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Membuat Animasi Boomerang...',
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Progress: ${(_exportProgress * 100).round()}%',
+                          style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

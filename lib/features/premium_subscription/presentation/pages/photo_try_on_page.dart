@@ -1063,6 +1063,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     final double originalSliderX = _sliderX;
     final bool originalSplitMode = _isSplitMode;
 
+    int? frameW;
+    int? frameH;
+
     try {
       setState(() {
         _isSplitMode = true;
@@ -1085,7 +1088,11 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
         await Future.delayed(const Duration(milliseconds: 150));
 
-        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.2);
+        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.8);
+        if (frameW == null) {
+          frameW = uiImage.width;
+          frameH = uiImage.height;
+        }
         final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
         if (byteData != null) {
           frames.add(byteData.buffer.asUint8List());
@@ -1101,10 +1108,9 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       });
 
       // Proses konversi dan pengodean GIF anim menggunakan package:image
-      final int w = boundary.size.width.toInt();
-      final int h = boundary.size.height.toInt();
-      final int frameW = (w * 1.2).toInt();
-      final int frameH = (h * 1.2).toInt();
+      if (frameW == null || frameH == null || frames.isEmpty) {
+        throw Exception("Gagal merekam frame gambar.");
+      }
 
       // Tunggu agar CPU bebas
       await Future.delayed(const Duration(milliseconds: 50));
