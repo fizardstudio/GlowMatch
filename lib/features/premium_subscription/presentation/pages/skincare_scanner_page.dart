@@ -10,6 +10,7 @@ import '../../data/models/app_settings.dart';
 import '../../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../../core/utils/skincare_ocr_parser.dart';
 import '../../../../core/data/models/skincare_ingredient.dart';
+import '../../../../core/data/skincare_ingredients_data.dart';
 
 class SkincareScannerPage extends StatefulWidget {
   const SkincareScannerPage({super.key});
@@ -36,6 +37,12 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
   // Selected Skin Type
   String _selectedSkinType = 'normal'; // default
   bool _isPremium = false;
+
+  // Manual Autocomplete Search State
+  int _currentTab = 0; // 0 = Pindai Kemasan, 1 = Cari Kandungan
+  final List<SkincareIngredient> _manualSelectedIngredients = [];
+  final TextEditingController _searchController = TextEditingController();
+  List<SkincareIngredient> _searchSuggestions = [];
 
   final Map<String, String> _skinTypes = {
     'dry': 'Kering (Dry)',
@@ -65,6 +72,7 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
     WidgetsBinding.instance.removeObserver(this);
     _laserController.dispose();
     _cameraController?.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -719,6 +727,44 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
     );
   }
 
+  // Cari bahan kosmetik pasca perubahan query teks pencarian
+  void _onSearchChanged(String query) {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchSuggestions = [];
+      });
+      return;
+    }
+
+    final cleanQuery = query.toLowerCase().trim();
+    final suggestions = skincareIngredientsDb.where((ingredient) {
+      final nameMatches = ingredient.name.toLowerCase().contains(cleanQuery);
+      final aliasMatches = ingredient.aliases.any((alias) => alias.toLowerCase().contains(cleanQuery));
+      return nameMatches || aliasMatches;
+    }).toList();
+
+    setState(() {
+      _searchSuggestions = suggestions;
+    });
+  }
+
+  // Menganalisis kecocokan kandungan bahan yang diinput manual
+  void _analyzeManualIngredients() {
+    if (_manualSelectedIngredients.isEmpty) return;
+
+    final List<Map<String, dynamic>> formatted = _manualSelectedIngredients.map((ing) => {
+      'name': ing.name,
+      'matched': ing,
+    }).toList();
+
+    final Map<String, dynamic> result = SkincareOcrParser.calculateCompatibility(
+      matchedIngredients: _manualSelectedIngredients,
+      skinTypeKey: _selectedSkinType,
+    );
+
+    _showAnalysisResultSheet(formatted, result);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = ThemeManager.isDark;
@@ -787,242 +833,505 @@ class _SkincareScannerPageState extends State<SkincareScannerPage>
                   },
                 ),
               ),
-              const SizedBox(height: 8),
-              
-              // 2. Viewfinder Kamera & View
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: _isCameraInitialized && _cameraController != null
-                        ? Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTapUp: (details) => _onTapToFocus(details, constraints),
-                                    child: CameraPreview(_cameraController!),
-                                  );
-                                },
-                              ),
-                              
-                              // Viewfinder Overlay Grid
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final double rectWidth = constraints.maxWidth * 0.8;
-                                  final double rectHeight = constraints.maxHeight * 0.45;
-                                  final double rectLeft = (constraints.maxWidth - rectWidth) / 2;
-                                  final double rectTop = (constraints.maxHeight - rectHeight) / 2;
-
-                                  return Stack(
-                                    children: [
-                                      // Darkened outer boundaries
-                                      ColorFiltered(
-                                        colorFilter: ColorFilter.mode(
-                                          Colors.black.withOpacity(0.6),
-                                          BlendMode.srcOut,
-                                        ),
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            Container(
-                                              color: Colors.black,
-                                            ),
-                                            Positioned(
-                                              left: rectLeft,
-                                              top: rectTop,
-                                              width: rectWidth,
-                                              height: rectHeight,
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius: BorderRadius.circular(18),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      // Frame border outline
-                                      Positioned(
-                                        left: rectLeft,
-                                        top: rectTop,
-                                        width: rectWidth,
-                                        height: rectHeight,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: primaryColor, width: 2.5),
-                                            borderRadius: BorderRadius.circular(18),
-                                          ),
-                                        ),
-                                      ),
-                                      // Animated laser lines
-                                      AnimatedBuilder(
-                                        animation: _laserAnimation,
-                                        builder: (context, child) {
-                                          final double currentTop = rectTop + (rectHeight * _laserAnimation.value);
-                                          return Positioned(
-                                            left: rectLeft + 6,
-                                            top: currentTop,
-                                            width: rectWidth - 12,
-                                            height: 2.5,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    primaryColor.withOpacity(0.1),
-                                                    primaryColor,
-                                                    primaryColor.withOpacity(0.1),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      // Torch Toggle Button
-                                      Positioned(
-                                        top: 16,
-                                        right: 16,
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(30),
-                                          child: BackdropFilter(
-                                            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                            child: Container(
-                                              color: Colors.black.withOpacity(0.4),
-                                              child: IconButton(
-                                                icon: Icon(
-                                                  _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                                                  color: _isTorchOn ? Colors.yellow : Colors.white,
-                                                  size: 22,
-                                                ),
-                                                onPressed: _toggleTorch,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      // Helper Text Overlay
-                                      Positioned(
-                                        bottom: 24,
-                                        left: 16,
-                                        right: 16,
-                                        child: Text(
-                                          'Posisikan teks kandungan bahan aktif skincare di dalam area pemindai',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white.withOpacity(0.9),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            shadows: const [Shadow(blurRadius: 4, color: Colors.black)],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
-                          )
-                        : Container(
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: cardBgColor,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: ThemeManager.cardBorderColor),
-                            ),
-                            child: _isCameraPermissionDenied
-                                ? Padding(
-                                    padding: const EdgeInsets.all(24.0),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.camera_alt_rounded, color: primaryColor, size: 44),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Izin Kamera Ditolak',
-                                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Aplikasi memerlukan izin akses kamera belakang untuk memindai label teks kosmetik luring.',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(color: textMutedColor, fontSize: 12, height: 1.4),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-                                          onPressed: _initializeCamera,
-                                          child: const Text('Beri Akses Kamera', style: TextStyle(color: Colors.white)),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      CircularProgressIndicator(color: primaryColor),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'Menginisialisasi Kamera...',
-                                        style: TextStyle(color: textMutedColor, fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                  ),
+              // Tab Selector Mode
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF2ECE7),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // 3. Actions Button Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   children: [
-                    // Ambil dari Galeri
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 48),
-                          side: BorderSide(color: primaryColor, width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        onPressed: _isAnalyzing ? null : _pickAndScanFromGallery,
-                        icon: Icon(Icons.photo_library_outlined, color: primaryColor, size: 20),
-                        label: Text(
-                          'Pilih Galeri',
-                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentTab = 0;
+                          });
+                        },
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _currentTab == 0 ? primaryColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Pindai Kemasan 📸',
+                            style: TextStyle(
+                              color: _currentTab == 0 ? Colors.white : textColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // Ambil Foto & Pindai
                     Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(0, 48),
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 2,
-                        ),
-                        onPressed: (_isCameraInitialized && !_isAnalyzing) ? _captureAndScan : null,
-                        icon: const Icon(Icons.document_scanner_rounded, size: 20),
-                        label: const Text(
-                          'Ambil & Pindai',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentTab = 1;
+                          });
+                        },
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _currentTab == 1 ? primaryColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Cari Kandungan 🔍',
+                            style: TextStyle(
+                              color: _currentTab == 1 ? Colors.white : textColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 8),
+              
+              if (_currentTab == 0) ...[
+                // 2. Viewfinder Kamera & View
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: _isCameraInitialized && _cameraController != null
+                          ? Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTapUp: (details) => _onTapToFocus(details, constraints),
+                                      child: CameraPreview(_cameraController!),
+                                    );
+                                  },
+                                ),
+                                
+                                // Viewfinder Overlay Grid
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final double rectWidth = constraints.maxWidth * 0.8;
+                                    final double rectHeight = constraints.maxHeight * 0.45;
+                                    final double rectLeft = (constraints.maxWidth - rectWidth) / 2;
+                                    final double rectTop = (constraints.maxHeight - rectHeight) / 2;
+
+                                    return Stack(
+                                      children: [
+                                        // Darkened outer boundaries
+                                        ColorFiltered(
+                                          colorFilter: ColorFilter.mode(
+                                            Colors.black.withOpacity(0.6),
+                                            BlendMode.srcOut,
+                                          ),
+                                          child: Stack(
+                                            fit: StackFit.expand,
+                                            children: [
+                                              Container(
+                                                color: Colors.black,
+                                              ),
+                                              Positioned(
+                                                left: rectLeft,
+                                                top: rectTop,
+                                                width: rectWidth,
+                                                height: rectHeight,
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius: BorderRadius.circular(18),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Frame border outline
+                                        Positioned(
+                                          left: rectLeft,
+                                          top: rectTop,
+                                          width: rectWidth,
+                                          height: rectHeight,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: primaryColor, width: 2.5),
+                                              borderRadius: BorderRadius.circular(18),
+                                            ),
+                                          ),
+                                        ),
+                                        // Animated laser lines
+                                        AnimatedBuilder(
+                                          animation: _laserAnimation,
+                                          builder: (context, child) {
+                                            final double currentTop = rectTop + (rectHeight * _laserAnimation.value);
+                                            return Positioned(
+                                              left: rectLeft + 6,
+                                              top: currentTop,
+                                              width: rectWidth - 12,
+                                              height: 2.5,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      primaryColor.withOpacity(0.1),
+                                                      primaryColor,
+                                                      primaryColor.withOpacity(0.1),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        // Torch Toggle Button
+                                        Positioned(
+                                          top: 16,
+                                          right: 16,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(30),
+                                            child: BackdropFilter(
+                                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                              child: Container(
+                                                color: Colors.black.withOpacity(0.4),
+                                                child: IconButton(
+                                                  icon: Icon(
+                                                    _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                                    color: _isTorchOn ? Colors.yellow : Colors.white,
+                                                    size: 22,
+                                                  ),
+                                                  onPressed: _toggleTorch,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Helper Text Overlay
+                                        Positioned(
+                                          bottom: 24,
+                                          left: 16,
+                                          right: 16,
+                                          child: Text(
+                                            'Posisikan teks kandungan bahan aktif skincare di dalam area pemindai',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.9),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              shadows: const [Shadow(blurRadius: 4, color: Colors.black)],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            )
+                          : Container(
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: cardBgColor,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: ThemeManager.cardBorderColor),
+                              ),
+                              child: _isCameraPermissionDenied
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.camera_alt_rounded, color: primaryColor, size: 44),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'Izin Kamera Ditolak',
+                                            style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Aplikasi memerlukan izin akses kamera belakang untuk memindai label teks kosmetik luring.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(color: textMutedColor, fontSize: 12, height: 1.4),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                                            onPressed: _initializeCamera,
+                                            child: const Text('Beri Akses Kamera', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        CircularProgressIndicator(color: primaryColor),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Menginisialisasi Kamera...',
+                                          style: TextStyle(color: textMutedColor, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 3. Actions Button Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      // Ambil dari Galeri
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                            side: BorderSide(color: primaryColor, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          onPressed: _isAnalyzing ? null : _pickAndScanFromGallery,
+                          icon: Icon(Icons.photo_library_outlined, color: primaryColor, size: 20),
+                          label: Text(
+                            'Pilih Galeri',
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Ambil Foto & Pindai
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 2,
+                          ),
+                          onPressed: (_isCameraInitialized && !_isAnalyzing) ? _captureAndScan : null,
+                          icon: const Icon(Icons.document_scanner_rounded, size: 20),
+                          label: const Text(
+                            'Ambil & Pindai',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ] else ...[
+                // Input Manual Cerdas dengan Autocomplete
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          'Cari & Tambahkan Bahan Aktif',
+                          style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        // Kolom Input Autocomplete Pintar
+                        TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: InputDecoration(
+                            hintText: 'Ketik nama bahan (contoh: Niacinamide)...',
+                            prefixIcon: Icon(Icons.search_rounded, color: primaryColor),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _onSearchChanged('');
+                                    },
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: cardBgColor,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: ThemeManager.cardBorderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: primaryColor, width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: ThemeManager.cardBorderColor),
+                            ),
+                          ),
+                          style: TextStyle(color: textColor, fontSize: 13),
+                        ),
+                        
+                        // Dropdown saran autocomplete
+                        if (_searchSuggestions.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            maxHeight: 180,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: ThemeManager.cardBorderColor),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _searchSuggestions.length,
+                              itemBuilder: (context, index) {
+                                final ingredient = _searchSuggestions[index];
+                                final isAlreadyAdded = _manualSelectedIngredients.contains(ingredient);
+
+                                return ListTile(
+                                  dense: true,
+                                  title: Text(
+                                    ingredient.name,
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    ingredient.category,
+                                    style: TextStyle(color: primaryColor, fontSize: 10),
+                                  ),
+                                  trailing: isAlreadyAdded
+                                      ? const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18)
+                                      : Icon(Icons.add_circle_outline_rounded, color: primaryColor, size: 18),
+                                  onTap: () {
+                                    if (!isAlreadyAdded) {
+                                      setState(() {
+                                        _manualSelectedIngredients.add(ingredient);
+                                        _searchController.clear();
+                                        _searchSuggestions = [];
+                                      });
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Bahan sudah ditambahkan.')),
+                                      );
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Bahan yang Dipilih (${_manualSelectedIngredients.length})',
+                              style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                            if (_manualSelectedIngredients.isNotEmpty)
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _manualSelectedIngredients.clear();
+                                  });
+                                },
+                                child: Text('Hapus Semua', style: TextStyle(color: primaryColor, fontSize: 11)),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        
+                        // Chip list bahan pilihan manual
+                        if (_manualSelectedIngredients.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            decoration: BoxDecoration(
+                              color: cardBgColor.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: ThemeManager.cardBorderColor, style: BorderStyle.solid),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.science_outlined, color: textMutedColor.withOpacity(0.4), size: 36),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Belum ada bahan aktif dipilih.\nCari nama bahan kosmetik di atas.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: textMutedColor, fontSize: 11, height: 1.4),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _manualSelectedIngredients.map((ingredient) {
+                              return InputChip(
+                                label: Text(ingredient.name),
+                                labelStyle: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w600),
+                                backgroundColor: cardBgColor,
+                                deleteIcon: Icon(Icons.cancel_rounded, size: 14, color: primaryColor),
+                                onDeleted: () {
+                                  setState(() {
+                                    _manualSelectedIngredients.remove(ingredient);
+                                  });
+                                },
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: ThemeManager.cardBorderColor),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        const SizedBox(height: 32),
+                        
+                        // Tombol Eksekusi Analisis
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: _manualSelectedIngredients.isNotEmpty ? 2 : 0,
+                            ),
+                            onPressed: _manualSelectedIngredients.isNotEmpty ? _analyzeManualIngredients : null,
+                            icon: const Icon(Icons.analytics_outlined, size: 18),
+                            label: const Text(
+                              'Analisis Kecocokan Kulit',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 
