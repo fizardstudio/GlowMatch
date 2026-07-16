@@ -562,7 +562,7 @@ class LipFilterPainter extends CustomPainter {
     }
 
     // 2. RENDER DEWY GLASS SKIN GLOW / SATIN HIGHLIGHTS
-    if (showGlassSkin && foundationFinishing != 'matte' && estimatedLeftCheek != null && estimatedRightCheek != null) {
+    if (showGlassSkin && foundationOpacity > 0.0 && foundationFinishing != 'matte' && estimatedLeftCheek != null && estimatedRightCheek != null) {
       final bool isDewy = foundationFinishing == 'dewy';
       
       final double cheekRadius = faceWidth * (isDewy ? 0.18 : 0.22);
