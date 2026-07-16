@@ -101,8 +101,8 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       setState(() {
         _isPremium = isPremium;
         _allShades = shades;
-        _sourceBrands = shades.map((s) => s.brand).toSet().toList()...sort();
-        _targetBrands = shades.map((s) => s.brand).toSet().toList()...sort();
+        _sourceBrands = shades.map((s) => s.brand).toSet().toList()..sort();
+        _targetBrands = shades.map((s) => s.brand).toSet().toList()..sort();
         
         if (matchedBrand != null) {
           _selectedSourceBrand = matchedBrand;
