@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/data/models/product_shade.dart';
-import '../../../../premium_subscription/data/models/app_settings.dart';
+import '../../../../features/premium_subscription/data/models/app_settings.dart';
 import '../../../../core/network/supabase_sync_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/theme/theme_manager.dart';
