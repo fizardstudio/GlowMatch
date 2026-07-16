@@ -2056,30 +2056,33 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                             ),
                                           ),
                                         ),
-                                      if (_isCapturing)
+                                      if (_isCapturing && !_isPremium)
                                         Positioned(
-                                          bottom: 20,
-                                          right: 20,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black.withOpacity(0.6),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 12),
-                                                const SizedBox(width: 4),
-                                                const Text(
-                                                  'GlowMatch AI - Temukan Shade Wajahmu!',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.bold,
+                                          bottom: 24,
+                                          left: 0,
+                                          right: 0,
+                                          child: Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withOpacity(0.6),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 12),
+                                                  const SizedBox(width: 4),
+                                                  const Text(
+                                                    'GlowMatch AI - Temukan Shade Wajahmu!',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),

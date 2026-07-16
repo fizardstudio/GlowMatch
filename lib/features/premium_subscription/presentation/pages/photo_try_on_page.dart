@@ -1646,34 +1646,6 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                         fit: BoxFit.fill,
                                       ),
                                     ),
-                                    if (_isCapturing)
-                                      Positioned(
-                                        bottom: 12,
-                                        right: 12,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(0.6),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.auto_awesome, color: primaryColor, size: 10),
-                                              const SizedBox(width: 4),
-                                              const Text(
-                                                'GlowMatch AI - Temukan Shade Wajahmu!',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 8,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-
 // Layer Gambar Riasan (CustomPaint)
                                   if (!_showPaywall)
                                     Positioned.fill(
@@ -1702,6 +1674,38 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                           eyelinerThickness: _eyelinerThickness,
                                           noseHighlightOpacity: _noseHighlightOpacity,
                                           noseShadingOpacity: _noseShadingOpacity,
+                                        ),
+                                      ),
+                                    ),
+
+                                  // Watermark (GlowMatch AI - Tergambar di atas CustomPaint agar tidak tertutup gambar latar)
+                                  if (_isCapturing && !_isPremium)
+                                    Positioned(
+                                      bottom: 16,
+                                      left: 0,
+                                      right: 0,
+                                      child: Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.6),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.auto_awesome, color: primaryColor, size: 10),
+                                              const SizedBox(width: 4),
+                                              const Text(
+                                                'GlowMatch AI - Temukan Shade Wajahmu!',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
