@@ -27,28 +27,38 @@ const PouchItemSchema = CollectionSchema(
       name: r'category',
       type: IsarType.string,
     ),
-    r'hexCode': PropertySchema(
+    r'feedbackScore': PropertySchema(
       id: 2,
+      name: r'feedbackScore',
+      type: IsarType.long,
+    ),
+    r'hexCode': PropertySchema(
+      id: 3,
       name: r'hexCode',
       type: IsarType.string,
     ),
+    r'isReviewSynced': PropertySchema(
+      id: 4,
+      name: r'isReviewSynced',
+      type: IsarType.bool,
+    ),
     r'openedDate': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'openedDate',
       type: IsarType.dateTime,
     ),
     r'paoMonths': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'paoMonths',
       type: IsarType.long,
     ),
     r'productName': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'productName',
       type: IsarType.string,
     ),
     r'shadeName': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'shadeName',
       type: IsarType.string,
     )
@@ -89,11 +99,13 @@ void _pouchItemSerialize(
 ) {
   writer.writeString(offsets[0], object.brand);
   writer.writeString(offsets[1], object.category);
-  writer.writeString(offsets[2], object.hexCode);
-  writer.writeDateTime(offsets[3], object.openedDate);
-  writer.writeLong(offsets[4], object.paoMonths);
-  writer.writeString(offsets[5], object.productName);
-  writer.writeString(offsets[6], object.shadeName);
+  writer.writeLong(offsets[2], object.feedbackScore);
+  writer.writeString(offsets[3], object.hexCode);
+  writer.writeBool(offsets[4], object.isReviewSynced);
+  writer.writeDateTime(offsets[5], object.openedDate);
+  writer.writeLong(offsets[6], object.paoMonths);
+  writer.writeString(offsets[7], object.productName);
+  writer.writeString(offsets[8], object.shadeName);
 }
 
 PouchItem _pouchItemDeserialize(
@@ -105,12 +117,14 @@ PouchItem _pouchItemDeserialize(
   final object = PouchItem();
   object.brand = reader.readString(offsets[0]);
   object.category = reader.readString(offsets[1]);
-  object.hexCode = reader.readString(offsets[2]);
+  object.feedbackScore = reader.readLongOrNull(offsets[2]);
+  object.hexCode = reader.readString(offsets[3]);
   object.id = id;
-  object.openedDate = reader.readDateTime(offsets[3]);
-  object.paoMonths = reader.readLong(offsets[4]);
-  object.productName = reader.readString(offsets[5]);
-  object.shadeName = reader.readString(offsets[6]);
+  object.isReviewSynced = reader.readBool(offsets[4]);
+  object.openedDate = reader.readDateTime(offsets[5]);
+  object.paoMonths = reader.readLong(offsets[6]);
+  object.productName = reader.readString(offsets[7]);
+  object.shadeName = reader.readString(offsets[8]);
   return object;
 }
 
@@ -126,14 +140,18 @@ P _pouchItemDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 3:
-      return (reader.readDateTime(offset)) as P;
-    case 4:
-      return (reader.readLong(offset)) as P;
-    case 5:
       return (reader.readString(offset)) as P;
+    case 4:
+      return (reader.readBool(offset)) as P;
+    case 5:
+      return (reader.readDateTime(offset)) as P;
     case 6:
+      return (reader.readLong(offset)) as P;
+    case 7:
+      return (reader.readString(offset)) as P;
+    case 8:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -492,6 +510,80 @@ extension PouchItemQueryFilter
     });
   }
 
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      feedbackScoreIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'feedbackScore',
+      ));
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      feedbackScoreIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'feedbackScore',
+      ));
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      feedbackScoreEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'feedbackScore',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      feedbackScoreGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'feedbackScore',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      feedbackScoreLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'feedbackScore',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      feedbackScoreBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'feedbackScore',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition> hexCodeEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -672,6 +764,16 @@ extension PouchItemQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterFilterCondition>
+      isReviewSyncedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isReviewSynced',
+        value: value,
       ));
     });
   }
@@ -1082,6 +1184,18 @@ extension PouchItemQuerySortBy on QueryBuilder<PouchItem, PouchItem, QSortBy> {
     });
   }
 
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> sortByFeedbackScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'feedbackScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> sortByFeedbackScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'feedbackScore', Sort.desc);
+    });
+  }
+
   QueryBuilder<PouchItem, PouchItem, QAfterSortBy> sortByHexCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hexCode', Sort.asc);
@@ -1091,6 +1205,18 @@ extension PouchItemQuerySortBy on QueryBuilder<PouchItem, PouchItem, QSortBy> {
   QueryBuilder<PouchItem, PouchItem, QAfterSortBy> sortByHexCodeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hexCode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> sortByIsReviewSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReviewSynced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> sortByIsReviewSyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReviewSynced', Sort.desc);
     });
   }
 
@@ -1169,6 +1295,18 @@ extension PouchItemQuerySortThenBy
     });
   }
 
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> thenByFeedbackScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'feedbackScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> thenByFeedbackScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'feedbackScore', Sort.desc);
+    });
+  }
+
   QueryBuilder<PouchItem, PouchItem, QAfterSortBy> thenByHexCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hexCode', Sort.asc);
@@ -1190,6 +1328,18 @@ extension PouchItemQuerySortThenBy
   QueryBuilder<PouchItem, PouchItem, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> thenByIsReviewSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReviewSynced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QAfterSortBy> thenByIsReviewSyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReviewSynced', Sort.desc);
     });
   }
 
@@ -1258,10 +1408,22 @@ extension PouchItemQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PouchItem, PouchItem, QDistinct> distinctByFeedbackScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'feedbackScore');
+    });
+  }
+
   QueryBuilder<PouchItem, PouchItem, QDistinct> distinctByHexCode(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'hexCode', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<PouchItem, PouchItem, QDistinct> distinctByIsReviewSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isReviewSynced');
     });
   }
 
@@ -1312,9 +1474,21 @@ extension PouchItemQueryProperty
     });
   }
 
+  QueryBuilder<PouchItem, int?, QQueryOperations> feedbackScoreProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'feedbackScore');
+    });
+  }
+
   QueryBuilder<PouchItem, String, QQueryOperations> hexCodeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'hexCode');
+    });
+  }
+
+  QueryBuilder<PouchItem, bool, QQueryOperations> isReviewSyncedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isReviewSynced');
     });
   }
 

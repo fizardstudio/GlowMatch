@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/network/database_service.dart';
+import 'core/network/supabase_sync_service.dart';
 import 'core/utils/notification_helper.dart';
 import 'core/theme/theme_manager.dart';
 import 'features/catalog/data/repositories/shade_matcher_repository_impl.dart';
@@ -14,9 +16,30 @@ void main() async {
   // Inisialisasi pengatur tema dinamis dari berkas lokal
   await ThemeManager.init();
 
+  // Inisialisasi klien Supabase jika kredensial lingkungan disediakan
+  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        publishableKey: supabaseKey,
+      );
+    } catch (e) {
+      debugPrint("SUPABASE_INIT_ERROR: Gagal inisialisasi Supabase: $e");
+    }
+  }
+
   // Inisialisasi Database Isar lokal dan lakukan seeding data
   final dbService = DatabaseService();
   await dbService.init();
+
+  // Jalankan sinkronisasi katalog luring-daring di latar belakang secara asinkron
+  if (SupabaseSyncService.isInitialized) {
+    SupabaseSyncService.syncCatalog(dbService.isar).then((_) {
+      SupabaseSyncService.syncOfflineReviews(dbService.isar);
+    });
+  }
 
   // Inisialisasi sistem notifikasi lokal luring
   await NotificationHelper.init();

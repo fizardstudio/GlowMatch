@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/network/database_service.dart';
 import '../../../../core/data/models/product_shade.dart';
+import '../../../../core/network/supabase_sync_service.dart';
 import '../../../../core/presentation/widgets/app_navigation_drawer.dart';
 import '../../../../core/theme/theme_manager.dart';
 import '../../../../core/utils/widget_helper.dart';
@@ -361,6 +362,48 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
                                             ),
                                           ],
                                         ),
+                                        
+                                        // Feedback Review Calibration Section
+                                        const SizedBox(height: 12),
+                                        const Divider(height: 12, thickness: 1),
+                                        if (item.feedbackScore == null) ...[
+                                          Text(
+                                            'Bagaimana kesesuaian warna shade ini di kulit Anda?',
+                                            style: TextStyle(color: textMutedColor, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              _buildFeedbackButton('Pas', 0, Colors.green, item),
+                                              _buildFeedbackButton('Terlalu Gelap', -1, Colors.brown, item),
+                                              _buildFeedbackButton('Terlalu Terang', 1, Colors.orange, item),
+                                            ],
+                                          ),
+                                        ] else ...[
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                item.isReviewSynced ? Icons.cloud_done_rounded : Icons.cloud_queue_rounded,
+                                                color: item.isReviewSynced ? Colors.green : Colors.amber,
+                                                size: 14,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  item.isReviewSynced
+                                                      ? 'Ulasan Anda (${_getFeedbackLabel(item.feedbackScore!)}) telah disinkronkan ke Cloud'
+                                                      : 'Ulasan Anda (${_getFeedbackLabel(item.feedbackScore!)}) disimpan luring (Menunggu Sinkronisasi...)',
+                                                  style: TextStyle(
+                                                    color: item.isReviewSynced ? Colors.green : Colors.amber,
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -425,6 +468,52 @@ class _MakeupPouchPageState extends State<MakeupPouchPage> {
             style: TextStyle(color: textMutedColor, fontSize: 12),
           ),
         ],
+      ),
+    );
+  }
+
+  String _getFeedbackLabel(int score) {
+    if (score == 0) return 'Pas';
+    if (score == -1) return 'Terlalu Gelap';
+    return 'Terlalu Terang';
+  }
+
+  Widget _buildFeedbackButton(String label, int score, Color color, PouchItem item) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            side: BorderSide(color: color.withOpacity(0.5)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          onPressed: () async {
+            await _isar.writeTxn(() async {
+              item.feedbackScore = score;
+              item.isReviewSynced = false;
+              await _isar.pouchItems.put(item);
+            });
+            
+            // Trigger offline review sync right away in the background if internet is active
+            SupabaseSyncService.syncOfflineReviews(_isar);
+
+            setState(() {
+              _loadPouchItems();
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ulasan "$label" berhasil disimpan.'),
+                backgroundColor: ThemeManager.primaryColor,
+              ),
+            );
+          },
+          child: Text(
+            label,
+            style: TextStyle(color: color, fontSize: 9.5, fontWeight: FontWeight.bold),
+          ),
+        ),
       ),
     );
   }

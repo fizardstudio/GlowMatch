@@ -19,4 +19,6 @@ class ProductShade {
   int perfectCount = 0;
   int tooDarkCount = 0;
   int tooLightCount = 0;
+
+  double deltaLOffset = 0.0;
 }

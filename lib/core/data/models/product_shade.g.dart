@@ -42,38 +42,43 @@ const ProductShadeSchema = CollectionSchema(
       name: r'category',
       type: IsarType.string,
     ),
-    r'hexCode': PropertySchema(
+    r'deltaLOffset': PropertySchema(
       id: 5,
+      name: r'deltaLOffset',
+      type: IsarType.double,
+    ),
+    r'hexCode': PropertySchema(
+      id: 6,
       name: r'hexCode',
       type: IsarType.string,
     ),
     r'l': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'l',
       type: IsarType.double,
     ),
     r'perfectCount': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'perfectCount',
       type: IsarType.long,
     ),
     r'productName': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'productName',
       type: IsarType.string,
     ),
     r'shadeName': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'shadeName',
       type: IsarType.string,
     ),
     r'tooDarkCount': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'tooDarkCount',
       type: IsarType.long,
     ),
     r'tooLightCount': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'tooLightCount',
       type: IsarType.long,
     )
@@ -118,13 +123,14 @@ void _productShadeSerialize(
   writer.writeDouble(offsets[2], object.b);
   writer.writeString(offsets[3], object.brand);
   writer.writeString(offsets[4], object.category);
-  writer.writeString(offsets[5], object.hexCode);
-  writer.writeDouble(offsets[6], object.l);
-  writer.writeLong(offsets[7], object.perfectCount);
-  writer.writeString(offsets[8], object.productName);
-  writer.writeString(offsets[9], object.shadeName);
-  writer.writeLong(offsets[10], object.tooDarkCount);
-  writer.writeLong(offsets[11], object.tooLightCount);
+  writer.writeDouble(offsets[5], object.deltaLOffset);
+  writer.writeString(offsets[6], object.hexCode);
+  writer.writeDouble(offsets[7], object.l);
+  writer.writeLong(offsets[8], object.perfectCount);
+  writer.writeString(offsets[9], object.productName);
+  writer.writeString(offsets[10], object.shadeName);
+  writer.writeLong(offsets[11], object.tooDarkCount);
+  writer.writeLong(offsets[12], object.tooLightCount);
 }
 
 ProductShade _productShadeDeserialize(
@@ -139,14 +145,15 @@ ProductShade _productShadeDeserialize(
   object.b = reader.readDouble(offsets[2]);
   object.brand = reader.readString(offsets[3]);
   object.category = reader.readString(offsets[4]);
-  object.hexCode = reader.readString(offsets[5]);
+  object.deltaLOffset = reader.readDouble(offsets[5]);
+  object.hexCode = reader.readString(offsets[6]);
   object.id = id;
-  object.l = reader.readDouble(offsets[6]);
-  object.perfectCount = reader.readLong(offsets[7]);
-  object.productName = reader.readString(offsets[8]);
-  object.shadeName = reader.readString(offsets[9]);
-  object.tooDarkCount = reader.readLong(offsets[10]);
-  object.tooLightCount = reader.readLong(offsets[11]);
+  object.l = reader.readDouble(offsets[7]);
+  object.perfectCount = reader.readLong(offsets[8]);
+  object.productName = reader.readString(offsets[9]);
+  object.shadeName = reader.readString(offsets[10]);
+  object.tooDarkCount = reader.readLong(offsets[11]);
+  object.tooLightCount = reader.readLong(offsets[12]);
   return object;
 }
 
@@ -168,18 +175,20 @@ P _productShadeDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
-    case 6:
       return (reader.readDouble(offset)) as P;
-    case 7:
-      return (reader.readLong(offset)) as P;
-    case 8:
+    case 6:
       return (reader.readString(offset)) as P;
+    case 7:
+      return (reader.readDouble(offset)) as P;
+    case 8:
+      return (reader.readLong(offset)) as P;
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 11:
+      return (reader.readLong(offset)) as P;
+    case 12:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -806,6 +815,72 @@ extension ProductShadeQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'category',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      deltaLOffsetEqualTo(
+    double value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deltaLOffset',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      deltaLOffsetGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deltaLOffset',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      deltaLOffsetLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deltaLOffset',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterFilterCondition>
+      deltaLOffsetBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deltaLOffset',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
       ));
     });
   }
@@ -1571,6 +1646,19 @@ extension ProductShadeQuerySortBy
     });
   }
 
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByDeltaLOffset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deltaLOffset', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      sortByDeltaLOffsetDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deltaLOffset', Sort.desc);
+    });
+  }
+
   QueryBuilder<ProductShade, ProductShade, QAfterSortBy> sortByHexCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hexCode', Sort.asc);
@@ -1723,6 +1811,19 @@ extension ProductShadeQuerySortThenBy
     });
   }
 
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByDeltaLOffset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deltaLOffset', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ProductShade, ProductShade, QAfterSortBy>
+      thenByDeltaLOffsetDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deltaLOffset', Sort.desc);
+    });
+  }
+
   QueryBuilder<ProductShade, ProductShade, QAfterSortBy> thenByHexCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hexCode', Sort.asc);
@@ -1859,6 +1960,12 @@ extension ProductShadeQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ProductShade, ProductShade, QDistinct> distinctByDeltaLOffset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deltaLOffset');
+    });
+  }
+
   QueryBuilder<ProductShade, ProductShade, QDistinct> distinctByHexCode(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1941,6 +2048,12 @@ extension ProductShadeQueryProperty
   QueryBuilder<ProductShade, String, QQueryOperations> categoryProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'category');
+    });
+  }
+
+  QueryBuilder<ProductShade, double, QQueryOperations> deltaLOffsetProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deltaLOffset');
     });
   }
 

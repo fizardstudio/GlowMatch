@@ -13,4 +13,7 @@ class PouchItem {
   late DateTime openedDate;
   late int paoMonths; // Masa PAO dalam bulan (misal: 12)
   late String category; // Foundation, Concealer, Lipstick, dll.
+
+  bool isReviewSynced = true;
+  int? feedbackScore; // null = no review, 0 = perfect, -1 = too dark, 1 = too light
 }
