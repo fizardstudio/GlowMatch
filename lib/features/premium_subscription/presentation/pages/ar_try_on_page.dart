@@ -480,6 +480,20 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       } else {
         return colorName == 'Pale Tangerine' || colorName == 'Soft Coral' || colorName == 'Peach Pink';
       }
+    } else if (category == 'eyeshadow') {
+      if (undertone == 'warm') {
+        if (colorName == 'Rose Shimmer' || colorName == 'Plum Glam' || colorName == 'Cyber Cyan') return false;
+      } else if (undertone == 'cool') {
+        if (colorName == 'Champagne Gold' || colorName == 'Sunset Bronze' || colorName == 'Cyber Cyan') return false;
+      }
+      
+      if (contrastTier == 'high') {
+        return colorName == 'Sunset Bronze' || colorName == 'Plum Glam' || colorName == 'Cyber Cyan';
+      } else if (contrastTier == 'medium') {
+        return colorName == 'Champagne Gold' || colorName == 'Rose Shimmer' || colorName == 'Taupe Nude';
+      } else { // low/muted contrast
+        return colorName == 'Taupe Nude' || colorName == 'Champagne Gold';
+      }
     }
     return false;
   }
@@ -3113,13 +3127,19 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                 itemBuilder: (context, index) {
                                   final eColor = _eyeshadowColors[index];
                                   final isSel = _selectedEyeshadowColor == eColor['color'] && _eyeshadowOpacity > 0.0;
-                                  return _buildColorCircle(eColor['color'], eColor['name'], isSel, () {
-                                    setState(() {
-                                      _selectedEyeshadowColor = eColor['color'];
-                                      if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
-                                      _activePreset = null;
-                                    });
-                                  });
+                                  return _buildColorCircle(
+                                    eColor['color'],
+                                    eColor['name'],
+                                    isSel,
+                                    () {
+                                      setState(() {
+                                        _selectedEyeshadowColor = eColor['color'];
+                                        if (_eyeshadowOpacity == 0.0) _eyeshadowOpacity = 0.40;
+                                        _activePreset = null;
+                                      });
+                                    },
+                                    isRecommended: _isColorRecommended('eyeshadow', eColor['name']),
+                                  );
                                 },
                               ),
                             ),
