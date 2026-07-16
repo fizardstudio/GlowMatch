@@ -565,85 +565,74 @@ class LipFilterPainter extends CustomPainter {
     if (showGlassSkin && foundationOpacity > 0.0 && foundationFinishing != 'matte' && estimatedLeftCheek != null && estimatedRightCheek != null) {
       final bool isDewy = foundationFinishing == 'dewy';
       
-      final double cheekRadius = faceWidth * (isDewy ? 0.18 : 0.22);
-      final double cheekOpacity = isDewy ? 0.22 : 0.12;
-
-      final double foreheadRadius = faceWidth * (isDewy ? 0.20 : 0.24);
-      final double foreheadOpacity = isDewy ? 0.15 : 0.08;
-
-      final double noseRadius = faceWidth * (isDewy ? 0.04 : 0.06);
-      final double noseOpacity = isDewy ? 0.25 : 0.15;
-
-      final double chinRadius = faceWidth * (isDewy ? 0.08 : 0.10);
-      final double chinOpacity = isDewy ? 0.12 : 0.08;
-
       final Paint paintGlow = Paint()
         ..style = PaintingStyle.fill
         ..blendMode = BlendMode.srcOver;
 
-      // Glow Pipi Kiri
-      paintGlow.shader = ui.Gradient.radial(
-        estimatedLeftCheek,
-        cheekRadius,
-        [
-          Colors.white.withOpacity(cheekOpacity),
-          Colors.white.withOpacity(0.0),
-        ],
-      );
-      canvas.drawCircle(estimatedLeftCheek, cheekRadius, paintGlow);
+      // Glow Pipi Kiri & Kanan (Hanya muncul jika blushOpacity > 0.0 dan blushColor != null)
+      if (blushColor != null && blushOpacity > 0.0) {
+        final double cheekRadius = faceWidth * (isDewy ? 0.18 : 0.22);
+        final double baseCheekOpacity = isDewy ? 0.22 : 0.12;
+        final double currentCheekOpacity = (baseCheekOpacity * (blushOpacity * 2.0)).clamp(0.0, 1.0);
 
-      // Glow Pipi Kanan
-      paintGlow.shader = ui.Gradient.radial(
-        estimatedRightCheek,
-        cheekRadius,
-        [
-          Colors.white.withOpacity(cheekOpacity),
-          Colors.white.withOpacity(0.0),
-        ],
-      );
-      canvas.drawCircle(estimatedRightCheek, cheekRadius, paintGlow);
-
-      // Glow Dahi
-      final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
-      final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
-      paintGlow.shader = ui.Gradient.radial(
-        mappedForehead,
-        foreheadRadius,
-        [
-          Colors.white.withOpacity(foreheadOpacity),
-          Colors.white.withOpacity(0.0),
-        ],
-      );
-      canvas.drawCircle(mappedForehead, foreheadRadius, paintGlow);
-
-      // Glow Ujung Hidung
-      final noseBridgePoints = face!.contours[FaceContourType.noseBridge]?.points;
-      if (noseBridgePoints != null && noseBridgePoints.isNotEmpty) {
-        final mappedNoseTip = mapPoint(Point(noseBridgePoints.last.x.round(), noseBridgePoints.last.y.round()));
         paintGlow.shader = ui.Gradient.radial(
-          mappedNoseTip,
-          noseRadius,
+          estimatedLeftCheek,
+          cheekRadius,
           [
-            Colors.white.withOpacity(noseOpacity),
+            Colors.white.withOpacity(currentCheekOpacity),
             Colors.white.withOpacity(0.0),
           ],
         );
-        canvas.drawCircle(mappedNoseTip, noseRadius, paintGlow);
+        canvas.drawCircle(estimatedLeftCheek, cheekRadius, paintGlow);
+
+        paintGlow.shader = ui.Gradient.radial(
+          estimatedRightCheek,
+          cheekRadius,
+          [
+            Colors.white.withOpacity(currentCheekOpacity),
+            Colors.white.withOpacity(0.0),
+          ],
+        );
+        canvas.drawCircle(estimatedRightCheek, cheekRadius, paintGlow);
       }
 
-      // Glow Dagu
-      final facePoints = face!.contours[FaceContourType.face]?.points;
-      if (facePoints != null && facePoints.length > 18) {
-        final mappedChin = mapPoint(Point(facePoints[18].x.round(), facePoints[18].y.round()));
+      // Glow T-Zone (Dahi & Ujung Hidung) (Hanya muncul jika noseHighlightOpacity > 0.0)
+      if (noseHighlightOpacity > 0.0) {
+        // Dahi
+        final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
+        final mappedForehead = mapPoint(Point(foreheadPt.x.round(), foreheadPt.y.round()));
+        final double foreheadRadius = faceWidth * (isDewy ? 0.20 : 0.24);
+        final double baseForeheadOpacity = isDewy ? 0.15 : 0.08;
+        final double currentForeheadOpacity = (baseForeheadOpacity * noseHighlightOpacity).clamp(0.0, 1.0);
+
         paintGlow.shader = ui.Gradient.radial(
-          mappedChin,
-          chinRadius,
+          mappedForehead,
+          foreheadRadius,
           [
-            Colors.white.withOpacity(chinOpacity),
+            Colors.white.withOpacity(currentForeheadOpacity),
             Colors.white.withOpacity(0.0),
           ],
         );
-        canvas.drawCircle(mappedChin, chinRadius, paintGlow);
+        canvas.drawCircle(mappedForehead, foreheadRadius, paintGlow);
+
+        // Ujung Hidung
+        final noseBridgePoints = face!.contours[FaceContourType.noseBridge]?.points;
+        if (noseBridgePoints != null && noseBridgePoints.isNotEmpty) {
+          final mappedNoseTip = mapPoint(Point(noseBridgePoints.last.x.round(), noseBridgePoints.last.y.round()));
+          final double noseRadius = faceWidth * (isDewy ? 0.04 : 0.06);
+          final double baseNoseOpacity = isDewy ? 0.25 : 0.15;
+          final double currentNoseOpacity = (baseNoseOpacity * noseHighlightOpacity).clamp(0.0, 1.0);
+
+          paintGlow.shader = ui.Gradient.radial(
+            mappedNoseTip,
+            noseRadius,
+            [
+              Colors.white.withOpacity(currentNoseOpacity),
+              Colors.white.withOpacity(0.0),
+            ],
+          );
+          canvas.drawCircle(mappedNoseTip, noseRadius, paintGlow);
+        }
       }
     }
 
