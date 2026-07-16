@@ -96,6 +96,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   String? _activePreset = 'Korean Glass Skin';
   bool _isSplitMode = true; // DEFAULT ON!
   bool _showGlassSkin = true;
+  bool _showContourGuide = false;
 
   // Foundation/Base fields
   Color _selectedFoundationColor = const Color(0xFFF3D3C4);
@@ -2090,6 +2091,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                               eyelinerThickness: _eyelinerThickness,
                                               noseHighlightOpacity: _noseHighlightOpacity,
                                               noseShadingOpacity: _noseShadingOpacity,
+                                              showContourGuide: _showContourGuide,
                                             ),
                                           ),
                                         ),
@@ -2222,47 +2224,82 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                               ),
                             ),
 
-                          // Live Face Shape Badge
+                          // Live Face Shape & Contour Guidance Banner
                           if (!_showPaywall && _detectedFace != null && !_isCapturing)
                             Positioned(
                               top: 20,
-                              left: 0,
-                              right: 0,
+                              left: 20,
+                              right: 20,
                               child: Center(
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  constraints: const BoxConstraints(maxWidth: 360),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: cardBgColor.withOpacity(0.85),
+                                    color: cardBgColor.withOpacity(_showContourGuide ? 0.92 : 0.85),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(color: primaryColor.withOpacity(0.4), width: 1.5),
                                     boxShadow: ThemeManager.premiumGlowShadow,
                                   ),
-                                  child: Row(
+                                  child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(
-                                        FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'round'
-                                            ? Icons.blur_circular_rounded
-                                            : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'long'
-                                                ? Icons.crop_portrait_rounded
-                                                : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'square'
-                                                    ? Icons.crop_square_rounded
-                                                    : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'heart'
-                                                        ? Icons.favorite_rounded
-                                                        : Icons.face_rounded,
-                                        color: primaryColor,
-                                        size: 16,
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'round'
+                                                ? Icons.blur_circular_rounded
+                                                : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'long'
+                                                    ? Icons.crop_portrait_rounded
+                                                    : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'square'
+                                                        ? Icons.crop_square_rounded
+                                                        : FaceGeometryHelper.classifyFaceShape(_detectedFace!) == 'heart'
+                                                            ? Icons.favorite_rounded
+                                                            : Icons.face_rounded,
+                                            color: primaryColor,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Wajah: ${FaceGeometryHelper.classifyFaceShape(_detectedFace!).toUpperCase()}',
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          if (_showContourGuide) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Text(
+                                                'PANDUAN KONTUR',
+                                                style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Wajah: ${FaceGeometryHelper.classifyFaceShape(_detectedFace!).toUpperCase()}',
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.5,
+                                      if (_showContourGuide) ...[
+                                        const SizedBox(height: 8),
+                                        const Divider(height: 8, thickness: 1),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _getContourTip(FaceGeometryHelper.classifyFaceShape(_detectedFace!)),
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: textColor.withOpacity(0.9),
+                                            fontSize: 10,
+                                            height: 1.45,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -2504,7 +2541,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                             _buildCategoryTab(1, 'BASE'),
                             _buildCategoryTab(2, 'BIBIR'),
                             _buildCategoryTab(3, 'PIPI'),
-                            _buildCategoryTab(4, 'HIDUNG'),
+                            _buildCategoryTab(4, 'KONTUR WAJAH'),
                             _buildCategoryTab(5, 'MATA'),
                             _buildCategoryTab(6, 'PENGATURAN'),
                           ],
@@ -2939,6 +2976,41 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                         ),
                       ),
                     ] else if (_activeCategoryIndex == 4) ...[
+                      // Toggle Panduan Kontur AR
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.face_retouching_natural_rounded, color: primaryColor, size: 18),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Panduan Kontur AR',
+                                    style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    'Garis pandu shading & highlight wajah',
+                                    style: TextStyle(color: textMutedColor, fontSize: 8),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Switch(
+                            activeColor: primaryColor,
+                            value: _showContourGuide,
+                            onChanged: (val) {
+                              setState(() {
+                                _showContourGuide = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 16, thickness: 1),
                       // Opacity Nose Highlight Slider
                       Row(
                         children: [
@@ -3212,6 +3284,22 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         ],
       ),
     );
+  }
+
+  String _getContourTip(String shape) {
+    switch (shape) {
+      case 'round':
+        return 'Wajah Bulat: Berikan shading cokelat di rahang bawah & pipi samping untuk efek tirus, lalu highlight dahi & batang hidung.';
+      case 'square':
+        return 'Wajah Kotak: Gunakan shading di sudut rahang & pelipis dahi untuk melembutkan sudut wajah, lalu highlight dahi & dagu.';
+      case 'heart':
+        return 'Wajah Hati: Bubuhkan shading di pelipis dahi samping & ujung dagu lancip, lalu highlight di tengah dahi & rahang samping.';
+      case 'long':
+        return 'Wajah Panjang: Tarik shading mendatar di dahi teratas & ujung bawah dagu untuk memendekkan wajah, lalu highlight mendatar di pipi.';
+      case 'oval':
+      default:
+        return 'Wajah Oval: Bentuk proporsional alami. Cukup berikan shading lembut di bawah tulang pipi dan highlight di dahi & hidung.';
+    }
   }
 }
 

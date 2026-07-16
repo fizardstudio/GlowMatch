@@ -45,6 +45,9 @@ class LipFilterPainter extends CustomPainter {
   // Parameter Hidung (Contour & Highlight)
   final double noseHighlightOpacity;
   final double noseShadingOpacity;
+  
+  // Panduan Kontur AR Overlay
+  final bool showContourGuide;
 
   LipFilterPainter({
     required this.face,
@@ -70,6 +73,7 @@ class LipFilterPainter extends CustomPainter {
     required this.eyelinerThickness,
     required this.noseHighlightOpacity,
     required this.noseShadingOpacity,
+    required this.showContourGuide,
   });
 
   @override
@@ -815,6 +819,154 @@ class LipFilterPainter extends CustomPainter {
         drawCheekBlush(estimatedRightCheek, false);
       }
       canvas.restore();
+    }
+
+    if (showContourGuide) {
+      final String shape = FaceGeometryHelper.classifyFaceShape(face!);
+      final eyes = FaceGeometryHelper.getEyeCenters(face!);
+      final leftEye = eyes['left']!;
+      final rightEye = eyes['right']!;
+      final vectors = FaceGeometryHelper.getFaceUnitVectors(face!, leftEye, rightEye);
+      final Point<double> unitX = vectors['unitX']!;
+      final Point<double> unitY = vectors['unitY']!;
+      final double eyeDist = vectors['distance']!.x;
+      
+      final cheekCoords = FaceGeometryHelper.getCheekCoordinates(face!);
+      final foreheadPt = FaceGeometryHelper.getForeheadCoordinate(face!);
+      final faceContour = face!.contours[FaceContourType.face]?.points ?? [];
+
+      if (faceContour.length >= 36) {
+        final Paint contourFillPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = const Color(0x3B8B5A2B); // Brown 23% opacity
+
+        final Paint contourStrokePaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8
+          ..color = const Color(0x808B5A2B); // Brown 50% opacity
+
+        final Paint highlightFillPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = const Color(0x3BFFEB3B); // Golden yellow 23% opacity
+
+        final Paint highlightStrokePaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8
+          ..color = const Color(0x80FFEB3B); // Golden yellow 50% opacity
+
+        void drawOvalGuide(Point<double> center, double rx, double ry, bool isHighlight) {
+          final Offset centerOffset = mapPoint(Point(center.x.round(), center.y.round()));
+          final double rollRad = (face!.headEulerAngleZ ?? 0.0) * pi / 180.0;
+          
+          canvas.save();
+          canvas.translate(centerOffset.dx, centerOffset.dy);
+          canvas.rotate(lensDirection == CameraLensDirection.front ? -rollRad : rollRad);
+          
+          final rect = Rect.fromLTRB(-rx * scaleX, -ry * scaleY, rx * scaleX, ry * scaleY);
+          canvas.drawOval(rect, isHighlight ? highlightFillPaint : contourFillPaint);
+          canvas.drawOval(rect, isHighlight ? highlightStrokePaint : contourStrokePaint);
+          
+          canvas.restore();
+        }
+
+        // --- DRAW COMMON HIGHLIGHTS ---
+        // 1. Dahi Tengah
+        drawOvalGuide(foreheadPt, eyeDist * 0.22, eyeDist * 0.12, true);
+        
+        // 2. Batang Hidung (Nose Bridge)
+        final noseBridgePoints = face!.contours[FaceContourType.noseBridge]?.points ?? [];
+        if (noseBridgePoints.isNotEmpty) {
+          final List<Point<double>> rawNose = noseBridgePoints.map((p) => Point<double>(p.x.toDouble(), p.y.toDouble())).toList();
+          final noseCenter = rawNose[rawNose.length ~/ 2];
+          drawOvalGuide(noseCenter, eyeDist * 0.08, eyeDist * 0.35, true);
+        }
+
+        // 3. Dagu Tengah (Chin center)
+        final chinPoint = Point<double>(faceContour[18].x.toDouble(), faceContour[18].y.toDouble());
+        drawOvalGuide(chinPoint - Point<double>(unitY.x * (eyeDist * 0.12), unitY.y * (eyeDist * 0.12)), eyeDist * 0.12, eyeDist * 0.08, true);
+
+        // --- DRAW SHAPE-SPECIFIC CONTOURS & HIGHLIGHTS ---
+        if (shape == 'round') {
+          // Bulat: shading pipi tajam ke arah sudut bibir + pelipis samping dahi
+          final cpLeft = Point<double>(
+            cheekCoords['left']!.x + unitY.x * (eyeDist * 0.18) - unitX.x * (eyeDist * 0.12),
+            cheekCoords['left']!.y + unitY.y * (eyeDist * 0.18) - unitX.y * (eyeDist * 0.12),
+          );
+          drawOvalGuide(cpLeft, eyeDist * 0.28, eyeDist * 0.10, false);
+          
+          final cpRight = Point<double>(
+            cheekCoords['right']!.x + unitY.x * (eyeDist * 0.18) + unitX.x * (eyeDist * 0.12),
+            cheekCoords['right']!.y + unitY.y * (eyeDist * 0.18) + unitX.y * (eyeDist * 0.12),
+          );
+          drawOvalGuide(cpRight, eyeDist * 0.28, eyeDist * 0.10, false);
+
+          final templeLeft = Point<double>(
+            leftEye.x - unitX.x * (eyeDist * 0.35) - unitY.x * (eyeDist * 0.5),
+            leftEye.y - unitX.y * (eyeDist * 0.35) - unitY.y * (eyeDist * 0.5),
+          );
+          drawOvalGuide(templeLeft, eyeDist * 0.15, eyeDist * 0.10, false);
+
+          final templeRight = Point<double>(
+            rightEye.x + unitX.x * (eyeDist * 0.35) - unitY.x * (eyeDist * 0.5),
+            rightEye.y + unitX.y * (eyeDist * 0.35) - unitY.y * (eyeDist * 0.5),
+          );
+          drawOvalGuide(templeRight, eyeDist * 0.15, eyeDist * 0.10, false);
+
+        } else if (shape == 'square') {
+          // Kotak: shading di pojok rahang lebar & pojok pelipis dahi samping atas
+          final jawLeft = Point<double>(faceContour[12].x.toDouble(), faceContour[12].y.toDouble());
+          drawOvalGuide(jawLeft - Point<double>(unitX.x * (eyeDist * 0.1) - unitY.x * (eyeDist * 0.1), unitX.y * (eyeDist * 0.1) - unitY.y * (eyeDist * 0.1)), eyeDist * 0.25, eyeDist * 0.15, false);
+
+          final jawRight = Point<double>(faceContour[24].x.toDouble(), faceContour[24].y.toDouble());
+          drawOvalGuide(jawRight + Point<double>(unitX.x * (eyeDist * 0.1) + unitY.x * (eyeDist * 0.1), unitX.y * (eyeDist * 0.1) + unitY.y * (eyeDist * 0.1)), eyeDist * 0.25, eyeDist * 0.15, false);
+
+          final foreheadCornerLeft = Point<double>(faceContour[4].x.toDouble(), faceContour[4].y.toDouble());
+          drawOvalGuide(foreheadCornerLeft, eyeDist * 0.2, eyeDist * 0.12, false);
+
+          final foreheadCornerRight = Point<double>(faceContour[32].x.toDouble(), faceContour[32].y.toDouble());
+          drawOvalGuide(foreheadCornerRight, eyeDist * 0.2, eyeDist * 0.12, false);
+
+        } else if (shape == 'heart') {
+          // Hati: shading di dahi atas samping + dagu paling bawah untuk melembutkan dagu lancip
+          final dahiLeft = Point<double>(faceContour[3].x.toDouble(), faceContour[3].y.toDouble());
+          drawOvalGuide(dahiLeft, eyeDist * 0.22, eyeDist * 0.12, false);
+
+          final dahiRight = Point<double>(faceContour[33].x.toDouble(), faceContour[33].y.toDouble());
+          drawOvalGuide(dahiRight, eyeDist * 0.22, eyeDist * 0.12, false);
+
+          drawOvalGuide(chinPoint, eyeDist * 0.15, eyeDist * 0.08, false);
+
+          final jawLeftMid = Point<double>(faceContour[14].x.toDouble(), faceContour[14].y.toDouble());
+          drawOvalGuide(jawLeftMid, eyeDist * 0.15, eyeDist * 0.08, true);
+
+          final jawRightMid = Point<double>(faceContour[22].x.toDouble(), faceContour[22].y.toDouble());
+          drawOvalGuide(jawRightMid, eyeDist * 0.15, eyeDist * 0.08, true);
+
+        } else if (shape == 'long') {
+          // Panjang: shading horizontal dahi paling atas (batas rambut) & dagu terbawah (efek memendekkan wajah)
+          final fhCenter = Point<double>(faceContour[0].x.toDouble(), faceContour[0].y.toDouble());
+          drawOvalGuide(fhCenter, eyeDist * 0.45, eyeDist * 0.10, false);
+
+          drawOvalGuide(chinPoint, eyeDist * 0.35, eyeDist * 0.12, false);
+
+          drawOvalGuide(Point<double>(cheekCoords['left']!.x, cheekCoords['left']!.y), eyeDist * 0.20, eyeDist * 0.08, true);
+          drawOvalGuide(Point<double>(cheekCoords['right']!.x, cheekCoords['right']!.y), eyeDist * 0.20, eyeDist * 0.08, true);
+
+        } else {
+          // Oval: shading standar di bawah tulang pipi
+          final cpLeft = Point<double>(
+            cheekCoords['left']!.x + unitY.x * (eyeDist * 0.15) - unitX.x * (eyeDist * 0.10),
+            cheekCoords['left']!.y + unitY.y * (eyeDist * 0.15) - unitX.y * (eyeDist * 0.10),
+          );
+          drawOvalGuide(cpLeft, eyeDist * 0.24, eyeDist * 0.08, false);
+          
+          final cpRight = Point<double>(
+            cheekCoords['right']!.x + unitY.x * (eyeDist * 0.15) + unitX.x * (eyeDist * 0.10),
+            cheekCoords['right']!.y + unitY.y * (eyeDist * 0.15) + unitX.y * (eyeDist * 0.10),
+          );
+          drawOvalGuide(cpRight, eyeDist * 0.24, eyeDist * 0.08, false);
+        }
+      }
     }
 
     canvas.restore();
