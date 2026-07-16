@@ -22,6 +22,7 @@ class ShadeConverterPage extends StatefulWidget {
 
 class _ShadeConverterPageState extends State<ShadeConverterPage> {
   bool _isLoading = true;
+  bool _isPremium = false;
   List<ProductShade> _allShades = [];
 
   // Dropdown States
@@ -55,11 +56,14 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
       List<ProductShade> sourceSds = [];
       ProductShade? matchedShade;
 
+      bool isPremium = false;
       try {
         final isar = DatabaseService().isar;
         final settings = await isar.appSettings.get(0);
-        if (settings != null && settings.lastMatchedShadeName != null) {
-          final lastShadeName = settings.lastMatchedShadeName!;
+        if (settings != null) {
+          isPremium = settings.isPremium;
+          if (settings.lastMatchedShadeName != null) {
+            final lastShadeName = settings.lastMatchedShadeName!;
           ProductShade? found;
           try {
             found = shades.firstWhere(
@@ -89,14 +93,16 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
             debugPrint("SHADE_CONVERTER: Auto-selected scanned shade: ${found.shadeName}");
           }
         }
+      }
       } catch (e) {
         debugPrint("Error loading AppSettings in ShadeConverterPage: $e");
       }
 
       setState(() {
+        _isPremium = isPremium;
         _allShades = shades;
-        _sourceBrands = shades.map((s) => s.brand).toSet().toList()..sort();
-        _targetBrands = shades.map((s) => s.brand).toSet().toList()..sort();
+        _sourceBrands = shades.map((s) => s.brand).toSet().toList()...sort();
+        _targetBrands = shades.map((s) => s.brand).toSet().toList()...sort();
         
         if (matchedBrand != null) {
           _selectedSourceBrand = matchedBrand;
@@ -409,8 +415,72 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _matches.length,
+                          itemCount: _isPremium ? _matches.length : (_matches.length > 1 ? 2 : _matches.length),
                           itemBuilder: (context, index) {
+                            if (!_isPremium && index == 1) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: ThemeManager.cardBgColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: ThemeManager.primaryColor.withOpacity(0.3),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: ThemeManager.premiumGlowShadow,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.lock_rounded, color: ThemeManager.primaryColor, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${_matches.length - 1}+ Shade Alternatif Terkunci',
+                                          style: TextStyle(
+                                            color: ThemeManager.textColor,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Upgrade ke Premium untuk membuka semua konversi shade alternatif terdekat.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: ThemeManager.textMutedColor,
+                                        fontSize: 10.5,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: ThemeManager.primaryColor,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                        ),
+                                        onPressed: _showPremiumUnlockDialog,
+                                        child: const Text(
+                                          'Buka Semua Shade (Premium)',
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
                             final match = _matches[index];
                             final ProductShade product = match['product'] as ProductShade;
                             final double dE = match['deltaE'] as double;
@@ -609,6 +679,83 @@ class _ShadeConverterPageState extends State<ShadeConverterPage> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: ThemeManager.primaryColor),
       ),
+    );
+  }
+
+  Future<void> _activatePremium() async {
+    final isar = DatabaseService().isar;
+    await isar.writeTxn(() async {
+      final settings = await isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = false);
+      settings.isPremium = true;
+      await isar.appSettings.put(settings);
+    });
+
+    setState(() {
+      _isPremium = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Selamat! Fitur Premium Berhasil Diaktifkan.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showPremiumUnlockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = ThemeManager.isDark;
+        final textColor = ThemeManager.textColor;
+        final textMutedColor = ThemeManager.textMutedColor;
+        final primaryColor = ThemeManager.primaryColor;
+        final cardBgColor = ThemeManager.cardBgColor;
+        final cardBorderColor = ThemeManager.cardBorderColor;
+        return AlertDialog(
+          backgroundColor: cardBgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: cardBorderColor, width: 1.5),
+          ),
+          title: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.stars_rounded, color: primaryColor, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                'Buka Fitur Premium',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Text(
+            'Nikmati fitur premium tanpa batasan harian, buka semua opsi shade alternatif terdekat, hilangkan watermark, dan akses AR Makeup Contour Guide!',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textMutedColor, fontSize: 13, height: 1.5),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                await _activatePremium();
+              },
+              child: const Text('Aktifkan Premium Permanen', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }
