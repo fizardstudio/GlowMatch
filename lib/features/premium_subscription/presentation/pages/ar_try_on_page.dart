@@ -1224,10 +1224,6 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
     final bool originalSplitMode = _isSplitMode;
 
     try {
-      setState(() {
-        _isSplitMode = true;
-      });
-
       final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
         throw Exception("Gagal menginisialisasi area dandan.");
@@ -1235,37 +1231,43 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
       final double width = boundary.size.width;
 
-      int? frameW;
-      int? frameH;
+      // 1. Ambil Snapshot Riasan Penuh (sliderX = 0)
+      setState(() {
+        _isSplitMode = true;
+        _sliderX = 0;
+      });
+      await Future.delayed(const Duration(milliseconds: 100));
 
-      // Ambil 6 frame bertahap dari kiri ke kanan (0% hingga 100%)
-      final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
-      for (int i = 0; i < steps.length; i++) {
-        setState(() {
-          _sliderX = steps[i] * width;
-          _isCapturing = true; // Sembunyikan semua UI overlays & tampilkan watermark
-        });
+      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 0.6);
+      final int frameW = uiImageMakeup.width;
+      final int frameH = uiImageMakeup.height;
 
-        await Future.delayed(const Duration(milliseconds: 150));
-
-        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.3);
-        if (frameW == null) {
-          frameW = uiImage.width;
-          frameH = uiImage.height;
-        }
-        final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
-        if (byteData != null) {
-          frames.add(byteData.buffer.asUint8List());
-        }
-
-        setState(() {
-          _exportProgress = (i + 1) / steps.length * 0.45;
-        });
+      final ByteData? byteDataMakeup = await uiImageMakeup.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteDataMakeup == null) {
+        throw Exception("Gagal mengodekan frame dandan.");
       }
+      final Uint8List makeupBytes = byteDataMakeup.buffer.asUint8List();
 
-      if (frameW == null || frameH == null || frames.isEmpty) {
-        throw Exception("Gagal merekam frame gambar.");
+      setState(() {
+        _exportProgress = 0.20;
+      });
+
+      // 2. Ambil Snapshot Wajah Asli Tanpa Riasan (sliderX = width)
+      setState(() {
+        _sliderX = width;
+      });
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 0.6);
+      final ByteData? byteDataRaw = await uiImageRaw.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteDataRaw == null) {
+        throw Exception("Gagal mengodekan frame wajah asli.");
       }
+      final Uint8List rawBytes = byteDataRaw.buffer.asUint8List();
+
+      setState(() {
+        _exportProgress = 0.45;
+      });
 
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -1276,7 +1278,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       // Jalankan kompresi dan encoding GIF di background Isolate menggunakan compute agar UI tidak hang/lag
       final List<int> gifBytes = await compute(
         encodeBoomerangGifInBackground,
-        BoomerangGifParams(width: frameW, height: frameH, frames: frames),
+        BoomerangGifParams(
+          width: frameW,
+          height: frameH,
+          rawBytes: rawBytes,
+          makeupBytes: makeupBytes,
+        ),
       );
 
       setState(() {
@@ -3439,23 +3446,61 @@ class SmoothedFaceContour implements FaceContour {
 class BoomerangGifParams {
   final int width;
   final int height;
-  final List<Uint8List> frames;
+  final Uint8List rawBytes;
+  final Uint8List makeupBytes;
   BoomerangGifParams({
     required this.width,
     required this.height,
-    required this.frames,
+    required this.rawBytes,
+    required this.makeupBytes,
   });
 }
 
 List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
-  final img.Image gifAnim = img.Image(width: params.width, height: params.height, numChannels: 4);
+  final List<Uint8List> frames = [];
+  final int width = params.width;
+  final int height = params.height;
+  final int bytesPerRow = width * 4;
+
+  // Generate 6 frames
+  final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  for (int i = 0; i < steps.length; i++) {
+    final double splitFactor = steps[i];
+    final int splitCol = (width * splitFactor).toInt();
+    final int splitBytes = splitCol * 4;
+    
+    final Uint8List frameBytes = Uint8List(width * height * 4);
+    for (int y = 0; y < height; y++) {
+      final int rowOffset = y * bytesPerRow;
+      if (splitBytes > 0) {
+        frameBytes.setRange(
+          rowOffset,
+          rowOffset + splitBytes,
+          params.rawBytes,
+          rowOffset,
+        );
+      }
+      if (splitBytes < bytesPerRow) {
+        frameBytes.setRange(
+          rowOffset + splitBytes,
+          rowOffset + bytesPerRow,
+          params.makeupBytes,
+          rowOffset + splitBytes,
+        );
+      }
+    }
+    frames.add(frameBytes);
+  }
+
+  // Compile GIF using package:image
+  final img.Image gifAnim = img.Image(width: width, height: height, numChannels: 4);
   gifAnim.frameDuration = 150;
 
-  for (int fIndex = 0; fIndex < params.frames.length; fIndex++) {
+  for (int fIndex = 0; fIndex < frames.length; fIndex++) {
     final img.Image frameImg = img.Image.fromBytes(
-      width: params.width,
-      height: params.height,
-      bytes: params.frames[fIndex].buffer,
+      width: width,
+      height: height,
+      bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
     frameImg.frameDuration = 150;
@@ -3466,12 +3511,12 @@ List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
     }
   }
 
-  // Ping-pong frames
-  for (int fIndex = params.frames.length - 2; fIndex > 0; fIndex--) {
+  // Ping-pong frames for Boomerang effect
+  for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
     final img.Image frameImg = img.Image.fromBytes(
-      width: params.width,
-      height: params.height,
-      bytes: params.frames[fIndex].buffer,
+      width: width,
+      height: height,
+      bytes: frames[fIndex].buffer,
       numChannels: 4,
     );
     frameImg.frameDuration = 150;

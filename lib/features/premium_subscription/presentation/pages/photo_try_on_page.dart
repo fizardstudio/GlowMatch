@@ -1064,14 +1064,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     final double originalSliderX = _sliderX;
     final bool originalSplitMode = _isSplitMode;
 
-    int? frameW;
-    int? frameH;
-
     try {
-      setState(() {
-        _isSplitMode = true;
-      });
-
       final RenderRepaintBoundary? boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
         throw Exception("Gagal menginisialisasi area dandan.");
@@ -1079,37 +1072,44 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
 
       final double width = boundary.size.width;
 
-      // Ambil 6 frame bertahap dari kiri ke kanan (0% hingga 100%)
-      final List<double> steps = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
-      for (int i = 0; i < steps.length; i++) {
-        setState(() {
-          _sliderX = steps[i] * width;
-          _isCapturing = true; // Sembunyikan semua UI overlays & tampilkan watermark
-        });
+      // 1. Ambil Snapshot Riasan Penuh (sliderX = 0)
+      setState(() {
+        _isSplitMode = true;
+        _sliderX = 0;
+      });
+      await Future.delayed(const Duration(milliseconds: 100));
 
-        await Future.delayed(const Duration(milliseconds: 150));
+      final ui.Image uiImageMakeup = await boundary.toImage(pixelRatio: 0.6);
+      final int frameW = uiImageMakeup.width;
+      final int frameH = uiImageMakeup.height;
 
-        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.3);
-        if (frameW == null) {
-          frameW = uiImage.width;
-          frameH = uiImage.height;
-        }
-        final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
-        if (byteData != null) {
-          frames.add(byteData.buffer.asUint8List());
-        }
-
-        setState(() {
-          _exportProgress = (i + 1) / steps.length * 0.45; // 0% - 45%
-        });
+      final ByteData? byteDataMakeup = await uiImageMakeup.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteDataMakeup == null) {
+        throw Exception("Gagal mengodekan frame dandan.");
       }
+      final Uint8List makeupBytes = byteDataMakeup.buffer.asUint8List();
 
-      // Proses konversi dan pengodean GIF anim menggunakan package:image
-      if (frameW == null || frameH == null || frames.isEmpty) {
-        throw Exception("Gagal merekam frame gambar.");
+      setState(() {
+        _exportProgress = 0.20;
+      });
+
+      // 2. Ambil Snapshot Wajah Asli Tanpa Riasan (sliderX = width)
+      setState(() {
+        _sliderX = width;
+      });
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final ui.Image uiImageRaw = await boundary.toImage(pixelRatio: 0.6);
+      final ByteData? byteDataRaw = await uiImageRaw.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteDataRaw == null) {
+        throw Exception("Gagal mengodekan frame wajah asli.");
       }
+      final Uint8List rawBytes = byteDataRaw.buffer.asUint8List();
 
-      // Tunggu agar CPU bebas
+      setState(() {
+        _exportProgress = 0.45;
+      });
+
       await Future.delayed(const Duration(milliseconds: 50));
 
       setState(() {
@@ -1119,7 +1119,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       // Jalankan kompresi dan encoding GIF di background Isolate menggunakan compute agar UI tidak hang/lag
       final List<int> gifBytes = await compute(
         encodeBoomerangGifInBackground,
-        BoomerangGifParams(width: frameW, height: frameH, frames: frames),
+        BoomerangGifParams(
+          width: frameW,
+          height: frameH,
+          rawBytes: rawBytes,
+          makeupBytes: makeupBytes,
+        ),
       );
 
       setState(() {
