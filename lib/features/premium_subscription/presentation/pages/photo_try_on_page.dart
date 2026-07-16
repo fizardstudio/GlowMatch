@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:glowmatch/core/theme/theme_manager.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1083,12 +1084,12 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       for (int i = 0; i < steps.length; i++) {
         setState(() {
           _sliderX = steps[i] * width;
-          _isCapturing = false; // Tampilkan garis slider/split line di frame
+          _isCapturing = true; // Sembunyikan semua UI overlays & tampilkan watermark
         });
 
         await Future.delayed(const Duration(milliseconds: 150));
 
-        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.8);
+        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.3);
         if (frameW == null) {
           frameW = uiImage.width;
           frameH = uiImage.height;
@@ -1103,10 +1104,6 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         });
       }
 
-      setState(() {
-        _isCapturing = true;
-      });
-
       // Proses konversi dan pengodean GIF anim menggunakan package:image
       if (frameW == null || frameH == null || frames.isEmpty) {
         throw Exception("Gagal merekam frame gambar.");
@@ -1115,42 +1112,15 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       // Tunggu agar CPU bebas
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final img.Image gifAnim = img.Image(width: frameW, height: frameH, numChannels: 4);
-      gifAnim.frameDuration = 150;
+      setState(() {
+        _exportProgress = 0.50; // Mulai memproses di latar belakang
+      });
 
-      for (int fIndex = 0; fIndex < frames.length; fIndex++) {
-        final img.Image frameImg = img.Image.fromBytes(
-          width: frameW,
-          height: frameH,
-          bytes: frames[fIndex].buffer,
-          numChannels: 4,
-        );
-        frameImg.frameDuration = 150;
-        if (fIndex == 0) {
-          gifAnim.frames[0] = frameImg;
-        } else {
-          gifAnim.addFrame(frameImg);
-        }
-        
-        setState(() {
-          _exportProgress = 0.45 + ((fIndex + 1) / frames.length * 0.45); // 45% - 90%
-        });
-      }
-
-      // Ping-pong frames untuk efek Boomerang
-      for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
-        final img.Image frameImg = img.Image.fromBytes(
-          width: frameW,
-          height: frameH,
-          bytes: frames[fIndex].buffer,
-          numChannels: 4,
-        );
-        frameImg.frameDuration = 150;
-        gifAnim.addFrame(frameImg);
-      }
-
-      final gifEncoder = img.GifEncoder();
-      final List<int> gifBytes = gifEncoder.encode(gifAnim);
+      // Jalankan kompresi dan encoding GIF di background Isolate menggunakan compute agar UI tidak hang/lag
+      final List<int> gifBytes = await compute(
+        encodeBoomerangGifInBackground,
+        BoomerangGifParams(width: frameW, height: frameH, frames: frames),
+      );
 
       setState(() {
         _exportProgress = 0.95;
@@ -1894,7 +1864,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
             ),
 
           // 3. Toggle Panel Kontrol
-          if (_imagePath != null && !_showPaywall)
+          if (_imagePath != null && !_showPaywall && !_isCapturing)
             Positioned(
               bottom: _showControls ? 300 : 24,
               right: 16,
@@ -1922,7 +1892,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
             ),
 
           // 4. Panel Kontrol Bawah (Makeup Editor Panel)
-          if (_showControls && _imagePath != null && !_showPaywall)
+          if (_showControls && _imagePath != null && !_showPaywall && !_isCapturing)
             Positioned(
               bottom: 0,
               left: 0,
@@ -2863,4 +2833,50 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
       ),
     );
   }
+}
+
+class BoomerangGifParams {
+  final int width;
+  final int height;
+  final List<Uint8List> frames;
+  BoomerangGifParams({
+    required this.width,
+    required this.height,
+    required this.frames,
+  });
+}
+
+List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
+  final img.Image gifAnim = img.Image(width: params.width, height: params.height, numChannels: 4);
+  gifAnim.frameDuration = 150;
+
+  for (int fIndex = 0; fIndex < params.frames.length; fIndex++) {
+    final img.Image frameImg = img.Image.fromBytes(
+      width: params.width,
+      height: params.height,
+      bytes: params.frames[fIndex].buffer,
+      numChannels: 4,
+    );
+    frameImg.frameDuration = 150;
+    if (fIndex == 0) {
+      gifAnim.frames[0] = frameImg;
+    } else {
+      gifAnim.addFrame(frameImg);
+    }
+  }
+
+  // Ping-pong frames
+  for (int fIndex = params.frames.length - 2; fIndex > 0; fIndex--) {
+    final img.Image frameImg = img.Image.fromBytes(
+      width: params.width,
+      height: params.height,
+      bytes: params.frames[fIndex].buffer,
+      numChannels: 4,
+    );
+    frameImg.frameDuration = 150;
+    gifAnim.addFrame(frameImg);
+  }
+
+  final gifEncoder = img.GifEncoder();
+  return gifEncoder.encode(gifAnim);
 }

@@ -1243,12 +1243,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       for (int i = 0; i < steps.length; i++) {
         setState(() {
           _sliderX = steps[i] * width;
-          _isCapturing = false;
+          _isCapturing = true; // Sembunyikan semua UI overlays & tampilkan watermark
         });
 
         await Future.delayed(const Duration(milliseconds: 150));
 
-        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.8);
+        final ui.Image uiImage = await boundary.toImage(pixelRatio: 1.3);
         if (frameW == null) {
           frameW = uiImage.width;
           frameH = uiImage.height;
@@ -1263,51 +1263,21 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         });
       }
 
-      setState(() {
-        _isCapturing = true;
-      });
-
       if (frameW == null || frameH == null || frames.isEmpty) {
         throw Exception("Gagal merekam frame gambar.");
       }
 
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final img.Image gifAnim = img.Image(width: frameW, height: frameH, numChannels: 4);
-      gifAnim.frameDuration = 150;
+      setState(() {
+        _exportProgress = 0.50; // Mulai memproses di latar belakang
+      });
 
-      for (int fIndex = 0; fIndex < frames.length; fIndex++) {
-        final img.Image frameImg = img.Image.fromBytes(
-          width: frameW,
-          height: frameH,
-          bytes: frames[fIndex].buffer,
-          numChannels: 4,
-        );
-        frameImg.frameDuration = 150;
-        if (fIndex == 0) {
-          gifAnim.frames[0] = frameImg;
-        } else {
-          gifAnim.addFrame(frameImg);
-        }
-        
-        setState(() {
-          _exportProgress = 0.45 + ((fIndex + 1) / frames.length * 0.45);
-        });
-      }
-
-      for (int fIndex = frames.length - 2; fIndex > 0; fIndex--) {
-        final img.Image frameImg = img.Image.fromBytes(
-          width: frameW,
-          height: frameH,
-          bytes: frames[fIndex].buffer,
-          numChannels: 4,
-        );
-        frameImg.frameDuration = 150;
-        gifAnim.addFrame(frameImg);
-      }
-
-      final gifEncoder = img.GifEncoder();
-      final List<int> gifBytes = gifEncoder.encode(gifAnim);
+      // Jalankan kompresi dan encoding GIF di background Isolate menggunakan compute agar UI tidak hang/lag
+      final List<int> gifBytes = await compute(
+        encodeBoomerangGifInBackground,
+        BoomerangGifParams(width: frameW, height: frameH, frames: frames),
+      );
 
       setState(() {
         _exportProgress = 0.95;
@@ -2448,7 +2418,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
           ),
 
           // 2. Tombol Show/Hide Floating Panel (Hanya melayang saat panel ditutup)
-          if (!_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall)
+          if (!_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall && !_isCapturing)
             Positioned(
               bottom: 24,
               right: 16,
@@ -2476,7 +2446,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
             ),
 
           // 2.5. Floating Action Panel (Tombol Melayang di Kanan Layar agar Tangan Pengguna Tidak Menghalangi Kamera)
-          if (_isCameraInitialized && _cameraController != null && !_showPaywall)
+          if (_isCameraInitialized && _cameraController != null && !_showPaywall && !_isCapturing)
             Positioned(
               top: kToolbarHeight + 40,
               right: 16,
@@ -2518,7 +2488,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
             ),
 
           // 3. Wilayah Kontrol Filter Bawah (Floats at bottom with premium card styling)
-          if (_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall)
+          if (_showControls && _isCameraInitialized && _cameraController != null && !_showPaywall && !_isCapturing)
             Positioned(
               bottom: 0,
               left: 0,
@@ -3464,4 +3434,50 @@ class SmoothedFaceContour implements FaceContour {
   final List<Point<int>> points;
 
   SmoothedFaceContour({required this.type, required this.points});
+}
+
+class BoomerangGifParams {
+  final int width;
+  final int height;
+  final List<Uint8List> frames;
+  BoomerangGifParams({
+    required this.width,
+    required this.height,
+    required this.frames,
+  });
+}
+
+List<int> encodeBoomerangGifInBackground(BoomerangGifParams params) {
+  final img.Image gifAnim = img.Image(width: params.width, height: params.height, numChannels: 4);
+  gifAnim.frameDuration = 150;
+
+  for (int fIndex = 0; fIndex < params.frames.length; fIndex++) {
+    final img.Image frameImg = img.Image.fromBytes(
+      width: params.width,
+      height: params.height,
+      bytes: params.frames[fIndex].buffer,
+      numChannels: 4,
+    );
+    frameImg.frameDuration = 150;
+    if (fIndex == 0) {
+      gifAnim.frames[0] = frameImg;
+    } else {
+      gifAnim.addFrame(frameImg);
+    }
+  }
+
+  // Ping-pong frames
+  for (int fIndex = params.frames.length - 2; fIndex > 0; fIndex--) {
+    final img.Image frameImg = img.Image.fromBytes(
+      width: params.width,
+      height: params.height,
+      bytes: params.frames[fIndex].buffer,
+      numChannels: 4,
+    );
+    frameImg.frameDuration = 150;
+    gifAnim.addFrame(frameImg);
+  }
+
+  final gifEncoder = img.GifEncoder();
+  return gifEncoder.encode(gifAnim);
 }
