@@ -428,10 +428,14 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
 
       String? faceShape;
       String? coupleFaceShape;
+      double faceContrast = 35.0;
+      double? coupleFaceContrast;
       if (detectedFaces.isNotEmpty) {
         faceShape = FaceGeometryHelper.classifyFaceShape(detectedFaces.first);
-        if (event.isCoupleMode && detectedFaces.length >= 2) {
+        faceContrast = _calculateFaceContrast(decodedImage, detectedFaces.first, finalRgb);
+        if (event.isCoupleMode && detectedFaces.length >= 2 && coupleRgb != null) {
           coupleFaceShape = FaceGeometryHelper.classifyFaceShape(detectedFaces[1]);
+          coupleFaceContrast = _calculateFaceContrast(decodedImage, detectedFaces[1], coupleRgb);
         }
       }
 
@@ -440,9 +444,11 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
         faceShape: faceShape,
+        faceContrast: faceContrast,
         coupleExtractedRgb: coupleRgb,
         coupleMatchedStandard: coupleMatchedStandard,
         coupleFaceShape: coupleFaceShape,
+        coupleFaceContrast: coupleFaceContrast,
         galleryFilePath: photoFile.path,
       ));
     } catch (e) {
@@ -547,6 +553,57 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       return ImageProcessor.extractSkinColor(decodedImage, regions);
     } catch (_) {
       return [0, 0, 0];
+    }
+  }
+
+  double _calculateFaceContrast(dynamic decodedImage, Face face, List<int> skinRgb) {
+    final rect = face.boundingBox;
+    final leftEye = face.landmarks[FaceLandmarkType.leftEye]?.position;
+    final rightEye = face.landmarks[FaceLandmarkType.rightEye]?.position;
+
+    final double boxW = (rect.width * 0.12);
+    final double boxH = (rect.height * 0.10);
+
+    int eyeLeftX, eyeLeftY;
+    int eyeRightX, eyeRightY;
+
+    if (leftEye != null && rightEye != null) {
+      eyeLeftX = (leftEye.x - boxW / 2).round();
+      eyeLeftY = (leftEye.y - boxH * 1.2).round();
+      eyeRightX = (rightEye.x - boxW / 2).round();
+      eyeRightY = (rightEye.y - boxH * 1.2).round();
+    } else {
+      eyeLeftX = (rect.left + rect.width * 0.28 - boxW / 2).round();
+      eyeLeftY = (rect.top + rect.height * 0.38 - boxH * 1.2).round();
+      eyeRightX = (rect.left + rect.width * 0.58 - boxW / 2).round();
+      eyeRightY = (rect.top + rect.height * 0.38 - boxH * 1.2).round();
+    }
+
+    final featureRegions = [
+      {
+        'x': eyeLeftX,
+        'y': eyeLeftY,
+        'w': boxW.round(),
+        'h': (boxH * 1.8).round(),
+      },
+      {
+        'x': eyeRightX,
+        'y': eyeRightY,
+        'w': boxW.round(),
+        'h': (boxH * 1.8).round(),
+      }
+    ];
+
+    try {
+      final List<int> featureRgb = ImageProcessor.extractSkinColor(decodedImage, featureRegions);
+      
+      final double skinLuminance = 0.299 * skinRgb[0] + 0.587 * skinRgb[1] + 0.114 * skinRgb[2];
+      final double featureLuminance = 0.299 * featureRgb[0] + 0.587 * featureRgb[1] + 0.114 * featureRgb[2];
+      
+      final double contrast = (skinLuminance - featureLuminance).clamp(0.0, 255.0);
+      return contrast;
+    } catch (_) {
+      return 35.0;
     }
   }
 
@@ -700,8 +757,10 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       }
 
       String? faceShape;
+      double faceContrast = 35.0;
       if (detectedFaces.isNotEmpty) {
         faceShape = FaceGeometryHelper.classifyFaceShape(detectedFaces.first);
+        faceContrast = _calculateFaceContrast(decodedImage, detectedFaces.first, finalRgb);
       }
 
       emit(ScannerSuccess(
@@ -709,6 +768,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
         faceShape: faceShape,
+        faceContrast: faceContrast,
         galleryFilePath: event.filePath,
       ));
     } catch (e) {

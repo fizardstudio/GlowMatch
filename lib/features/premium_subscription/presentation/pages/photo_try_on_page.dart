@@ -117,6 +117,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   String? _lastMatchedUndertone;
   String? _lastMatchedSeasonalColor;
   String? _lastMatchedSkinTone;
+  double? _lastMatchedContrast;
 
   final List<Map<String, dynamic>> _presetLooks = [
     {
@@ -622,9 +623,51 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         _lastMatchedUndertone = settings.lastMatchedUndertone;
         _lastMatchedSeasonalColor = settings.lastMatchedSeasonalColor;
         _lastMatchedSkinTone = settings.lastMatchedSkinTone;
+        _lastMatchedContrast = settings.lastMatchedContrast;
       });
       _tryAutoSelectFoundation();
     }
+  }
+
+  bool _isColorRecommended(String category, String colorName) {
+    if (_lastMatchedUndertone == null) return false;
+    final String undertone = _lastMatchedUndertone!.toLowerCase();
+    final double contrast = _lastMatchedContrast ?? 35.0;
+    
+    final String contrastTier = contrast < 25.0 
+        ? 'low' 
+        : (contrast >= 48.0 ? 'high' : 'medium');
+
+    if (category == 'lipstick') {
+      if (undertone == 'warm') {
+        if (colorName == 'Plum Berry' || colorName == 'Matte Rose' || colorName == 'Cherry Red') return false;
+      } else if (undertone == 'cool') {
+        if (colorName == 'Nude Brown' || colorName == 'Peach Coral') return false;
+      }
+      
+      if (contrastTier == 'high') {
+        return colorName == 'Classic Crimson' || colorName == 'Plum Berry' || colorName == 'Cherry Red' || colorName == 'Matte Rose';
+      } else if (contrastTier == 'medium') {
+        return colorName == 'Matte Rose' || colorName == 'Peach Coral' || colorName == 'Cherry Red';
+      } else {
+        return colorName == 'Nude Brown' || colorName == 'Peach Coral';
+      }
+    } else if (category == 'blush') {
+      if (undertone == 'warm') {
+        if (colorName == 'Peach Pink' || colorName == 'Plum Pink' || colorName == 'Dusty Rose') return false;
+      } else if (undertone == 'cool') {
+        if (colorName == 'Pale Tangerine' || colorName == 'Warm Amber' || colorName == 'Soft Coral') return false;
+      }
+      
+      if (contrastTier == 'high') {
+        return colorName == 'Warm Amber' || colorName == 'Dusty Rose' || colorName == 'Plum Pink';
+      } else if (contrastTier == 'medium') {
+        return colorName == 'Soft Coral' || colorName == 'Peach Pink' || colorName == 'Plum Pink' || colorName == 'Dusty Rose';
+      } else {
+        return colorName == 'Pale Tangerine' || colorName == 'Soft Coral' || colorName == 'Peach Pink';
+      }
+    }
+    return false;
   }
 
 
@@ -2146,13 +2189,19 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                 itemBuilder: (context, index) {
                                   final lColor = _lipstickColors[index];
                                   final isSel = _selectedLipstickColor == lColor['color'] && _lipstickOpacity > 0.0;
-                                  return _buildColorCircle(lColor['color'], lColor['name'], isSel, () {
-                                    setState(() {
-                                      _selectedLipstickColor = lColor['color'];
-                                      if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
-                                      _activePreset = null;
-                                    });
-                                  });
+                                  return _buildColorCircle(
+                                    lColor['color'],
+                                    lColor['name'],
+                                    isSel,
+                                    () {
+                                      setState(() {
+                                        _selectedLipstickColor = lColor['color'];
+                                        if (_lipstickOpacity == 0.0) _lipstickOpacity = 0.40;
+                                        _activePreset = null;
+                                      });
+                                    },
+                                    isRecommended: _isColorRecommended('lipstick', lColor['name']),
+                                  );
                                 },
                               ),
                             ),
@@ -2185,13 +2234,19 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                 itemBuilder: (context, index) {
                                   final bColor = _blushColors[index];
                                   final isSel = _selectedBlushColor == bColor['color'] && _blushOpacity > 0.0;
-                                  return _buildColorCircle(bColor['color'], bColor['name'], isSel, () {
-                                    setState(() {
-                                      _selectedBlushColor = bColor['color'];
-                                      if (_blushOpacity == 0.0) _blushOpacity = 0.25;
-                                      _activePreset = null;
-                                    });
-                                  });
+                                  return _buildColorCircle(
+                                    bColor['color'],
+                                    bColor['name'],
+                                    isSel,
+                                    () {
+                                      setState(() {
+                                        _selectedBlushColor = bColor['color'];
+                                        if (_blushOpacity == 0.0) _blushOpacity = 0.25;
+                                        _activePreset = null;
+                                      });
+                                    },
+                                    isRecommended: _isColorRecommended('blush', bColor['name']),
+                                  );
                                 },
                               ),
                             ),
@@ -2593,12 +2648,14 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     );
   }
 
-  Widget _buildColorCircle(Color color, String name, bool isSel, VoidCallback onTap) {
+  Widget _buildColorCircle(Color color, String name, bool isSel, VoidCallback onTap, {bool isRecommended = false}) {
     final bool isClear = color == Colors.transparent || color.opacity == 0.0;
     final bool isMatched = _lastMatchedShadeName != null && 
         (name.toLowerCase().trim() == _lastMatchedShadeName!.toLowerCase().trim() ||
          name.toLowerCase().contains(_lastMatchedShadeName!.toLowerCase()) ||
          _lastMatchedShadeName!.toLowerCase().contains(name.toLowerCase()));
+
+    final bool showBadge = (isMatched || isRecommended) && !isClear;
 
     Widget circle = Container(
       margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -2638,7 +2695,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
               : null),
     );
 
-    if (isMatched && !isClear) {
+    if (showBadge) {
       return GestureDetector(
         onTap: onTap,
         child: Stack(

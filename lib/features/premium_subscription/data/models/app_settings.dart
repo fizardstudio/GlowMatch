@@ -14,4 +14,5 @@ class AppSettings {
   String? lastMatchedSeasonalColor;
   String? lastMatchedSkinTone;
   String? lastMatchedFaceShape;
+  double lastMatchedContrast = 35.0;
 }

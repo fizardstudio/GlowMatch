@@ -18,6 +18,7 @@ class ResultsPage extends StatefulWidget {
   final List<int> extractedRgb;
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
+  final double faceContrast;
   final String? galleryFilePath;
   final String? faceShape;
 
@@ -25,17 +26,20 @@ class ResultsPage extends StatefulWidget {
   final List<int>? coupleExtractedRgb;
   final StandardShade? coupleMatchedStandard;
   final String? coupleFaceShape;
+  final double? coupleFaceContrast;
 
   const ResultsPage({
-    super.key,
+    key,
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    required this.faceContrast,
     this.galleryFilePath,
     this.faceShape,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
     this.coupleFaceShape,
+    this.coupleFaceContrast,
   });
 
   bool get isCoupleMode => coupleMatchedStandard != null && coupleExtractedRgb != null;
@@ -147,6 +151,7 @@ class _ResultsPageState extends State<ResultsPage> {
         settings.lastMatchedSeasonalColor = profile['season'] as String;
         settings.lastMatchedSkinTone = widget.matchedStandard.skinTone;
         settings.lastMatchedFaceShape = widget.faceShape;
+        settings.lastMatchedContrast = widget.faceContrast;
         await isar.appSettings.put(settings);
       });
       debugPrint("SUCCESS_ISAR: Scanned shade results saved to AppSettings.");
@@ -487,10 +492,11 @@ class _ResultsPageState extends State<ResultsPage> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
                               _buildPillTag(widget.matchedStandard.skinTone, Colors.blueAccent),
-                              const SizedBox(width: 8),
                               _buildPillTag(
                                 '${widget.matchedStandard.undertone} Undertone',
                                 widget.matchedStandard.undertone.toLowerCase() == 'warm'
@@ -498,6 +504,12 @@ class _ResultsPageState extends State<ResultsPage> {
                                     : widget.matchedStandard.undertone.toLowerCase() == 'cool'
                                         ? Colors.pinkAccent
                                         : Colors.tealAccent,
+                              ),
+                              _buildPillTag(
+                                widget.faceContrast < 25.0
+                                    ? 'Low Contrast'
+                                    : (widget.faceContrast >= 48.0 ? 'High Contrast' : 'Medium Contrast'),
+                                Colors.purpleAccent,
                               ),
                             ],
                           ),
@@ -603,6 +615,40 @@ class _ResultsPageState extends State<ResultsPage> {
                 child: Text(
                   _getUndertoneExplanation(widget.matchedStandard.undertone),
                   style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 13, height: 1.5),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorderColor, width: 1.2),
+                  boxShadow: ThemeManager.premiumGlowShadow,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.contrast_rounded, color: Colors.purpleAccent, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Tingkat Kontras Wajah: ${widget.faceContrast < 25.0 ? 'Rendah (Low)' : (widget.faceContrast >= 48.0 ? 'Tinggi (High)' : 'Sedang (Medium)')}',
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.faceContrast < 25.0
+                          ? 'Perbedaan warna antara kulit dan mata/rambut Anda lembut. Rekomendasi riasan terbaik adalah warna-warna nude atau soft pastel yang tidak terlalu mencolok.'
+                          : (widget.faceContrast >= 48.0
+                              ? 'Wajah Anda memiliki kontras yang kuat dan tajam. Anda sangat cocok menggunakan warna bibir yang berani (bold) seperti merah menyala atau berry gelap.'
+                              : 'Tingkat kontras wajah Anda seimbang dan serbaguna. Anda bisa bereksperimen dengan bebas antara warna natural segar maupun warna-warna hangat.'),
+                      style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 12, height: 1.5),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
