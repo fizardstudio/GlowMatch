@@ -14,6 +14,7 @@ import '../../../../features/premium_subscription/presentation/pages/ar_try_on_p
 import '../../../../features/premium_subscription/presentation/pages/photo_try_on_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/makeup_detector_page.dart';
 import '../../../../features/color_mixer/presentation/pages/color_mixer_page.dart';
+import '../../../../features/premium_subscription/presentation/pages/skincare_scanner_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -229,6 +230,18 @@ class _HomePageState extends State<HomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const MakeupPouchPage()),
+                        );
+                      },
+                    ),
+                    _buildMenuCard(
+                      icon: Icons.document_scanner_outlined,
+                      title: 'Skincare Scanner',
+                      subtitle: 'Pindai kandungan aktif skincare.',
+                      color: const Color(0xFFFBF4F1),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SkincareScannerPage()),
                         );
                       },
                     ),

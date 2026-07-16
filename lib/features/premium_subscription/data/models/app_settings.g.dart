@@ -62,8 +62,13 @@ const AppSettingsSchema = CollectionSchema(
       name: r'lastMatchedUndertone',
       type: IsarType.string,
     ),
-    r'showWatermark': PropertySchema(
+    r'lastSelectedSkinType': PropertySchema(
       id: 9,
+      name: r'lastSelectedSkinType',
+      type: IsarType.string,
+    ),
+    r'showWatermark': PropertySchema(
+      id: 10,
       name: r'showWatermark',
       type: IsarType.bool,
     )
@@ -119,6 +124,12 @@ int _appSettingsEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.lastSelectedSkinType;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -137,7 +148,8 @@ void _appSettingsSerialize(
   writer.writeString(offsets[6], object.lastMatchedShadeName);
   writer.writeString(offsets[7], object.lastMatchedSkinTone);
   writer.writeString(offsets[8], object.lastMatchedUndertone);
-  writer.writeBool(offsets[9], object.showWatermark);
+  writer.writeString(offsets[9], object.lastSelectedSkinType);
+  writer.writeBool(offsets[10], object.showWatermark);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -157,7 +169,8 @@ AppSettings _appSettingsDeserialize(
   object.lastMatchedShadeName = reader.readStringOrNull(offsets[6]);
   object.lastMatchedSkinTone = reader.readStringOrNull(offsets[7]);
   object.lastMatchedUndertone = reader.readStringOrNull(offsets[8]);
-  object.showWatermark = reader.readBool(offsets[9]);
+  object.lastSelectedSkinType = reader.readStringOrNull(offsets[9]);
+  object.showWatermark = reader.readBool(offsets[10]);
   return object;
 }
 
@@ -187,6 +200,8 @@ P _appSettingsDeserializeProp<P>(
     case 8:
       return (reader.readStringOrNull(offset)) as P;
     case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1343,6 +1358,160 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastSelectedSkinType',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastSelectedSkinType',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastSelectedSkinType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastSelectedSkinType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastSelectedSkinType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastSelectedSkinType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'lastSelectedSkinType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'lastSelectedSkinType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'lastSelectedSkinType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'lastSelectedSkinType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastSelectedSkinType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lastSelectedSkinTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'lastSelectedSkinType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       showWatermarkEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1468,6 +1637,20 @@ extension AppSettingsQuerySortBy
       sortByLastMatchedUndertoneDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastMatchedUndertone', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByLastSelectedSkinType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSelectedSkinType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByLastSelectedSkinTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSelectedSkinType', Sort.desc);
     });
   }
 
@@ -1609,6 +1792,20 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByLastSelectedSkinType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSelectedSkinType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByLastSelectedSkinTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSelectedSkinType', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByShowWatermark() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'showWatermark', Sort.asc);
@@ -1692,6 +1889,14 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByLastSelectedSkinType({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastSelectedSkinType',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByShowWatermark() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'showWatermark');
@@ -1766,6 +1971,13 @@ extension AppSettingsQueryProperty
       lastMatchedUndertoneProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastMatchedUndertone');
+    });
+  }
+
+  QueryBuilder<AppSettings, String?, QQueryOperations>
+      lastSelectedSkinTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastSelectedSkinType');
     });
   }
 

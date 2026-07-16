@@ -17,4 +17,5 @@ class AppSettings {
   double lastMatchedContrast = 35.0;
   List<int> lastMatchedCommercialShadeIds = [];
   bool showWatermark = true;
+  String? lastSelectedSkinType;
 }

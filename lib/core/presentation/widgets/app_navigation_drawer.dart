@@ -10,6 +10,7 @@ import '../../../../features/color_mixer/presentation/pages/color_mixer_page.dar
 import '../../../../features/premium_subscription/presentation/pages/photo_try_on_page.dart';
 import '../../../../features/premium_subscription/presentation/pages/makeup_detector_page.dart';
 import '../../../../features/home/presentation/pages/home_page.dart';
+import '../../../../features/premium_subscription/presentation/pages/skincare_scanner_page.dart';
 import '../../theme/theme_manager.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
@@ -268,6 +269,24 @@ class AppNavigationDrawer extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const MakeupDetectorPage(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDrawerItem(
+                        context: context,
+                        icon: Icons.document_scanner_outlined,
+                        title: 'Skincare Scanner (Premium)',
+                        isActive: context.widget is SkincareScannerPage,
+                        onTap: () {
+                          Navigator.pop(context); // Tutup drawer
+                          if (context.widget is! SkincareScannerPage) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SkincareScannerPage(),
                               ),
                             );
                           }
