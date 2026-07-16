@@ -61,6 +61,11 @@ const AppSettingsSchema = CollectionSchema(
       id: 8,
       name: r'lastMatchedUndertone',
       type: IsarType.string,
+    ),
+    r'showWatermark': PropertySchema(
+      id: 9,
+      name: r'showWatermark',
+      type: IsarType.bool,
     )
   },
   estimateSize: _appSettingsEstimateSize,
@@ -132,6 +137,7 @@ void _appSettingsSerialize(
   writer.writeString(offsets[6], object.lastMatchedShadeName);
   writer.writeString(offsets[7], object.lastMatchedSkinTone);
   writer.writeString(offsets[8], object.lastMatchedUndertone);
+  writer.writeBool(offsets[9], object.showWatermark);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -151,6 +157,7 @@ AppSettings _appSettingsDeserialize(
   object.lastMatchedShadeName = reader.readStringOrNull(offsets[6]);
   object.lastMatchedSkinTone = reader.readStringOrNull(offsets[7]);
   object.lastMatchedUndertone = reader.readStringOrNull(offsets[8]);
+  object.showWatermark = reader.readBool(offsets[9]);
   return object;
 }
 
@@ -179,6 +186,8 @@ P _appSettingsDeserializeProp<P>(
       return (reader.readStringOrNull(offset)) as P;
     case 8:
       return (reader.readStringOrNull(offset)) as P;
+    case 9:
+      return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1332,6 +1341,16 @@ extension AppSettingsQueryFilter
       ));
     });
   }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      showWatermarkEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'showWatermark',
+        value: value,
+      ));
+    });
+  }
 }
 
 extension AppSettingsQueryObject
@@ -1449,6 +1468,19 @@ extension AppSettingsQuerySortBy
       sortByLastMatchedUndertoneDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastMatchedUndertone', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByShowWatermark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showWatermark', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByShowWatermarkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showWatermark', Sort.desc);
     });
   }
 }
@@ -1576,6 +1608,19 @@ extension AppSettingsQuerySortThenBy
       return query.addSortBy(r'lastMatchedUndertone', Sort.desc);
     });
   }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByShowWatermark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showWatermark', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByShowWatermarkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showWatermark', Sort.desc);
+    });
+  }
 }
 
 extension AppSettingsQueryWhereDistinct
@@ -1644,6 +1689,12 @@ extension AppSettingsQueryWhereDistinct
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastMatchedUndertone',
           caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByShowWatermark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'showWatermark');
     });
   }
 }
@@ -1715,6 +1766,12 @@ extension AppSettingsQueryProperty
       lastMatchedUndertoneProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastMatchedUndertone');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> showWatermarkProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'showWatermark');
     });
   }
 }

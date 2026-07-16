@@ -183,6 +183,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   String? _lastMatchedSkinTone;
   double? _lastMatchedContrast;
   List<int>? _lastMatchedCommercialShadeIds;
+  bool _showWatermarkSetting = true;
 
   // List Warna Lipstik Eksklusif
   final List<Map<String, dynamic>> _lipstickColors = [
@@ -440,9 +441,21 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
         _lastMatchedSkinTone = settings.lastMatchedSkinTone;
         _lastMatchedContrast = settings.lastMatchedContrast;
         _lastMatchedCommercialShadeIds = settings.lastMatchedCommercialShadeIds;
+        _showWatermarkSetting = settings.showWatermark;
       });
       _tryAutoSelectFoundation();
     }
+  }
+
+  Future<void> _saveWatermarkSetting(bool value) async {
+    await _isar.writeTxn(() async {
+      final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = _isPremium);
+      settings.showWatermark = value;
+      await _isar.appSettings.put(settings);
+    });
+    setState(() {
+      _showWatermarkSetting = value;
+    });
   }
 
   bool _isColorRecommended(String category, String colorName) {
@@ -1408,6 +1421,30 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
     );
   }
 
+  Widget _buildCategoryTab(int index, String title) {
+    final bool isSelected = _activeCategoryIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _activeCategoryIndex = index),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : ThemeManager.textMutedColor,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFloatingActionButton({
     required IconData icon,
     required String tooltip,
@@ -2056,7 +2093,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                             ),
                                           ),
                                         ),
-                                      if (_isCapturing && !_isPremium)
+                                      if (_isCapturing && _showWatermarkSetting)
                                         Positioned(
                                           bottom: 24,
                                           left: 0,
@@ -2459,135 +2496,19 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                         color: cardBgColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _activeCategoryIndex = 0),
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 0 ? primaryColor : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'LOOKS',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 0 ? Colors.white : textMutedColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _activeCategoryIndex = 1),
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 1 ? primaryColor : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'BASE',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 1 ? Colors.white : textMutedColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _activeCategoryIndex = 2),
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 2 ? primaryColor : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'BIBIR',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 2 ? Colors.white : textMutedColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _activeCategoryIndex = 3),
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 3 ? primaryColor : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'PIPI',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 3 ? Colors.white : textMutedColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _activeCategoryIndex = 4),
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 4 ? primaryColor : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'HIDUNG',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 4 ? Colors.white : textMutedColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _activeCategoryIndex = 5),
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _activeCategoryIndex == 5 ? primaryColor : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'MATA',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _activeCategoryIndex == 5 ? Colors.white : textMutedColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildCategoryTab(0, 'LOOKS'),
+                            _buildCategoryTab(1, 'BASE'),
+                            _buildCategoryTab(2, 'BIBIR'),
+                            _buildCategoryTab(3, 'PIPI'),
+                            _buildCategoryTab(4, 'HIDUNG'),
+                            _buildCategoryTab(5, 'MATA'),
+                            _buildCategoryTab(6, 'PENGATURAN'),
+                          ],
+                        ),
                       ),
                     ),
 
@@ -3077,7 +2998,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                           ),
                         ],
                       ),
-                    ] else ...[
+                    ] else if (_activeCategoryIndex == 5) ...[
                       // Opacity Eyeshadow & Eyeliner Toggle
                       Row(
                         children: [
@@ -3202,6 +3123,64 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                   );
                                 },
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (_activeCategoryIndex == 6) ...[
+                      // Settings Tab
+                      Text(
+                        'PENGATURAN EKSPOR:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: cardBgColor.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: cardBorderColor.withOpacity(0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.branding_watermark_rounded, color: primaryColor, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Tampilkan Watermark AI',
+                                    style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Matikan untuk mengekspor gambar bersih tanpa watermark (Khusus Premium)',
+                                    style: TextStyle(color: textMutedColor, fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              activeColor: primaryColor,
+                              value: _showWatermarkSetting,
+                              onChanged: (val) {
+                                if (!_isPremium) {
+                                  // Lock to premium! Show paywall.
+                                  setState(() {
+                                    _showPaywall = true;
+                                  });
+                                } else {
+                                  _saveWatermarkSetting(val);
+                                }
+                              },
                             ),
                           ],
                         ),

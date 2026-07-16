@@ -41,6 +41,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
   final GlobalKey _repaintBoundaryKey = GlobalKey();
   bool _isPremium = false;
   bool _showPaywall = true;
+  bool _showWatermarkSetting = true;
 
   // ML Kit Face Detector
   final FaceDetector _faceDetector = FaceDetector(
@@ -626,9 +627,21 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
         _lastMatchedSkinTone = settings.lastMatchedSkinTone;
         _lastMatchedContrast = settings.lastMatchedContrast;
         _lastMatchedCommercialShadeIds = settings.lastMatchedCommercialShadeIds;
+        _showWatermarkSetting = settings.showWatermark;
       });
       _tryAutoSelectFoundation();
     }
+  }
+
+  Future<void> _saveWatermarkSetting(bool value) async {
+    await _isar.writeTxn(() async {
+      final settings = await _isar.appSettings.get(0) ?? (AppSettings()..id = 0..isPremium = _isPremium);
+      settings.showWatermark = value;
+      await _isar.appSettings.put(settings);
+    });
+    setState(() {
+      _showWatermarkSetting = value;
+    });
   }
 
   bool _isColorRecommended(String category, String colorName) {
@@ -1679,7 +1692,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                     ),
 
                                   // Watermark (GlowMatch AI - Tergambar di atas CustomPaint agar tidak tertutup gambar latar)
-                                  if (_isCapturing && !_isPremium)
+                                  if (_isCapturing && _showWatermarkSetting)
                                     Positioned(
                                       bottom: 16,
                                       left: 0,
@@ -1926,15 +1939,19 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                         color: cardBgColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        children: [
-                          _buildTabButton('Looks', 0),
-                          _buildTabButton('Base', 1),
-                          _buildTabButton('Lipstik', 2),
-                          _buildTabButton('Pipi', 3),
-                          _buildTabButton('Hidung', 4),
-                          _buildTabButton('Mata', 5),
-                        ],
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildTabButton('Looks', 0),
+                            _buildTabButton('Base', 1),
+                            _buildTabButton('Lipstik', 2),
+                            _buildTabButton('Pipi', 3),
+                            _buildTabButton('Hidung', 4),
+                            _buildTabButton('Mata', 5),
+                            _buildTabButton('Pengaturan', 6),
+                          ],
+                        ),
                       ),
                     ),
 
@@ -2295,7 +2312,7 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                           _noseShadingOpacity = val;
                         });
                       }),
-                    ] else ...[
+                    ] else if (_activeCategoryIndex == 5) ...[
                       // Opacity Eyeshadow & Eyeliner Toggle
                       Row(
                         children: [
@@ -2366,6 +2383,64 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
                                   );
                                 },
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (_activeCategoryIndex == 6) ...[
+                      // Settings Tab
+                      Text(
+                        'PENGATURAN EKSPOR:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: cardBgColor.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: cardBorderColor.withOpacity(0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.branding_watermark_rounded, color: primaryColor, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Tampilkan Watermark AI',
+                                    style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Matikan untuk mengekspor gambar bersih tanpa watermark (Khusus Premium)',
+                                    style: TextStyle(color: textMutedColor, fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              activeColor: primaryColor,
+                              value: _showWatermarkSetting,
+                              onChanged: (val) {
+                                if (!_isPremium) {
+                                  // Lock to premium! Show paywall.
+                                  setState(() {
+                                    _showPaywall = true;
+                                  });
+                                } else {
+                                  _saveWatermarkSetting(val);
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -2613,36 +2688,37 @@ class _PhotoTryOnPageState extends State<PhotoTryOnPage> with WidgetsBindingObse
     );
   }
 
+
+
+
+
   Widget _buildTabButton(String label, int index) {
     final bool isAct = _activeCategoryIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _activeCategoryIndex = index;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isAct ? primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isAct ? FontWeight.bold : FontWeight.normal,
-              color: isAct ? Colors.white : textMutedColor,
-            ),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _activeCategoryIndex = index;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isAct ? primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isAct ? FontWeight.bold : FontWeight.normal,
+            color: isAct ? Colors.white : textMutedColor,
           ),
         ),
       ),
     );
   }
-
-
 
   Widget _buildSliderRow(String label, double val, ValueChanged<double> onChg) {
     return Row(
