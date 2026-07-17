@@ -131,6 +131,7 @@ class _ResultsPageState extends State<ResultsPage> {
   Color get cardBorderColor => ThemeManager.cardBorderColor;
   Color get primaryColor => ThemeManager.primaryColor;
   String _selectedFilter = 'natural'; // 'natural', 'brightening', 'sunkissed'
+  String _activeProductTab = 'base'; // 'base', 'lipstick'
   bool _isPremium = false;
 
   @override
@@ -701,473 +702,79 @@ class _ResultsPageState extends State<ResultsPage> {
               ),
               const SizedBox(height: 28),
 
-              // 3. Judul Bagian Rekomendasi Brand
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                   Text(
-                    'Rekomendasi Produk Cocok',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    _isPremium 
-                        ? '${filteredMatches.length} Produk' 
-                        : (filteredMatches.length > 2 ? '2 dari ${filteredMatches.length} Produk' : '${filteredMatches.length} Produk'),
-                    style: TextStyle(
-                      color: textMutedColor.withOpacity(0.5),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // 4. Daftar Produk Hasil Pencocokan
-              filteredMatches.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _isPremium ? filteredMatches.length : (filteredMatches.length > 2 ? 3 : filteredMatches.length),
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        if (!_isPremium && index == 2) {
-                          return Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: cardBgColor,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: primaryColor.withOpacity(0.3),
-                                width: 1.5,
-                              ),
-                              boxShadow: ThemeManager.premiumGlowShadow,
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.lock_rounded, color: primaryColor, size: 24),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${filteredMatches.length - 2}+ Opsi Produk Lainnya Terkunci',
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Upgrade ke Premium sekarang untuk membuka rekomendasi brand kosmetik lokal & internasional lainnya.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: textMutedColor,
-                                    fontSize: 11,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                    ),
-                                    onPressed: _showPremiumUnlockDialog,
-                                    child: const Text(
-                                      'Buka Semua Rekomendasi (Premium)',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        final match = filteredMatches[index];
-                        final ProductShade product = match['product'] as ProductShade;
-                        final double matchPercentage = match['matchPercentage'] as double;
-                        final double deltaE = match['deltaE'] as double;
-                        final productShadeColor = _getHexColor(product.hexCode);
-
-                        final totalFeedback = product.perfectCount + product.tooDarkCount + product.tooLightCount;
-
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: cardBgColor,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: index == 0
-                                  ? primaryColor.withOpacity(0.4)
-                                  : cardBorderColor.withOpacity(0.45),
-                              width: 1.5,
-                            ),
-                            boxShadow: ThemeManager.premiumGlowShadow,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Swatch kecil warna shade kosmetik
-                                  Container(
-                                    height: 48,
-                                    width: 48,
-                                    decoration: BoxDecoration(
-                                      color: productShadeColor,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: cardBorderColor.withOpacity(0.35)),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          product.brand,
-                                          style:  TextStyle(
-                                            color: primaryColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          product.productName,
-                                          style:  TextStyle(
-                                            color: textColor,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Shade: ${product.shadeName}',
-                                          style: TextStyle(
-                                            color: textColor.withOpacity(0.8),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Persentase kecocokan berwarna emas
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: primaryColor.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: primaryColor.withOpacity(0.4)),
-                                        ),
-                                        child: Text(
-                                          '${matchPercentage.toStringAsFixed(0)}% Cocok',
-                                          style:  TextStyle(
-                                            color: primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Jarak: ${deltaE.toStringAsFixed(1)} ΔE',
-                                        style: TextStyle(
-                                          color: textMutedColor.withOpacity(0.5),
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Umpan Balik / Community Validation Loop
-                              Divider(color: cardBorderColor.withOpacity(0.15), height: 1),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  // Ulasan Statistik Komunitas
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'ULASAN KECOCOKAN KOMUNITAS:',
-                                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      totalFeedback == 0
-                                          ?  Text(
-                                              'Belum ada ulasan',
-                                              style: TextStyle(color: textMutedColor, fontSize: 10, fontStyle: FontStyle.italic),
-                                            )
-                                          : Row(
-                                              children: [
-                                                const Icon(Icons.thumb_up_alt_rounded, color: Colors.greenAccent, size: 10),
-                                                const SizedBox(width: 3),
-                                                Text(
-                                                  '${product.perfectCount}',
-                                                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                const Icon(Icons.dark_mode_rounded, color: Colors.amberAccent, size: 10),
-                                                const SizedBox(width: 3),
-                                                Text(
-                                                  '${product.tooDarkCount}',
-                                                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                const Icon(Icons.light_mode_rounded, color: Colors.orangeAccent, size: 10),
-                                                const SizedBox(width: 3),
-                                                Text(
-                                                  '${product.tooLightCount}',
-                                                  style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
-                                                ),
-                                              ],
-                                            ),
-                                    ],
-                                  ),
-                                  // Tombol Beri Ulasan
-                                  Row(
-                                    children: [
-                                      _buildVoteButton(
-                                        icon: Icons.thumb_up_alt_outlined,
-                                        color: Colors.greenAccent,
-                                        tooltip: 'Pas / Cocok',
-                                        onPressed: () => _submitFeedback(product, 'PERFECT'),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      _buildVoteButton(
-                                        icon: Icons.dark_mode_outlined,
-                                        color: Colors.amberAccent,
-                                        tooltip: 'Kegelapan',
-                                        onPressed: () => _submitFeedback(product, 'TOO_DARK'),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      _buildVoteButton(
-                                        icon: Icons.light_mode_outlined,
-                                        color: Colors.orangeAccent,
-                                        tooltip: 'Keterangan',
-                                        onPressed: () => _submitFeedback(product, 'TOO_LIGHT'),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-
-                              // Tombol belanja/beli affiliate & Cari Dupe
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF1E1E38),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        elevation: 0,
-                                      ),
-                                      onPressed: () => _launchUrl(context, product.affiliateUrl),
-                                      child: const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.shopping_bag_outlined, size: 16),
-                                          SizedBox(width: 6),
-                                          Text('Beli Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: primaryColor.withOpacity(0.12),
-                                        foregroundColor: primaryColor,
-                                        side: BorderSide(color: primaryColor.withOpacity(0.3)),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        elevation: 0,
-                                      ),
-                                      onPressed: () => _findDupesForProduct(context, product),
-                                      child: const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.discount_outlined, size: 16),
-                                          SizedBox(width: 6),
-                                          Text('Cari Dupe 🏷️', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-              const SizedBox(height: 28),
-              Text(
-                'Rekomendasi Warna Lipstik 💄',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              // 3. Tab Selector & Rekomendasi Produk
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorderColor.withOpacity(0.5)),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Berdasarkan undertone ${widget.matchedStandard.undertone} Anda, berikut adalah warna lipstik yang paling serasi:',
-                style: TextStyle(
-                  color: textMutedColor,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 12),
-              widget.matchedLipsticks.isEmpty
-                  ? _buildEmptyState()
-                  : SizedBox(
-                      height: 155,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: widget.matchedLipsticks.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final product = widget.matchedLipsticks[index];
-                          final productShadeColor = _getHexColor(product.hexCode);
-                          
-                          return Container(
-                            width: 200,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: cardBgColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: cardBorderColor.withOpacity(0.45),
-                                width: 1.2,
-                              ),
-                              boxShadow: ThemeManager.premiumGlowShadow,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      height: 36,
-                                      width: 36,
-                                      decoration: BoxDecoration(
-                                        color: productShadeColor,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: cardBorderColor.withOpacity(0.3),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            product.brand,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: primaryColor,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          Text(
-                                            product.productName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Shade: ${product.shadeName}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: textColor.withOpacity(0.8),
-                                    fontSize: 11,
-                                  ),
-                                ),
-                                const Spacer(),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 32,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1E1E38),
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.zero,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    onPressed: () => _launchUrl(context, product.affiliateUrl),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.shopping_bag_outlined, size: 12),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Beli Produk',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildProductTabButton(
+                        label: 'Face / Base 👩‍🦰',
+                        tabName: 'base',
+                        count: filteredMatches.length,
                       ),
                     ),
+                    Expanded(
+                      child: _buildProductTabButton(
+                        label: 'Lips / Lipstick 💄',
+                        tabName: 'lipstick',
+                        count: widget.matchedLipsticks.length,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _activeProductTab == 'base'
+                  ? (filteredMatches.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _isPremium ? filteredMatches.length : (filteredMatches.length > 2 ? 3 : filteredMatches.length),
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            if (!_isPremium && index == 2) {
+                              return _buildPremiumLockCard(filteredMatches.length - 2);
+                            }
+                            final match = filteredMatches[index];
+                            final ProductShade product = match['product'] as ProductShade;
+                            final double matchPercentage = match['matchPercentage'] as double;
+                            final double deltaE = match['deltaE'] as double;
+                            return _buildProductItemCard(
+                              product: product,
+                              matchPercentage: matchPercentage,
+                              deltaE: deltaE,
+                              isFirst: index == 0,
+                            );
+                          },
+                        ))
+                  : (widget.matchedLipsticks.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _isPremium ? widget.matchedLipsticks.length : (widget.matchedLipsticks.length > 2 ? 3 : widget.matchedLipsticks.length),
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            if (!_isPremium && index == 2) {
+                              return _buildPremiumLockCard(widget.matchedLipsticks.length - 2);
+                            }
+                            final product = widget.matchedLipsticks[index];
+                            return _buildProductItemCard(
+                              product: product,
+                              matchPercentage: 98.0,
+                              deltaE: null,
+                              isFirst: index == 0,
+                            );
+                          },
+                        )),
             ],
           ),
         ),
@@ -1215,6 +822,354 @@ class _ResultsPageState extends State<ResultsPage> {
           fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildProductTabButton({
+    required String label,
+    required String tabName,
+    required int count,
+  }) {
+    final isActive = _activeProductTab == tabName;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _activeProductTab = tabName;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isActive ? ThemeManager.premiumGlowShadow : null,
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : textColor.withOpacity(0.8),
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$count Produk',
+              style: TextStyle(
+                color: isActive ? Colors.white.withOpacity(0.8) : textMutedColor,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductItemCard({
+    required ProductShade product,
+    required double matchPercentage,
+    required double? deltaE,
+    required bool isFirst,
+  }) {
+    final productShadeColor = _getHexColor(product.hexCode);
+    final totalFeedback = product.perfectCount + product.tooDarkCount + product.tooLightCount;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isFirst
+              ? primaryColor.withOpacity(0.4)
+              : cardBorderColor.withOpacity(0.45),
+          width: 1.5,
+        ),
+        boxShadow: ThemeManager.premiumGlowShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Swatch kecil warna shade kosmetik
+              Container(
+                height: 48,
+                width: 48,
+                decoration: BoxDecoration(
+                  color: productShadeColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cardBorderColor.withOpacity(0.35)),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.brand,
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      product.productName,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Shade: ${product.shadeName}',
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Persentase kecocokan berwarna emas
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: primaryColor.withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      '${matchPercentage.toStringAsFixed(0)}% Cocok',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  if (deltaE != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Jarak: ${deltaE.toStringAsFixed(1)} ΔE',
+                      style: TextStyle(
+                        color: textMutedColor.withOpacity(0.5),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Umpan Balik / Community Validation Loop
+          Divider(color: cardBorderColor.withOpacity(0.15), height: 1),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Ulasan Statistik Komunitas
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ULASAN KECOCOKAN KOMUNITAS:',
+                    style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  totalFeedback == 0
+                      ? Text(
+                          'Belum ada ulasan',
+                          style: TextStyle(color: textMutedColor, fontSize: 10, fontStyle: FontStyle.italic),
+                        )
+                      : Row(
+                          children: [
+                            const Icon(Icons.thumb_up_alt_rounded, color: Colors.greenAccent, size: 10),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${product.perfectCount}',
+                              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.dark_mode_rounded, color: Colors.amberAccent, size: 10),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${product.tooDarkCount}',
+                              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.light_mode_rounded, color: Colors.orangeAccent, size: 10),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${product.tooLightCount}',
+                              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                ],
+              ),
+              // Tombol Beri Ulasan
+              Row(
+                children: [
+                  _buildVoteButton(
+                    icon: Icons.thumb_up_alt_outlined,
+                    color: Colors.greenAccent,
+                    tooltip: 'Pas / Cocok',
+                    onPressed: () => _submitFeedback(product, 'PERFECT'),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildVoteButton(
+                    icon: Icons.dark_mode_outlined,
+                    color: Colors.amberAccent,
+                    tooltip: 'Kegelapan',
+                    onPressed: () => _submitFeedback(product, 'TOO_DARK'),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildVoteButton(
+                    icon: Icons.light_mode_outlined,
+                    color: Colors.orangeAccent,
+                    tooltip: 'Keterangan',
+                    onPressed: () => _submitFeedback(product, 'TOO_LIGHT'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Tombol belanja/beli affiliate & Cari Dupe
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E1E38),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                  ),
+                  onPressed: () => _launchUrl(context, product.affiliateUrl),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.shopping_bag_outlined, size: 16),
+                      SizedBox(width: 6),
+                      Text('Beli Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor.withOpacity(0.12),
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor.withOpacity(0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                  ),
+                  onPressed: () => _findDupesForProduct(context, product),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.discount_outlined, size: 16),
+                      SizedBox(width: 6),
+                      Text('Cari Dupe 🏷️', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumLockCard(int hiddenCount) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: primaryColor.withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: ThemeManager.premiumGlowShadow,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_rounded, color: primaryColor, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                '$hiddenCount+ Opsi Produk Lainnya Terkunci',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Upgrade ke Premium sekarang untuk membuka rekomendasi brand kosmetik lokal & internasional lainnya.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: textMutedColor,
+              fontSize: 11,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onPressed: _showPremiumUnlockDialog,
+              child: const Text(
+                'Buka Semua Rekomendasi (Premium)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
