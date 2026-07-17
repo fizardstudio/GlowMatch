@@ -14,6 +14,7 @@ import '../../../catalog/domain/repositories/shade_matcher_repository.dart';
 import 'scanner_event.dart';
 import 'scanner_state.dart';
 import '../../../../core/data/models/standard_shade.dart';
+import '../../../../core/data/models/product_shade.dart';
 
 class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   final ShadeMatcherRepository _shadeMatcherRepository;
@@ -409,7 +410,11 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       // 4. Konversi RGB rata-rata ke LabColor
       final targetLab = ColorCalculator.rgbToLab(finalRgb[0], finalRgb[1], finalRgb[2]);
       final matchedStandard = await _shadeMatcherRepository.matchStandardShade(targetLab);
-      final commercialMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
+      final rawMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
+      final commercialMatches = rawMatches.where((m) {
+        final product = m['product'] as ProductShade;
+        return product.category != 'Lip Color';
+      }).toList();
 
       if (matchedStandard == null) {
         emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah pertama.'));
@@ -749,7 +754,11 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       // 4. Konversi RGB rata-rata ke LabColor dan cari pencocokan
       final targetLab = ColorCalculator.rgbToLab(finalRgb[0], finalRgb[1], finalRgb[2]);
       final matchedStandard = await _shadeMatcherRepository.matchStandardShade(targetLab);
-      final commercialMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
+      final rawMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
+      final commercialMatches = rawMatches.where((m) {
+        final product = m['product'] as ProductShade;
+        return product.category != 'Lip Color';
+      }).toList();
 
       if (matchedStandard == null) {
         emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah.'));
