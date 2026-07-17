@@ -263,6 +263,33 @@ class MakeupOverlayView @JvmOverloads constructor(
     var sliderX: Float = 0f
     private var rotationDegrees = 270
 
+    private val smoothedContours = HashMap<Int, List<PointF>>()
+    private val smoothingFactor = 0.5f // 50% new frame, 50% history. Higher = faster, lower = smoother.
+
+    private fun getSmoothedContour(face: Face, contourType: Int): List<PointF>? {
+        val rawPoints = face.getContour(contourType)?.points ?: return null
+        if (rawPoints.isEmpty()) return null
+
+        val history = smoothedContours[contourType]
+        if (history == null || history.size != rawPoints.size) {
+            val initialized = rawPoints.map { PointF(it.x, it.y) }
+            smoothedContours[contourType] = initialized
+            return initialized
+        }
+
+        val smoothed = ArrayList<PointF>(rawPoints.size)
+        for (i in rawPoints.indices) {
+            val raw = rawPoints[i]
+            val prev = history[i]
+            val sx = raw.x * smoothingFactor + prev.x * (1f - smoothingFactor)
+            val sy = raw.y * smoothingFactor + prev.y * (1f - smoothingFactor)
+            val smoothedPt = PointF(sx, sy)
+            smoothed.add(smoothedPt)
+            prev.set(sx, sy)
+        }
+        return smoothed
+    }
+
     private val pathPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
@@ -281,6 +308,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 
     fun clearFace() {
         this.face = null
+        smoothedContours.clear()
         postInvalidate()
     }
 
@@ -354,8 +382,8 @@ class MakeupOverlayView @JvmOverloads constructor(
     }
 
     private fun getHairlinePoints(face: Face): List<PointF> {
-        val leftEye = face.getContour(FaceContour.LEFT_EYE)?.points ?: emptyList()
-        val rightEye = face.getContour(FaceContour.RIGHT_EYE)?.points ?: emptyList()
+        val leftEye = getSmoothedContour(face, FaceContour.LEFT_EYE) ?: emptyList()
+        val rightEye = getSmoothedContour(face, FaceContour.RIGHT_EYE) ?: emptyList()
 
         if (leftEye.isEmpty() || rightEye.isEmpty()) {
             val bbox = face.boundingBox
@@ -395,8 +423,8 @@ class MakeupOverlayView @JvmOverloads constructor(
     }
 
     private fun getCheekboneCoordinates(face: Face): Map<String, PointF> {
-        val leftEye = face.getContour(FaceContour.LEFT_EYE)?.points ?: emptyList()
-        val rightEye = face.getContour(FaceContour.RIGHT_EYE)?.points ?: emptyList()
+        val leftEye = getSmoothedContour(face, FaceContour.LEFT_EYE) ?: emptyList()
+        val rightEye = getSmoothedContour(face, FaceContour.RIGHT_EYE) ?: emptyList()
 
         if (leftEye.isEmpty() || rightEye.isEmpty()) {
             val bbox = face.boundingBox
@@ -527,8 +555,8 @@ class MakeupOverlayView @JvmOverloads constructor(
         var screenUnitY = PointF(0f, 1f)
         var eyeDistance = 0f
 
-        val leftEyeContour = currentFace.getContour(FaceContour.LEFT_EYE)?.points
-        val rightEyeContour = currentFace.getContour(FaceContour.RIGHT_EYE)?.points
+        val leftEyeContour = getSmoothedContour(currentFace, FaceContour.LEFT_EYE)
+        val rightEyeContour = getSmoothedContour(currentFace, FaceContour.RIGHT_EYE)
         if (leftEyeContour != null && leftEyeContour.isNotEmpty() && rightEyeContour != null && rightEyeContour.isNotEmpty()) {
             val leftCenter = getEyeCenter(leftEyeContour)
             val rightCenter = getEyeCenter(rightEyeContour)
@@ -549,7 +577,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 
             // Dot product check in screen space to guarantee screenUnitY points downwards on the screen (positive screen Y direction)
             val midScreenEye = PointF((lEye.x + rEye.x) / 2f, (lEye.y + rEye.y) / 2f)
-            val upperLipPoints = currentFace.getContour(FaceContour.UPPER_LIP_TOP)?.points
+            val upperLipPoints = getSmoothedContour(currentFace, FaceContour.UPPER_LIP_TOP)
             if (upperLipPoints != null && upperLipPoints.isNotEmpty()) {
                 val refScreen = mapPoint(upperLipPoints[upperLipPoints.size / 2])
                 val refX = refScreen.x - midScreenEye.x
@@ -573,7 +601,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 
         // 1. Foundation (Base) - Combines face path with difference cutouts of eyes, eyebrows, and mouth for 100% realistic premium look
         if (foundationColor != Color.TRANSPARENT && foundationOpacity > 0f) {
-            val faceContourPoints = currentFace.getContour(FaceContour.FACE)?.points
+            val faceContourPoints = getSmoothedContour(currentFace, FaceContour.FACE)
             if (faceContourPoints != null && faceContourPoints.isNotEmpty()) {
                 val facePath = Path()
                 val faceOffsets = ArrayList<PointF>()
@@ -597,7 +625,7 @@ class MakeupOverlayView @JvmOverloads constructor(
                 val holesPath = Path()
 
                 // Mata Kiri
-                val leftEye = currentFace.getContour(FaceContour.LEFT_EYE)?.points
+                val leftEye = getSmoothedContour(currentFace, FaceContour.LEFT_EYE)
                 if (leftEye != null && leftEye.isNotEmpty()) {
                     val leftEyePath = Path()
                     val p0 = mapPoint(leftEye[0])
@@ -611,7 +639,7 @@ class MakeupOverlayView @JvmOverloads constructor(
                 }
 
                 // Mata Kanan
-                val rightEye = currentFace.getContour(FaceContour.RIGHT_EYE)?.points
+                val rightEye = getSmoothedContour(currentFace, FaceContour.RIGHT_EYE)
                 if (rightEye != null && rightEye.isNotEmpty()) {
                     val rightEyePath = Path()
                     val p0 = mapPoint(rightEye[0])
@@ -625,8 +653,8 @@ class MakeupOverlayView @JvmOverloads constructor(
                 }
 
                 // Bibir (Mulut luar)
-                val upperLipTop = currentFace.getContour(FaceContour.UPPER_LIP_TOP)?.points
-                val lowerLipBottom = currentFace.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
+                val upperLipTop = getSmoothedContour(currentFace, FaceContour.UPPER_LIP_TOP)
+                val lowerLipBottom = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_BOTTOM)
                 if (upperLipTop != null && upperLipTop.isNotEmpty() && lowerLipBottom != null && lowerLipBottom.isNotEmpty()) {
                     val lipsPath = Path()
                     val lipsOffsets = ArrayList<PointF>()
@@ -645,8 +673,8 @@ class MakeupOverlayView @JvmOverloads constructor(
                 }
 
                 // Alis Kiri
-                val leftEyebrowTop = currentFace.getContour(FaceContour.LEFT_EYEBROW_TOP)?.points
-                val leftEyebrowBottom = currentFace.getContour(FaceContour.LEFT_EYEBROW_BOTTOM)?.points
+                val leftEyebrowTop = getSmoothedContour(currentFace, FaceContour.LEFT_EYEBROW_TOP)
+                val leftEyebrowBottom = getSmoothedContour(currentFace, FaceContour.LEFT_EYEBROW_BOTTOM)
                 if (leftEyebrowTop != null && leftEyebrowTop.isNotEmpty()) {
                     val eyebrowPath = Path()
                     val eyebrowOffsets = ArrayList<PointF>()
@@ -665,10 +693,10 @@ class MakeupOverlayView @JvmOverloads constructor(
                     eyebrowPath.close()
                     holesPath.addPath(eyebrowPath)
                 }
-
+ 
                 // Alis Kanan
-                val rightEyebrowTop = currentFace.getContour(FaceContour.RIGHT_EYEBROW_TOP)?.points
-                val rightEyebrowBottom = currentFace.getContour(FaceContour.RIGHT_EYEBROW_BOTTOM)?.points
+                val rightEyebrowTop = getSmoothedContour(currentFace, FaceContour.RIGHT_EYEBROW_TOP)
+                val rightEyebrowBottom = getSmoothedContour(currentFace, FaceContour.RIGHT_EYEBROW_BOTTOM)
                 if (rightEyebrowTop != null && rightEyebrowTop.isNotEmpty()) {
                     val eyebrowPath = Path()
                     val eyebrowOffsets = ArrayList<PointF>()
@@ -764,7 +792,7 @@ class MakeupOverlayView @JvmOverloads constructor(
                         }
 
                         // Nose Tip
-                        val noseBridgePoints = currentFace.getContour(FaceContour.NOSE_BRIDGE)?.points ?: emptyList()
+                        val noseBridgePoints = getSmoothedContour(currentFace, FaceContour.NOSE_BRIDGE) ?: emptyList()
                         if (noseBridgePoints.isNotEmpty()) {
                             val noseTip = mapPoint(noseBridgePoints.last())
                             val noseRadius = faceWidth * (if (isDewy) 0.04f else 0.06f)
@@ -792,8 +820,8 @@ class MakeupOverlayView @JvmOverloads constructor(
 
         // 2. Eyeshadow & Eyeliner
         if ((eyeshadowColor != Color.TRANSPARENT && eyeshadowOpacity > 0f) || hasEyeliner) {
-            val leftEye = currentFace.getContour(FaceContour.LEFT_EYE)?.points
-            val rightEye = currentFace.getContour(FaceContour.RIGHT_EYE)?.points
+            val leftEye = getSmoothedContour(currentFace, FaceContour.LEFT_EYE)
+            val rightEye = getSmoothedContour(currentFace, FaceContour.RIGHT_EYE)
 
             if (leftEye != null && leftEye.isNotEmpty() && rightEye != null && rightEye.isNotEmpty()) {
                 // We reuse screenUnitX, screenUnitY, and eyeDistance calculated at the top of onDraw
@@ -1006,7 +1034,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 
             canvas.save()
             // Clip to face contour path to keep blush-on within the face boundaries
-            val faceOutline = currentFace.getContour(FaceContour.FACE)?.points
+            val faceOutline = getSmoothedContour(currentFace, FaceContour.FACE)
             if (faceOutline != null && faceOutline.isNotEmpty()) {
                 val facePath = Path()
                 val start = mapPoint(faceOutline[0])
@@ -1110,10 +1138,10 @@ class MakeupOverlayView @JvmOverloads constructor(
 
         // 4. Lipstick (Bibir)
         if (lipstickColor != Color.TRANSPARENT && lipstickOpacity > 0f) {
-            val upperLipTop = currentFace.getContour(FaceContour.UPPER_LIP_TOP)?.points
-            val upperLipBottom = currentFace.getContour(FaceContour.UPPER_LIP_BOTTOM)?.points
-            val lowerLipTop = currentFace.getContour(FaceContour.LOWER_LIP_TOP)?.points
-            val lowerLipBottom = currentFace.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
+            val upperLipTop = getSmoothedContour(currentFace, FaceContour.UPPER_LIP_TOP)
+            val upperLipBottom = getSmoothedContour(currentFace, FaceContour.UPPER_LIP_BOTTOM)
+            val lowerLipTop = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_TOP)
+            val lowerLipBottom = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_BOTTOM)
 
              fun drawLipPath(top: List<PointF>?, bottom: List<PointF>?) {
                 if (top == null || top.isEmpty() || bottom == null || bottom.isEmpty()) return
@@ -1121,8 +1149,20 @@ class MakeupOverlayView @JvmOverloads constructor(
                 val centroidRaw = getPathCentroid(top, bottom)
                 val centroid = mapPoint(centroidRaw)
 
-                // Expansion factor to cover the vermillion border/skin line naturally
-                val expansionFactor = 1.08f
+                // 1. Calculate vertical lip height relative to eye distance to identify if lips are sucked in
+                val midTop = mapPoint(top[top.size / 2])
+                val midBottom = mapPoint(bottom[bottom.size / 2])
+                val dy = Math.abs(midBottom.y - midTop.y)
+                val lipHeightRatio = if (eyeDistance > 0f) (dy / eyeDistance) else 0.06f
+
+                // Normal lipHeightRatio is >= 0.05. Below 0.045, we start fading. Below 0.02, it is hidden.
+                val expressionScale = ((lipHeightRatio - 0.02f) / 0.03f).coerceIn(0f, 1f)
+
+                if (expressionScale <= 0f) return // Completely hidden/sucked in
+
+                // Dynamic expansion factor: drops to 1.0f (no expansion) as lips shrink/suck in
+                val baseExpansion = 1.08f
+                val expansionFactor = 1.0f + (baseExpansion - 1.0f) * expressionScale
 
                 // Map and expand all points outward from the centroid
                 val expandedTop = top.map { rawPt ->
@@ -1156,14 +1196,14 @@ class MakeupOverlayView @JvmOverloads constructor(
                 when (lipstickFinishing) {
                     "glossy" -> {
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 240).toInt()
+                        pathPaint.alpha = (lipstickOpacity * 240 * expressionScale).toInt()
                         canvas.drawPath(path, pathPaint)
 
                         // Overlay a beautiful, subtle glossy light-reflection white stroke
                         val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                             style = Paint.Style.STROKE
                             color = Color.WHITE
-                            alpha = (lipstickOpacity * 110).toInt()
+                            alpha = (lipstickOpacity * 110 * expressionScale).toInt()
                             strokeWidth = 2.5f
                             maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
                         }
@@ -1172,15 +1212,15 @@ class MakeupOverlayView @JvmOverloads constructor(
                     "liquid_matte" -> {
                         // Liquid Matte: high coverage and sharpness
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 250).toInt()
+                        pathPaint.alpha = (lipstickOpacity * 250 * expressionScale).toInt()
                         pathPaint.maskFilter = BlurMaskFilter(1f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
                     }
                     "blurred_matte" -> {
                         // Blurred / Bitten Matte: soft base, inner focus (ombre)
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 175).toInt() // closer to inner opacity to soften contrast
-                        pathPaint.maskFilter = BlurMaskFilter(3.5f, BlurMaskFilter.Blur.NORMAL) // slightly tighter blur so base lip stays solid
+                        pathPaint.alpha = (lipstickOpacity * 175 * expressionScale).toInt()
+                        pathPaint.maskFilter = BlurMaskFilter(3.5f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
 
                         val scaleFactor = 0.72f // wider inner area for a gradual, seamless blend
@@ -1201,14 +1241,14 @@ class MakeupOverlayView @JvmOverloads constructor(
                         innerPath.close()
 
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 205).toInt() // gentler inner highlight
-                        pathPaint.maskFilter = BlurMaskFilter(5.5f, BlurMaskFilter.Blur.NORMAL) // smooth transition blur
+                        pathPaint.alpha = (lipstickOpacity * 205 * expressionScale).toInt()
+                        pathPaint.maskFilter = BlurMaskFilter(5.5f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(innerPath, pathPaint)
                     }
                     else -> { // velvet_matte or default matte
                         // Velvet / Creamy Matte: soft focus blurred matte
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 185).toInt()
+                        pathPaint.alpha = (lipstickOpacity * 185 * expressionScale).toInt()
                         pathPaint.maskFilter = BlurMaskFilter(2.8f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
                     }
