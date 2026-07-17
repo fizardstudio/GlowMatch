@@ -94,7 +94,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
   // Advanced Try-On Upgrades (Phase 2.5) State Variables
   String? _activePreset = 'Korean Glass Skin';
-  bool _isSplitMode = false; // DEFAULT OFF!
+  bool _isSplitMode = true; // DEFAULT ON!
   bool _showGlassSkin = true;
   bool _showContourGuide = false;
 
@@ -2906,6 +2906,16 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                     icon: Icons.flip_camera_ios_rounded,
                     tooltip: 'Ganti Kamera',
                     onPressed: _toggleCameraDirection,
+                  ),
+                  _buildFloatingActionButton(
+                    icon: _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
+                    tooltip: _isSplitMode ? 'Sembunyikan Pembanding' : 'Tampilkan Pembanding',
+                    onPressed: () {
+                      setState(() {
+                        _isSplitMode = !_isSplitMode;
+                      });
+                    },
+                    isSelected: _isSplitMode,
                   ),
                   _buildFloatingActionButton(
                     icon: Icons.share_rounded,
