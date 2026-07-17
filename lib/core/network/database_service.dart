@@ -97,16 +97,344 @@ class DatabaseService {
 
     // Seeding data produk komersial
     final productCount = await isar.productShades.count();
-    if (productCount < 180) {
+    if (productCount < 213) {
       await isar.writeTxn(() async {
         await isar.productShades.clear();
       });
-      final List<Map<String, String>> rawProducts = [
+            final List<Map<String, String>> rawProducts = [
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '11C Pink Fair',
+          'hex': '#F8D4C4',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '22N Light Ivory',
+          'hex': '#EED0BD',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '23W Warm Ivory',
+          'hex': '#E6C5AC',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '32N Neutral Beige',
+          'hex': '#D4A286',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '33W Olive Beige',
+          'hex': '#C89A7B',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '42N Neutral Sand',
+          'hex': '#BFA08A',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '43W Golden Sand',
+          'hex': '#A27557',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Colorfit Matte Foundation',
+          'shade': '52N Almond',
+          'hex': '#8D624C',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Exclusive Liquid Foundation',
+          'shade': '01 Light Beige',
+          'hex': '#F5DBC8',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Exclusive Liquid Foundation',
+          'shade': '02 Sheer Pink',
+          'hex': '#F1CBB5',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Exclusive Liquid Foundation',
+          'shade': '03 Sandy Beige',
+          'hex': '#E1B395',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Exclusive Liquid Foundation',
+          'shade': '04 Natural',
+          'hex': '#D8A682',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Wardah',
+          'product': 'Exclusive Liquid Foundation',
+          'shade': '05 Coffee Beige',
+          'hex': '#BC8660',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/wardahofficial'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '110 Porcelain',
+          'hex': '#FDF4EF',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '112 Natural Ivory',
+          'hex': '#F6E4D9',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '115 Ivory',
+          'hex': '#F5ECDE',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '120 Classic Ivory',
+          'hex': '#FAF0E6',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '125 Nude Beige',
+          'hex': '#EAC7B2',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '128 Warm Nude',
+          'hex': '#E8C6A5',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '220 Natural Beige',
+          'hex': '#D9AB85',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '228 Soft Tan',
+          'hex': '#D09F7A',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '230 Natural Buff',
+          'hex': '#C59976',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '310 Sun Beige',
+          'hex': '#BCA28B',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '320 Natural Tan',
+          'hex': '#A37B5C',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Fit Me Matte + Poreless',
+          'shade': '322 Warm Honey',
+          'hex': '#946D4B',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Superstay Active Wear 30H Foundation',
+          'shade': '112 Natural Ivory',
+          'hex': '#F5E0D2',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Superstay Active Wear 30H Foundation',
+          'shade': '120 Classic Ivory',
+          'hex': '#F0D3BE',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Superstay Active Wear 30H Foundation',
+          'shade': '128 Warm Nude',
+          'hex': '#E3BEA0',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Superstay Active Wear 30H Foundation',
+          'shade': '220 Natural Beige',
+          'hex': '#D3A884',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Superstay Active Wear 30H Foundation',
+          'shade': '310 Sun Beige',
+          'hex': '#B28A6D',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Maybelline',
+          'product': 'Superstay Active Wear 30H Foundation',
+          'shade': '312 Golden',
+          'hex': '#9C7557',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/maybellineindonesia'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'N10 Marble',
+          'hex': '#FBF1E8',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'W22 Warm Ivory',
+          'hex': '#E3BF9F',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'N20 Warm Beige',
+          'hex': '#DDC09D',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'W33 Honey Beige',
+          'hex': '#D3A279',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'N30 Natural Beige',
+          'hex': '#CFA07C',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'W41 Peach Beige',
+          'hex': '#C69268',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'W42 Warm Sand',
+          'hex': '#9B7051',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'N40 Sand',
+          'hex': '#8A6546',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'N50 Tan',
+          'hex': '#765337',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
+        {
+          'brand': 'Make Over',
+          'product': 'Powerstay Weightless Liquid Foundation',
+          'shade': 'C62 Rich Cocoa',
+          'hex': '#5D3E2B',
+          'cat': 'Foundation',
+          'url': 'https://shopee.co.id/makeoverofficial'
+        },
         {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '01 Ochre',
-          'hex': '#F6DCBF',
+          'hex': '#F5DCBF',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -114,7 +442,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '02 Pink Shade',
-          'hex': '#ECC0AE',
+          'hex': '#EDB9A6',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -122,7 +450,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '03 Nude Silk',
-          'hex': '#E9C1A0',
+          'hex': '#E3C2A3',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -130,7 +458,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '04 Amber Rose',
-          'hex': '#D9A07E',
+          'hex': '#D8A78F',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -138,7 +466,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '05 Velvet Nude',
-          'hex': '#E3B291',
+          'hex': '#CCA080',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -146,7 +474,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '06 Beige Blast',
-          'hex': '#D59F7C',
+          'hex': '#B88C6C',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -154,7 +482,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '07 Caramel',
-          'hex': '#C68E65',
+          'hex': '#A17859',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -162,7 +490,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '08 Pearl',
-          'hex': '#FCE3D2',
+          'hex': '#FBF0DF',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -170,7 +498,7 @@ class DatabaseService {
           'brand': 'Make Over',
           'product': 'Ultra Cover Liquid Matte Foundation',
           'shade': '09 Creme Rose',
-          'hex': '#ECC1AB',
+          'hex': '#F2D4BB',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
         },
@@ -365,70 +693,6 @@ class DatabaseService {
           'hex': '#754B3A',
           'cat': 'Foundation',
           'url': 'https://shopee.co.id/makeoverofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '11C Pink Fair',
-          'hex': '#EABDAA',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '22N Light Ivory',
-          'hex': '#E5BEA3',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '23W Warm Ivory',
-          'hex': '#ECC4A2',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '32N Neutral Beige',
-          'hex': '#DCB395',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '33W Olive Beige',
-          'hex': '#D4AF92',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '42N Neutral Sand',
-          'hex': '#CFA180',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '43W Golden Sand',
-          'hex': '#C49A76',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
-        },
-        {
-          'brand': 'Wardah',
-          'product': 'Colorfit Matte Foundation',
-          'shade': '52N Almond',
-          'hex': '#BA8E6E',
-          'cat': 'Foundation',
-          'url': 'https://shopee.co.id/wardahofficial'
         },
         {
           'brand': 'Wardah',
