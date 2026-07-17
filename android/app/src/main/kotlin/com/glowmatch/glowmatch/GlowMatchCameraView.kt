@@ -1143,15 +1143,36 @@ class MakeupOverlayView @JvmOverloads constructor(
             val lowerLipTop = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_TOP)
             val lowerLipBottom = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_BOTTOM)
 
-            if (upperLipTop != null && upperLipTop.isNotEmpty() && lowerLipBottom != null && lowerLipBottom.isNotEmpty()) {
-                // Calculate the total mouth vertical height relative to eyeDistance (mouth ratio)
-                val midTop = mapPoint(upperLipTop[upperLipTop.size / 2])
-                val midBottom = mapPoint(lowerLipBottom[lowerLipBottom.size / 2])
-                val mouthHeight = Math.abs(midBottom.y - midTop.y)
+            if (upperLipTop != null && upperLipTop.isNotEmpty() &&
+                upperLipBottom != null && upperLipBottom.isNotEmpty() &&
+                lowerLipTop != null && lowerLipTop.isNotEmpty() &&
+                lowerLipBottom != null && lowerLipBottom.isNotEmpty()) {
+
+                val midUpperTop = mapPoint(upperLipTop[upperLipTop.size / 2])
+                val midUpperBottom = mapPoint(upperLipBottom[upperLipBottom.size / 2])
+                val midLowerTop = mapPoint(lowerLipTop[lowerLipTop.size / 2])
+                val midLowerBottom = mapPoint(lowerLipBottom[lowerLipBottom.size / 2])
+
+                val upperThickness = Math.abs(midUpperBottom.y - midUpperTop.y)
+                val lowerThickness = Math.abs(midLowerBottom.y - midLowerTop.y)
+                val mouthHeight = Math.abs(midLowerBottom.y - midUpperTop.y)
+
+                val upperRatio = if (eyeDistance > 0f) (upperThickness / eyeDistance) else 0.03f
+                val lowerRatio = if (eyeDistance > 0f) (lowerThickness / eyeDistance) else 0.04f
                 val mouthRatio = if (eyeDistance > 0f) (mouthHeight / eyeDistance) else 0.12f
 
-                // Normal mouthRatio is >= 0.10f. Below 0.08f we start fading, below 0.04f fully hidden.
-                val expressionScale = ((mouthRatio - 0.04f) / 0.05f).coerceIn(0f, 1f)
+                val avgLipThicknessRatio = (upperRatio + lowerRatio) / 2f
+
+                // Normal average thickness ratio is around 0.035f. Below 0.02f means lips are sucked in/hidden.
+                val expressionScale = ((avgLipThicknessRatio - 0.016f) / 0.016f).coerceIn(0f, 1f)
+
+                // Normal mouthRatio is around 0.10f. If mouth opens wide, mouthOpenness scales to 1.0f.
+                val mouthOpenness = ((mouthRatio - 0.11f) / 0.08f).coerceIn(0f, 1f)
+
+                // Scale down the expansion when mouth is open or lips are sucked/hidden to prevent bleeding
+                val expansionScale = expressionScale * (1f - mouthOpenness)
+                val baseExpansion = 1.05f
+                val expansionFactor = 1.0f + (baseExpansion - 1.0f) * expansionScale
 
                 fun drawLipPath(top: List<PointF>?, bottom: List<PointF>?) {
                     if (top == null || top.isEmpty() || bottom == null || bottom.isEmpty() || expressionScale <= 0f) return
@@ -1159,11 +1180,6 @@ class MakeupOverlayView @JvmOverloads constructor(
                     val centroidRaw = getPathCentroid(top, bottom)
                     val centroid = mapPoint(centroidRaw)
 
-                    // Dynamic expansion factor: drops to 1.0f (no expansion) as lips shrink/suck in
-                    val baseExpansion = 1.08f
-                    val expansionFactor = 1.0f + (baseExpansion - 1.0f) * expressionScale
-
-                    // Map and expand all points outward from the centroid
                     val expandedTop = top.map { rawPt ->
                         val pt = mapPoint(rawPt)
                         PointF(
@@ -1198,7 +1214,6 @@ class MakeupOverlayView @JvmOverloads constructor(
                             pathPaint.alpha = (lipstickOpacity * 240 * expressionScale).toInt()
                             canvas.drawPath(path, pathPaint)
 
-                            // Overlay a beautiful, subtle glossy light-reflection white stroke
                             val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                                 style = Paint.Style.STROKE
                                 color = Color.WHITE
@@ -1209,20 +1224,18 @@ class MakeupOverlayView @JvmOverloads constructor(
                             canvas.drawPath(path, highlightPaint)
                         }
                         "liquid_matte" -> {
-                            // Liquid Matte: high coverage and sharpness
                             pathPaint.xfermode = null
                             pathPaint.alpha = (lipstickOpacity * 250 * expressionScale).toInt()
                             pathPaint.maskFilter = BlurMaskFilter(1f, BlurMaskFilter.Blur.NORMAL)
                             canvas.drawPath(path, pathPaint)
                         }
                         "blurred_matte" -> {
-                            // Blurred / Bitten Matte: soft base, inner focus (ombre)
                             pathPaint.xfermode = null
                             pathPaint.alpha = (lipstickOpacity * 175 * expressionScale).toInt()
                             pathPaint.maskFilter = BlurMaskFilter(3.5f, BlurMaskFilter.Blur.NORMAL)
                             canvas.drawPath(path, pathPaint)
 
-                            val scaleFactor = 0.72f // wider inner area for a gradual, seamless blend
+                            val scaleFactor = 0.72f
                             val innerPath = Path()
                             val startX = centroid.x + (expandedTop[0].x - centroid.x) * scaleFactor
                             val startY = centroid.y + (expandedTop[0].y - centroid.y) * scaleFactor
@@ -1244,8 +1257,7 @@ class MakeupOverlayView @JvmOverloads constructor(
                             pathPaint.maskFilter = BlurMaskFilter(5.5f, BlurMaskFilter.Blur.NORMAL)
                             canvas.drawPath(innerPath, pathPaint)
                         }
-                        else -> { // velvet_matte or default matte
-                            // Velvet / Creamy Matte: soft focus blurred matte
+                        else -> {
                             pathPaint.xfermode = null
                             pathPaint.alpha = (lipstickOpacity * 185 * expressionScale).toInt()
                             pathPaint.maskFilter = BlurMaskFilter(2.8f, BlurMaskFilter.Blur.NORMAL)
