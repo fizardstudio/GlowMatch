@@ -97,7 +97,10 @@ class DatabaseService {
 
     // Seeding data produk komersial
     final productCount = await isar.productShades.count();
-    if (productCount == 0) {
+    if (productCount < 180) {
+      await isar.writeTxn(() async {
+        await isar.productShades.clear();
+      });
       final List<Map<String, String>> rawProducts = [
         {
           'brand': 'Make Over',
