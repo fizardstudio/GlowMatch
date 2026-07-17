@@ -39,6 +39,8 @@ class GlowMatchCameraView(
     private val methodChannel: MethodChannel = MethodChannel(messenger, "com.glowmatch.glowmatch/camera_view_$id")
     
     private var cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var lensFacing: Int = CameraSelector.LENS_FACING_FRONT
     private val detector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
@@ -90,6 +92,18 @@ class GlowMatchCameraView(
                 } else {
                     result.error("INVALID_ARGS", "Params cannot be null", null)
                 }
+            }
+            "switchCamera" -> {
+                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                    CameraSelector.LENS_FACING_BACK
+                } else {
+                    CameraSelector.LENS_FACING_FRONT
+                }
+                overlayView.isFrontCamera = (lensFacing == CameraSelector.LENS_FACING_FRONT)
+                mainHandler.post {
+                    startCamera()
+                }
+                result.success(lensFacing == CameraSelector.LENS_FACING_FRONT)
             }
             else -> result.notImplemented()
         }
@@ -144,8 +158,12 @@ class GlowMatchCameraView(
                     it.setAnalyzer(cameraExecutor, FaceAnalyzer())
                 }
 
-            // Select Front Camera
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+            // Select Front or Back Camera
+            val cameraSelector = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
 
             try {
                 Log.d("GlowMatchCameraView", "startCamera: Binding camera use cases to lifecycleOwner")
@@ -214,6 +232,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     var face: Face? = null
+    var isFrontCamera: Boolean = true
     var imageWidth: Int = 0
     var imageHeight: Int = 0
 
@@ -475,7 +494,7 @@ class MakeupOverlayView @JvmOverloads constructor(
         fun mapPoint(point: PointF): PointF {
             // ML Kit coordinates are already rotated to portrait space by InputImage(rotationDegrees).
             // Since it's the front camera, we only need to mirror the X axis horizontally.
-            val rx = imageHeight.toFloat() - point.x
+            val rx = if (isFrontCamera) (imageHeight.toFloat() - point.x) else point.x
             val ry = point.y
 
             val mappedX = rx * scale + dx
@@ -968,11 +987,17 @@ class MakeupOverlayView @JvmOverloads constructor(
                     blushH = faceWidth * 0.26f
                 }
 
-                canvas.rotate((rollAngle + tilt) * 180f / Math.PI.toFloat())
+                val rollCorrection = if (isFrontCamera) rollAngle else -rollAngle
+                val tiltCorrection = if (isFrontCamera) tilt else -tilt
+                canvas.rotate((rollCorrection + tiltCorrection) * 180f / Math.PI.toFloat())
 
                 // Outward offset with front-camera mirroring reflection accounted for
                 // Front camera is mirrored, so left/right are flipped relative to screen
-                val offsetX = if (isLeft) blushW * 0.20f else -blushW * 0.20f
+                val offsetX = if (isLeft) {
+                    if (isFrontCamera) blushW * 0.20f else -blushW * 0.20f
+                } else {
+                    if (isFrontCamera) -blushW * 0.20f else blushW * 0.20f
+                }
 
                 val rect = RectF(
                     offsetX - blushW / 2f,
@@ -1183,7 +1208,8 @@ class MakeupOverlayView @JvmOverloads constructor(
                     canvas.save()
                     canvas.translate(centerOffset.x, centerOffset.y)
                     // Mirror reflection camera rotation correction
-                    canvas.rotate(-rollRad * 180f / Math.PI.toFloat())
+                    val rollCorrection = if (isFrontCamera) -rollRad else rollRad
+                    canvas.rotate(rollCorrection * 180f / Math.PI.toFloat())
 
                     val rect = RectF(-rx * scale, -ry * scale, rx * scale, ry * scale)
                     canvas.drawOval(rect, if (isHighlight) highlightFillPaint else contourFillPaint)

@@ -94,7 +94,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
   // Advanced Try-On Upgrades (Phase 2.5) State Variables
   String? _activePreset = 'Korean Glass Skin';
-  bool _isSplitMode = true; // DEFAULT ON!
+  bool _isSplitMode = false; // DEFAULT OFF!
   bool _showGlassSkin = true;
   bool _showContourGuide = false;
 
@@ -1797,12 +1797,19 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
 
   Future<void> _toggleCameraDirection() async {
     if (Platform.isAndroid) {
-      if (mounted) {
-        setState(() {
-          _cameraLensDirection = _cameraLensDirection == CameraLensDirection.front
-              ? CameraLensDirection.back
-              : CameraLensDirection.front;
-        });
+      if (_nativeViewChannel != null) {
+        try {
+          final isFront = await _nativeViewChannel!.invokeMethod<bool>('switchCamera');
+          if (mounted) {
+            setState(() {
+              _cameraLensDirection = isFront == true
+                  ? CameraLensDirection.front
+                  : CameraLensDirection.back;
+            });
+          }
+        } catch (e) {
+          debugPrint("Error switching camera on native side: $e");
+        }
       }
       return;
     }
@@ -2901,29 +2908,8 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                     onPressed: _toggleCameraDirection,
                   ),
                   _buildFloatingActionButton(
-                    icon: _isSplitMode ? Icons.splitscreen_rounded : Icons.crop_free_rounded,
-                    tooltip: _isSplitMode ? 'Sembunyikan Pembanding' : 'Tampilkan Pembanding',
-                    onPressed: () {
-                      setState(() {
-                        _isSplitMode = !_isSplitMode;
-                      });
-                    },
-                    isSelected: _isSplitMode,
-                  ),
-                  _buildFloatingActionButton(
-                    icon: Icons.camera_alt_rounded,
-                    tooltip: 'Simpan Foto ke Galeri',
-                    onPressed: _saveCurrentMakeupLook,
-                  ),
-                  _buildFloatingActionButton(
-                    icon: Icons.compare_rounded,
-                    tooltip: 'Bagikan Foto Perbandingan Before/After',
-                    onPressed: _exportComparisonPhoto,
-                  ),
-
-                  _buildFloatingActionButton(
                     icon: Icons.share_rounded,
-                    tooltip: 'Bagikan Riasan',
+                    tooltip: 'Bagikan & Simpan Riasan',
                     onPressed: _shareCurrentMakeupLook,
                   ),
                 ],
