@@ -1179,11 +1179,11 @@ class MakeupOverlayView @JvmOverloads constructor(
                     "blurred_matte" -> {
                         // Blurred / Bitten Matte: soft base, inner focus (ombre)
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 160).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(5f, BlurMaskFilter.Blur.NORMAL)
+                        pathPaint.alpha = (lipstickOpacity * 175).toInt() // closer to inner opacity to soften contrast
+                        pathPaint.maskFilter = BlurMaskFilter(3.5f, BlurMaskFilter.Blur.NORMAL) // slightly tighter blur so base lip stays solid
                         canvas.drawPath(path, pathPaint)
 
-                        val scaleFactor = 0.62f // scale down relative to expanded lip
+                        val scaleFactor = 0.72f // wider inner area for a gradual, seamless blend
                         val innerPath = Path()
                         val startX = centroid.x + (expandedTop[0].x - centroid.x) * scaleFactor
                         val startY = centroid.y + (expandedTop[0].y - centroid.y) * scaleFactor
@@ -1201,8 +1201,8 @@ class MakeupOverlayView @JvmOverloads constructor(
                         innerPath.close()
 
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 215).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL)
+                        pathPaint.alpha = (lipstickOpacity * 205).toInt() // gentler inner highlight
+                        pathPaint.maskFilter = BlurMaskFilter(5.5f, BlurMaskFilter.Blur.NORMAL) // smooth transition blur
                         canvas.drawPath(innerPath, pathPaint)
                     }
                     else -> { // velvet_matte or default matte
