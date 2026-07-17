@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:equatable/equatable.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../../../../core/data/models/standard_shade.dart';
+import '../../../../core/data/models/product_shade.dart';
 
 abstract class ScannerState extends Equatable {
   const ScannerState();
@@ -78,6 +79,7 @@ class ScannerSuccess extends ScannerState {
   final List<int> extractedRgb;
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
+  final List<ProductShade> matchedLipsticks;
   final String? galleryFilePath;
   final String? faceShape;
   final double faceContrast;
@@ -85,6 +87,7 @@ class ScannerSuccess extends ScannerState {
   // Fields for Face 2 (Couple Mode)
   final List<int>? coupleExtractedRgb;
   final StandardShade? coupleMatchedStandard;
+  final List<ProductShade>? coupleMatchedLipsticks;
   final String? coupleFaceShape;
   final double? coupleFaceContrast;
 
@@ -92,11 +95,13 @@ class ScannerSuccess extends ScannerState {
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    required this.matchedLipsticks,
     this.galleryFilePath,
     this.faceShape,
     this.faceContrast = 35.0,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
+    this.coupleMatchedLipsticks,
     this.coupleFaceShape,
     this.coupleFaceContrast,
   });
@@ -108,11 +113,13 @@ class ScannerSuccess extends ScannerState {
         extractedRgb,
         matchedStandard,
         commercialMatches,
+        matchedLipsticks,
         galleryFilePath,
         faceShape,
         faceContrast,
         coupleExtractedRgb,
         coupleMatchedStandard,
+        coupleMatchedLipsticks,
         coupleFaceShape,
         coupleFaceContrast,
       ];

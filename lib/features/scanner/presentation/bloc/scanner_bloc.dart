@@ -410,11 +410,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       // 4. Konversi RGB rata-rata ke LabColor
       final targetLab = ColorCalculator.rgbToLab(finalRgb[0], finalRgb[1], finalRgb[2]);
       final matchedStandard = await _shadeMatcherRepository.matchStandardShade(targetLab);
-      final rawMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
-      final commercialMatches = rawMatches.where((m) {
-        final product = m['product'] as ProductShade;
-        return product.category != 'Lip Color';
-      }).toList();
+      final commercialMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
 
       if (matchedStandard == null) {
         emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah pertama.'));
@@ -429,6 +425,14 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
           emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah kedua.'));
           return;
         }
+      }
+
+      // Fetch all product shades to filter matched lipsticks
+      final allProducts = await _shadeMatcherRepository.getAllProductShades();
+      final matchedLipsticks = _filterLipsticks(allProducts, matchedStandard.undertone);
+      List<ProductShade>? coupleMatchedLipsticks;
+      if (event.isCoupleMode && coupleMatchedStandard != null) {
+        coupleMatchedLipsticks = _filterLipsticks(allProducts, coupleMatchedStandard.undertone);
       }
 
       String? faceShape;
@@ -448,10 +452,12 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         extractedRgb: finalRgb,
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
+        matchedLipsticks: matchedLipsticks,
         faceShape: faceShape,
         faceContrast: faceContrast,
         coupleExtractedRgb: coupleRgb,
         coupleMatchedStandard: coupleMatchedStandard,
+        coupleMatchedLipsticks: coupleMatchedLipsticks,
         coupleFaceShape: coupleFaceShape,
         coupleFaceContrast: coupleFaceContrast,
         galleryFilePath: photoFile.path,
@@ -612,6 +618,23 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     }
   }
 
+  List<ProductShade> _filterLipsticks(List<ProductShade> allProducts, String undertone) {
+    final lowerUnder = undertone.toLowerCase();
+    return allProducts.where((p) {
+      if (p.category != 'Lip Color') return false;
+      final double a = p.a;
+      final double b = p.b;
+      final double ratio = a != 0.0 ? b / a : 0.0;
+      if (lowerUnder == 'cool') {
+        return ratio < 0.45;
+      } else if (lowerUnder == 'warm') {
+        return ratio >= 0.45;
+      } else {
+        return true;
+      }
+    }).toList();
+  }
+
   Future<void> _onResetScanner(
     ResetScanner event,
     Emitter<ScannerState> emit,
@@ -754,16 +777,16 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
       // 4. Konversi RGB rata-rata ke LabColor dan cari pencocokan
       final targetLab = ColorCalculator.rgbToLab(finalRgb[0], finalRgb[1], finalRgb[2]);
       final matchedStandard = await _shadeMatcherRepository.matchStandardShade(targetLab);
-      final rawMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
-      final commercialMatches = rawMatches.where((m) {
-        final product = m['product'] as ProductShade;
-        return product.category != 'Lip Color';
-      }).toList();
+      final commercialMatches = await _shadeMatcherRepository.matchCommercialProducts(targetLab);
 
       if (matchedStandard == null) {
         emit(const ScannerFailure('Gagal mencocokkan profil warna standar kulit wajah.'));
         return;
       }
+
+      // Fetch all product shades to filter matched lipsticks
+      final allProducts = await _shadeMatcherRepository.getAllProductShades();
+      final matchedLipsticks = _filterLipsticks(allProducts, matchedStandard.undertone);
 
       String? faceShape;
       double faceContrast = 35.0;
@@ -776,6 +799,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         extractedRgb: finalRgb,
         matchedStandard: matchedStandard,
         commercialMatches: commercialMatches,
+        matchedLipsticks: matchedLipsticks,
         faceShape: faceShape,
         faceContrast: faceContrast,
         galleryFilePath: event.filePath,

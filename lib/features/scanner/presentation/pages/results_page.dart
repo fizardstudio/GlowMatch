@@ -18,6 +18,7 @@ class ResultsPage extends StatefulWidget {
   final List<int> extractedRgb;
   final StandardShade matchedStandard;
   final List<Map<String, dynamic>> commercialMatches;
+  final List<ProductShade> matchedLipsticks;
   final double faceContrast;
   final String? galleryFilePath;
   final String? faceShape;
@@ -25,6 +26,7 @@ class ResultsPage extends StatefulWidget {
   // Fields for Face 2 (Couple Mode)
   final List<int>? coupleExtractedRgb;
   final StandardShade? coupleMatchedStandard;
+  final List<ProductShade>? coupleMatchedLipsticks;
   final String? coupleFaceShape;
   final double? coupleFaceContrast;
 
@@ -33,11 +35,13 @@ class ResultsPage extends StatefulWidget {
     required this.extractedRgb,
     required this.matchedStandard,
     required this.commercialMatches,
+    required this.matchedLipsticks,
     required this.faceContrast,
     this.galleryFilePath,
     this.faceShape,
     this.coupleExtractedRgb,
     this.coupleMatchedStandard,
+    this.coupleMatchedLipsticks,
     this.coupleFaceShape,
     this.coupleFaceContrast,
   });
@@ -263,10 +267,14 @@ class _ResultsPageState extends State<ResultsPage> {
   /// Menyaring dan mengurutkan rekomendasi kosmetik berdasarkan preferensi riasan subjektif pengguna.
   List<Map<String, dynamic>> _getFilteredMatches(LabColor targetLab) {
     List<Map<String, dynamic>> filtered = [];
+    final complexionMatches = widget.commercialMatches.where((m) {
+      final product = m['product'] as ProductShade;
+      return product.category != 'Lip Color';
+    }).toList();
 
     if (_selectedFilter == 'natural') {
       // Natural: Mengambil shade yang paling mendekati secara objektif (Delta E <= 5.0)
-      for (final match in widget.commercialMatches) {
+      for (final match in complexionMatches) {
         final double deltaE = match['deltaE'] as double;
         if (deltaE <= 5.0) {
           filtered.add(match);
@@ -276,7 +284,7 @@ class _ResultsPageState extends State<ResultsPage> {
       filtered.sort((a, b) => (a['deltaE'] as double).compareTo(b['deltaE'] as double));
     } else if (_selectedFilter == 'brightening') {
       // Brightening: Menyaring shade yang lebih cerah (L* produk > L* kulit) dengan rentang +0.5 sampai +4.5 L*
-      for (final match in widget.commercialMatches) {
+      for (final match in complexionMatches) {
         final ProductShade product = match['product'] as ProductShade;
         final double diffL = product.l - targetLab.l;
         if (diffL >= 0.5 && diffL <= 4.5) {
@@ -286,7 +294,7 @@ class _ResultsPageState extends State<ResultsPage> {
       
       // Jika kosong, ambil semua produk dan urutkan dari yang paling terang (L* terbesar)
       if (filtered.isEmpty) {
-        filtered = List.from(widget.commercialMatches);
+        filtered = List.from(complexionMatches);
         filtered.sort((a, b) {
           final productA = a['product'] as ProductShade;
           final productB = b['product'] as ProductShade;
@@ -304,7 +312,7 @@ class _ResultsPageState extends State<ResultsPage> {
       }
     } else if (_selectedFilter == 'sunkissed') {
       // Sun-Kissed / Tanned: Menyaring shade yang sedikit lebih gelap (L* produk < L* kulit) dengan rentang -0.5 sampai -4.5 L*
-      for (final match in widget.commercialMatches) {
+      for (final match in complexionMatches) {
         final ProductShade product = match['product'] as ProductShade;
         final double diffL = targetLab.l - product.l;
         if (diffL >= 0.5 && diffL <= 4.5) {
@@ -314,7 +322,7 @@ class _ResultsPageState extends State<ResultsPage> {
 
       // Jika kosong, ambil semua produk dan urutkan dari yang paling gelap (L* terkecil)
       if (filtered.isEmpty) {
-        filtered = List.from(widget.commercialMatches);
+        filtered = List.from(complexionMatches);
         filtered.sort((a, b) {
           final productA = a['product'] as ProductShade;
           final productB = b['product'] as ProductShade;
@@ -1025,6 +1033,140 @@ class _ResultsPageState extends State<ResultsPage> {
                           ),
                         );
                       },
+                    ),
+              const SizedBox(height: 28),
+              Text(
+                'Rekomendasi Warna Lipstik 💄',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Berdasarkan undertone ${widget.matchedStandard.undertone} Anda, berikut adalah warna lipstik yang paling serasi:',
+                style: TextStyle(
+                  color: textMutedColor,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 12),
+              widget.matchedLipsticks.isEmpty
+                  ? _buildEmptyState()
+                  : SizedBox(
+                      height: 155,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.matchedLipsticks.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final product = widget.matchedLipsticks[index];
+                          final productShadeColor = _getHexColor(product.hexCode);
+                          
+                          return Container(
+                            width: 200,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: cardBgColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: cardBorderColor.withOpacity(0.45),
+                                width: 1.2,
+                              ),
+                              boxShadow: ThemeManager.premiumGlowShadow,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      height: 36,
+                                      width: 36,
+                                      decoration: BoxDecoration(
+                                        color: productShadeColor,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: cardBorderColor.withOpacity(0.3),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            product.brand,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: primaryColor,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            product.productName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Shade: ${product.shadeName}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: textColor.withOpacity(0.8),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const Spacer(),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 32,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1E1E38),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    onPressed: () => _launchUrl(context, product.affiliateUrl),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.shopping_bag_outlined, size: 12),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Beli Produk',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
             ],
           ),
