@@ -1159,13 +1159,13 @@ class MakeupOverlayView @JvmOverloads constructor(
                      "blurred_matte" -> {
                         // Blurred / Bitten Matte: soft base, inner focus (ombre)
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 110).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL)
+                        pathPaint.alpha = (lipstickOpacity * 160).toInt() // higher opacity for base to reduce stark contrast
+                        pathPaint.maskFilter = BlurMaskFilter(5f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
 
                         val centroidRaw = getPathCentroid(top, bottom)
                         val centroid = mapPoint(centroidRaw)
-                        val scaleFactor = 0.55f
+                        val scaleFactor = 0.68f // wider inner area for smoother gradient flow
                         val innerPath = Path()
                         val startPt = mapPoint(top[0])
                         val startX = centroid.x + (startPt.x - centroid.x) * scaleFactor
@@ -1186,15 +1186,15 @@ class MakeupOverlayView @JvmOverloads constructor(
                         innerPath.close()
 
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 240).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
+                        pathPaint.alpha = (lipstickOpacity * 215).toInt() // softer inner opacity
+                        pathPaint.maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL) // higher blur for smoother transition
                         canvas.drawPath(innerPath, pathPaint)
                     }
                     else -> { // velvet_matte or default matte
                         // Velvet / Creamy Matte: soft focus blurred matte
                         pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 210).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(4.5f, BlurMaskFilter.Blur.NORMAL)
+                        pathPaint.alpha = (lipstickOpacity * 185).toInt() // slightly lower opacity to show natural lip texture underneath
+                        pathPaint.maskFilter = BlurMaskFilter(2.8f, BlurMaskFilter.Blur.NORMAL) // tighter blur to prevent shiny/glowing halo effect
                         canvas.drawPath(path, pathPaint)
                     }
                 }
