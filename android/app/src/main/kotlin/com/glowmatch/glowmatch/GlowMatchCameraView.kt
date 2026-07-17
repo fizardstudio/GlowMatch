@@ -264,7 +264,7 @@ class MakeupOverlayView @JvmOverloads constructor(
     private var rotationDegrees = 270
 
     private val smoothedContours = HashMap<Int, List<PointF>>()
-    private val smoothingFactor = 0.5f // 50% new frame, 50% history. Higher = faster, lower = smoother.
+    private val smoothingFactor = 0.78f // 78% new frame, 22% history. Higher = faster, lower = smoother.
 
     private fun getSmoothedContour(face: Face, contourType: Int): List<PointF>? {
         val rawPoints = face.getContour(contourType)?.points ?: return null
@@ -1143,125 +1143,125 @@ class MakeupOverlayView @JvmOverloads constructor(
             val lowerLipTop = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_TOP)
             val lowerLipBottom = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_BOTTOM)
 
-             fun drawLipPath(top: List<PointF>?, bottom: List<PointF>?) {
-                if (top == null || top.isEmpty() || bottom == null || bottom.isEmpty()) return
+            if (upperLipTop != null && upperLipTop.isNotEmpty() && lowerLipBottom != null && lowerLipBottom.isNotEmpty()) {
+                // Calculate the total mouth vertical height relative to eyeDistance (mouth ratio)
+                val midTop = mapPoint(upperLipTop[upperLipTop.size / 2])
+                val midBottom = mapPoint(lowerLipBottom[lowerLipBottom.size / 2])
+                val mouthHeight = Math.abs(midBottom.y - midTop.y)
+                val mouthRatio = if (eyeDistance > 0f) (mouthHeight / eyeDistance) else 0.12f
 
-                val centroidRaw = getPathCentroid(top, bottom)
-                val centroid = mapPoint(centroidRaw)
+                // Normal mouthRatio is >= 0.10f. Below 0.08f we start fading, below 0.04f fully hidden.
+                val expressionScale = ((mouthRatio - 0.04f) / 0.05f).coerceIn(0f, 1f)
 
-                // 1. Calculate vertical lip height relative to eye distance to identify if lips are sucked in
-                val midTop = mapPoint(top[top.size / 2])
-                val midBottom = mapPoint(bottom[bottom.size / 2])
-                val dy = Math.abs(midBottom.y - midTop.y)
-                val lipHeightRatio = if (eyeDistance > 0f) (dy / eyeDistance) else 0.06f
+                fun drawLipPath(top: List<PointF>?, bottom: List<PointF>?) {
+                    if (top == null || top.isEmpty() || bottom == null || bottom.isEmpty() || expressionScale <= 0f) return
 
-                // Normal lipHeightRatio is >= 0.05. Below 0.045, we start fading. Below 0.02, it is hidden.
-                val expressionScale = ((lipHeightRatio - 0.02f) / 0.03f).coerceIn(0f, 1f)
+                    val centroidRaw = getPathCentroid(top, bottom)
+                    val centroid = mapPoint(centroidRaw)
 
-                if (expressionScale <= 0f) return // Completely hidden/sucked in
+                    // Dynamic expansion factor: drops to 1.0f (no expansion) as lips shrink/suck in
+                    val baseExpansion = 1.08f
+                    val expansionFactor = 1.0f + (baseExpansion - 1.0f) * expressionScale
 
-                // Dynamic expansion factor: drops to 1.0f (no expansion) as lips shrink/suck in
-                val baseExpansion = 1.08f
-                val expansionFactor = 1.0f + (baseExpansion - 1.0f) * expressionScale
+                    // Map and expand all points outward from the centroid
+                    val expandedTop = top.map { rawPt ->
+                        val pt = mapPoint(rawPt)
+                        PointF(
+                            centroid.x + (pt.x - centroid.x) * expansionFactor,
+                            centroid.y + (pt.y - centroid.y) * expansionFactor
+                        )
+                    }
+                    val expandedBottom = bottom.map { rawPt ->
+                        val pt = mapPoint(rawPt)
+                        PointF(
+                            centroid.x + (pt.x - centroid.x) * expansionFactor,
+                            centroid.y + (pt.y - centroid.y) * expansionFactor
+                        )
+                    }
 
-                // Map and expand all points outward from the centroid
-                val expandedTop = top.map { rawPt ->
-                    val pt = mapPoint(rawPt)
-                    PointF(
-                        centroid.x + (pt.x - centroid.x) * expansionFactor,
-                        centroid.y + (pt.y - centroid.y) * expansionFactor
-                    )
-                }
-                val expandedBottom = bottom.map { rawPt ->
-                    val pt = mapPoint(rawPt)
-                    PointF(
-                        centroid.x + (pt.x - centroid.x) * expansionFactor,
-                        centroid.y + (pt.y - centroid.y) * expansionFactor
-                    )
-                }
+                    val path = Path()
+                    path.moveTo(expandedTop[0].x, expandedTop[0].y)
+                    for (i in 1 until expandedTop.size) {
+                        path.lineTo(expandedTop[i].x, expandedTop[i].y)
+                    }
+                    for (i in expandedBottom.size - 1 downTo 0) {
+                        path.lineTo(expandedBottom[i].x, expandedBottom[i].y)
+                    }
+                    path.close()
 
-                val path = Path()
-                path.moveTo(expandedTop[0].x, expandedTop[0].y)
-                for (i in 1 until expandedTop.size) {
-                    path.lineTo(expandedTop[i].x, expandedTop[i].y)
-                }
-                for (i in expandedBottom.size - 1 downTo 0) {
-                    path.lineTo(expandedBottom[i].x, expandedBottom[i].y)
-                }
-                path.close()
+                    pathPaint.color = lipstickColor
+                    pathPaint.maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
 
-                pathPaint.color = lipstickColor
-                pathPaint.maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
+                    when (lipstickFinishing) {
+                        "glossy" -> {
+                            pathPaint.xfermode = null
+                            pathPaint.alpha = (lipstickOpacity * 240 * expressionScale).toInt()
+                            canvas.drawPath(path, pathPaint)
 
-                when (lipstickFinishing) {
-                    "glossy" -> {
-                        pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 240 * expressionScale).toInt()
-                        canvas.drawPath(path, pathPaint)
-
-                        // Overlay a beautiful, subtle glossy light-reflection white stroke
-                        val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                            style = Paint.Style.STROKE
-                            color = Color.WHITE
-                            alpha = (lipstickOpacity * 110 * expressionScale).toInt()
-                            strokeWidth = 2.5f
-                            maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
+                            // Overlay a beautiful, subtle glossy light-reflection white stroke
+                            val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                                style = Paint.Style.STROKE
+                                color = Color.WHITE
+                                alpha = (lipstickOpacity * 110 * expressionScale).toInt()
+                                strokeWidth = 2.5f
+                                maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
+                            }
+                            canvas.drawPath(path, highlightPaint)
                         }
-                        canvas.drawPath(path, highlightPaint)
-                    }
-                    "liquid_matte" -> {
-                        // Liquid Matte: high coverage and sharpness
-                        pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 250 * expressionScale).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(1f, BlurMaskFilter.Blur.NORMAL)
-                        canvas.drawPath(path, pathPaint)
-                    }
-                    "blurred_matte" -> {
-                        // Blurred / Bitten Matte: soft base, inner focus (ombre)
-                        pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 175 * expressionScale).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(3.5f, BlurMaskFilter.Blur.NORMAL)
-                        canvas.drawPath(path, pathPaint)
-
-                        val scaleFactor = 0.72f // wider inner area for a gradual, seamless blend
-                        val innerPath = Path()
-                        val startX = centroid.x + (expandedTop[0].x - centroid.x) * scaleFactor
-                        val startY = centroid.y + (expandedTop[0].y - centroid.y) * scaleFactor
-                        innerPath.moveTo(startX, startY)
-                        for (i in 1 until expandedTop.size) {
-                            val px = centroid.x + (expandedTop[i].x - centroid.x) * scaleFactor
-                            val py = centroid.y + (expandedTop[i].y - centroid.y) * scaleFactor
-                            innerPath.lineTo(px, py)
+                        "liquid_matte" -> {
+                            // Liquid Matte: high coverage and sharpness
+                            pathPaint.xfermode = null
+                            pathPaint.alpha = (lipstickOpacity * 250 * expressionScale).toInt()
+                            pathPaint.maskFilter = BlurMaskFilter(1f, BlurMaskFilter.Blur.NORMAL)
+                            canvas.drawPath(path, pathPaint)
                         }
-                        for (i in expandedBottom.size - 1 downTo 0) {
-                            val px = centroid.x + (expandedBottom[i].x - centroid.x) * scaleFactor
-                            val py = centroid.y + (expandedBottom[i].y - centroid.y) * scaleFactor
-                            innerPath.lineTo(px, py)
-                        }
-                        innerPath.close()
+                        "blurred_matte" -> {
+                            // Blurred / Bitten Matte: soft base, inner focus (ombre)
+                            pathPaint.xfermode = null
+                            pathPaint.alpha = (lipstickOpacity * 175 * expressionScale).toInt()
+                            pathPaint.maskFilter = BlurMaskFilter(3.5f, BlurMaskFilter.Blur.NORMAL)
+                            canvas.drawPath(path, pathPaint)
 
-                        pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 205 * expressionScale).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(5.5f, BlurMaskFilter.Blur.NORMAL)
-                        canvas.drawPath(innerPath, pathPaint)
+                            val scaleFactor = 0.72f // wider inner area for a gradual, seamless blend
+                            val innerPath = Path()
+                            val startX = centroid.x + (expandedTop[0].x - centroid.x) * scaleFactor
+                            val startY = centroid.y + (expandedTop[0].y - centroid.y) * scaleFactor
+                            innerPath.moveTo(startX, startY)
+                            for (i in 1 until expandedTop.size) {
+                                val px = centroid.x + (expandedTop[i].x - centroid.x) * scaleFactor
+                                val py = centroid.y + (expandedTop[i].y - centroid.y) * scaleFactor
+                                innerPath.lineTo(px, py)
+                            }
+                            for (i in expandedBottom.size - 1 downTo 0) {
+                                val px = centroid.x + (expandedBottom[i].x - centroid.x) * scaleFactor
+                                val py = centroid.y + (expandedBottom[i].y - centroid.y) * scaleFactor
+                                innerPath.lineTo(px, py)
+                            }
+                            innerPath.close()
+
+                            pathPaint.xfermode = null
+                            pathPaint.alpha = (lipstickOpacity * 205 * expressionScale).toInt()
+                            pathPaint.maskFilter = BlurMaskFilter(5.5f, BlurMaskFilter.Blur.NORMAL)
+                            canvas.drawPath(innerPath, pathPaint)
+                        }
+                        else -> { // velvet_matte or default matte
+                            // Velvet / Creamy Matte: soft focus blurred matte
+                            pathPaint.xfermode = null
+                            pathPaint.alpha = (lipstickOpacity * 185 * expressionScale).toInt()
+                            pathPaint.maskFilter = BlurMaskFilter(2.8f, BlurMaskFilter.Blur.NORMAL)
+                            canvas.drawPath(path, pathPaint)
+                        }
                     }
-                    else -> { // velvet_matte or default matte
-                        // Velvet / Creamy Matte: soft focus blurred matte
-                        pathPaint.xfermode = null
-                        pathPaint.alpha = (lipstickOpacity * 185 * expressionScale).toInt()
-                        pathPaint.maskFilter = BlurMaskFilter(2.8f, BlurMaskFilter.Blur.NORMAL)
-                        canvas.drawPath(path, pathPaint)
-                    }
+                    pathPaint.maskFilter = null
+                    pathPaint.xfermode = null
                 }
-                pathPaint.maskFilter = null
-                pathPaint.xfermode = null
-            }
 
-            if (upperLipTop != null && upperLipBottom != null) {
-                drawLipPath(upperLipTop, upperLipBottom)
-            }
-            if (lowerLipTop != null && lowerLipBottom != null) {
-                drawLipPath(lowerLipTop, lowerLipBottom)
+                if (upperLipTop != null && upperLipBottom != null) {
+                    drawLipPath(upperLipTop, upperLipBottom)
+                }
+                if (lowerLipTop != null && lowerLipBottom != null) {
+                    drawLipPath(lowerLipTop, lowerLipBottom)
+                }
             }
         }
 
