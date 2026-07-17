@@ -265,6 +265,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 
     private val smoothedContours = HashMap<Int, List<PointF>>()
     private val smoothingFactor = 0.78f // 78% new frame, 22% history. Higher = faster, lower = smoother.
+    private var maxLipThicknessRatio = 0.03f
 
     private fun getSmoothedContour(face: Face, contourType: Int): List<PointF>? {
         val rawPoints = face.getContour(contourType)?.points ?: return null
@@ -309,6 +310,7 @@ class MakeupOverlayView @JvmOverloads constructor(
     fun clearFace() {
         this.face = null
         smoothedContours.clear()
+        maxLipThicknessRatio = 0.03f
         postInvalidate()
     }
 
@@ -1143,33 +1145,51 @@ class MakeupOverlayView @JvmOverloads constructor(
             val lowerLipTop = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_TOP)
             val lowerLipBottom = getSmoothedContour(currentFace, FaceContour.LOWER_LIP_BOTTOM)
 
+            val rawUpperTop = currentFace.getContour(FaceContour.UPPER_LIP_TOP)?.points
+            val rawUpperBottom = currentFace.getContour(FaceContour.UPPER_LIP_BOTTOM)?.points
+            val rawLowerTop = currentFace.getContour(FaceContour.LOWER_LIP_TOP)?.points
+            val rawLowerBottom = currentFace.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
+
             if (upperLipTop != null && upperLipTop.isNotEmpty() &&
                 upperLipBottom != null && upperLipBottom.isNotEmpty() &&
                 lowerLipTop != null && lowerLipTop.isNotEmpty() &&
-                lowerLipBottom != null && lowerLipBottom.isNotEmpty()) {
+                lowerLipBottom != null && lowerLipBottom.isNotEmpty() &&
+                rawUpperTop != null && rawUpperTop.isNotEmpty() &&
+                rawUpperBottom != null && rawUpperBottom.isNotEmpty() &&
+                rawLowerTop != null && rawLowerTop.isNotEmpty() &&
+                rawLowerBottom != null && rawLowerBottom.isNotEmpty()) {
 
-                val midUpperTop = mapPoint(upperLipTop[upperLipTop.size / 2])
-                val midUpperBottom = mapPoint(upperLipBottom[upperLipBottom.size / 2])
-                val midLowerTop = mapPoint(lowerLipTop[lowerLipTop.size / 2])
-                val midLowerBottom = mapPoint(lowerLipBottom[lowerLipBottom.size / 2])
+                // Calculate raw thickness for instantaneous expressionScale (no lag/smoothing delay)
+                val rawMidUpperTop = mapPoint(rawUpperTop[rawUpperTop.size / 2])
+                val rawMidUpperBottom = mapPoint(rawUpperBottom[rawUpperBottom.size / 2])
+                val rawMidLowerTop = mapPoint(rawLowerTop[rawLowerTop.size / 2])
+                val rawMidLowerBottom = mapPoint(rawLowerBottom[rawLowerBottom.size / 2])
 
-                val upperThickness = Math.abs(midUpperBottom.y - midUpperTop.y)
-                val lowerThickness = Math.abs(midLowerBottom.y - midLowerTop.y)
-                val mouthHeight = Math.abs(midLowerBottom.y - midUpperTop.y)
+                val rawUpperThickness = Math.abs(rawMidUpperBottom.y - rawMidUpperTop.y)
+                val rawLowerThickness = Math.abs(rawMidLowerBottom.y - rawMidLowerTop.y)
+                val rawUpperRatio = if (eyeDistance > 0f) (rawUpperThickness / eyeDistance) else 0.03f
+                val rawLowerRatio = if (eyeDistance > 0f) (rawLowerThickness / eyeDistance) else 0.04f
+                val rawAvgThickness = (rawUpperRatio + rawLowerRatio) / 2f
 
-                val upperRatio = if (eyeDistance > 0f) (upperThickness / eyeDistance) else 0.03f
-                val lowerRatio = if (eyeDistance > 0f) (lowerThickness / eyeDistance) else 0.04f
+                // Calculate mouth ratio using smoothed coordinates for stable mouth openness scaling
+                val midTop = mapPoint(upperLipTop[upperLipTop.size / 2])
+                val midBottom = mapPoint(lowerLipBottom[lowerLipBottom.size / 2])
+                val mouthHeight = Math.abs(midBottom.y - midTop.y)
                 val mouthRatio = if (eyeDistance > 0f) (mouthHeight / eyeDistance) else 0.12f
-
-                val avgLipThicknessRatio = (upperRatio + lowerRatio) / 2f
-
-                // Normal average thickness ratio is around 0.035f. Below 0.029f it starts fading, below 0.024f fully hidden.
-                val expressionScale = ((avgLipThicknessRatio - 0.024f) / 0.005f).coerceIn(0f, 1f)
-
-                // Normal mouthRatio is around 0.10f. If mouth opens wide, mouthOpenness scales to 1.0f.
                 val mouthOpenness = ((mouthRatio - 0.11f) / 0.08f).coerceIn(0f, 1f)
 
-                // Decouple expansionFactor from expressionScale to keep full expansion for visible lips, and increase baseExpansion to 1.09f
+                // Self-calibrating maximum lip thickness tracker (scale-independent)
+                if (rawAvgThickness > maxLipThicknessRatio && rawAvgThickness < 0.07f && mouthOpenness < 0.15f) {
+                    maxLipThicknessRatio = rawAvgThickness
+                }
+                // Decay max lip thickness slowly to adapt to user repositioning
+                maxLipThicknessRatio = (maxLipThicknessRatio * 0.995f + rawAvgThickness * 0.005f).coerceIn(0.028f, 0.070f)
+
+                val relativeThickness = rawAvgThickness / maxLipThicknessRatio
+                // If relativeThickness drops below 0.70 (meaning lip thickness drops by >30%), fade out completely
+                val expressionScale = ((relativeThickness - 0.70f) / 0.18f).coerceIn(0f, 1f)
+
+                // Decouple expansionFactor from expressionScale and keep baseExpansion at 1.09f
                 val baseExpansion = 1.09f
                 val expansionFactor = 1.0f + (baseExpansion - 1.0f) * (1f - mouthOpenness)
 
@@ -1182,15 +1202,15 @@ class MakeupOverlayView @JvmOverloads constructor(
                     val expandedTop = top.map { rawPt ->
                         val pt = mapPoint(rawPt)
                         PointF(
-                            centroid.x + (pt.x - centroid.x) * expansionFactor,
-                            centroid.y + (pt.y - centroid.y) * expansionFactor
+                            pt.x, // Lock horizontal mapping exactly to detected corners
+                            centroid.y + (pt.y - centroid.y) * expansionFactor // Vertical expansion only
                         )
                     }
                     val expandedBottom = bottom.map { rawPt ->
                         val pt = mapPoint(rawPt)
                         PointF(
-                            centroid.x + (pt.x - centroid.x) * expansionFactor,
-                            centroid.y + (pt.y - centroid.y) * expansionFactor
+                            pt.x, // Lock horizontal mapping exactly to detected corners
+                            centroid.y + (pt.y - centroid.y) * expansionFactor // Vertical expansion only
                         )
                     }
 
