@@ -1156,9 +1156,9 @@ class MakeupOverlayView @JvmOverloads constructor(
                         pathPaint.maskFilter = BlurMaskFilter(1f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
                     }
-                    "blurred_matte" -> {
+                     "blurred_matte" -> {
                         // Blurred / Bitten Matte: soft base, inner focus (ombre)
-                        pathPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+                        pathPaint.xfermode = null
                         pathPaint.alpha = (lipstickOpacity * 110).toInt()
                         pathPaint.maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
@@ -1185,13 +1185,14 @@ class MakeupOverlayView @JvmOverloads constructor(
                         }
                         innerPath.close()
 
+                        pathPaint.xfermode = null
                         pathPaint.alpha = (lipstickOpacity * 240).toInt()
                         pathPaint.maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(innerPath, pathPaint)
                     }
                     else -> { // velvet_matte or default matte
                         // Velvet / Creamy Matte: soft focus blurred matte
-                        pathPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+                        pathPaint.xfermode = null
                         pathPaint.alpha = (lipstickOpacity * 210).toInt()
                         pathPaint.maskFilter = BlurMaskFilter(4.5f, BlurMaskFilter.Blur.NORMAL)
                         canvas.drawPath(path, pathPaint)
