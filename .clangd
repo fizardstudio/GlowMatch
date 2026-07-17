@@ -1,0 +1,9 @@
+CompileFlags:
+  Add: [
+    "-isystem", "C:/Users/firma/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1",
+    "-isystem", "C:/Users/firma/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include",
+    "-isystem", "C:/Users/firma/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android",
+    "-D__ANDROID__",
+    "-DANDROID",
+    "-std=c++17"
+  ]

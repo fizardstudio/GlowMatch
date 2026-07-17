@@ -1,3 +1,11 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "cmake.sourceDirectory": "E:/APP PROJECT/GlowMatch/android/app",
+    "C_Cpp.default.configurationProvider": "",
+    "cmake.exportCompileCommands": true,
+    "files.exclude": {
+        "windows/flutter/ephemeral": true,
+        "linux/flutter/ephemeral": true,
+        "macos/flutter/ephemeral": true
+    }
 }
