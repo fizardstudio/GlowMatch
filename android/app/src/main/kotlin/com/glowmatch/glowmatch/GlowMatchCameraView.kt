@@ -123,6 +123,7 @@ class GlowMatchCameraView(
         
         (params["eyeshadowColor"] as? Number)?.let { overlayView.eyeshadowColor = it.toInt() }
         (params["eyeshadowOpacity"] as? Number)?.let { overlayView.eyeshadowOpacity = it.toFloat() }
+        (params["eyeshadowShape"] as? String)?.let { overlayView.eyeshadowShape = it }
         
         (params["hasEyeliner"] as? Boolean)?.let { overlayView.hasEyeliner = it }
         (params["eyelinerThickness"] as? Number)?.let { overlayView.eyelinerThickness = it.toFloat() }
@@ -250,6 +251,7 @@ class MakeupOverlayView @JvmOverloads constructor(
 
     var eyeshadowColor: Int = 0xFFFFCC80.toInt()
     var eyeshadowOpacity: Float = 0f
+    var eyeshadowShape: String = "gradient"
 
     var hasEyeliner: Boolean = false
     var eyelinerThickness: Float = 0.5f
@@ -290,6 +292,23 @@ class MakeupOverlayView @JvmOverloads constructor(
             sumY += p.y
         }
         return PointF(sumX / points.size, sumY / points.size)
+    }
+
+    private fun getPathCentroid(top: List<PointF>, bottom: List<PointF>): PointF {
+        var sumX = 0f
+        var sumY = 0f
+        var count = 0
+        for (pt in top) {
+            sumX += pt.x
+            sumY += pt.y
+            count++
+        }
+        for (pt in bottom) {
+            sumX += pt.x
+            sumY += pt.y
+            count++
+        }
+        return if (count > 0) PointF(sumX / count, sumY / count) else PointF(0f, 0f)
     }
 
     private fun getFaceUnitVectors(face: Face, leftCenter: PointF, rightCenter: PointF): Map<String, PointF> {
@@ -792,8 +811,24 @@ class MakeupOverlayView @JvmOverloads constructor(
 
                         for (i in 0 until upperLid.size) {
                             val bellFactor = Math.sin(i / 8.0 * Math.PI).toFloat()
-                            val shiftAmount = eyeDistance * 0.16f * bellFactor
+                            val shapeFactor = when (eyeshadowShape) {
+                                "cat_eye" -> {
+                                    // Cat eye: higher towards the outer edge (index 8)
+                                    val t = i / 8.0f
+                                    (0.08f + 0.28f * t * t)
+                                }
+                                "halo" -> {
+                                    // Halo: center is lower, sides are higher
+                                    val t = i / 8.0f
+                                    (0.24f - 0.16f * Math.sin(t * Math.PI).toFloat())
+                                }
+                                else -> {
+                                    // Gradient & Cut Crease: normal bell curve
+                                    0.16f * bellFactor
+                                }
+                            }
                             
+                            val shiftAmount = eyeDistance * shapeFactor
                             val sx = upperLid[i].x - screenUnitY.x * shiftAmount
                             val sy = upperLid[i].y - screenUnitY.y * shiftAmount
                             shiftedPoints.add(PointF(sx, sy))
@@ -808,23 +843,60 @@ class MakeupOverlayView @JvmOverloads constructor(
                         }
                         eyeshadowPath.close()
 
-                        // Smooth linear gradient fading out to the top
-                        val colorStart = Color.argb(
-                            (eyeshadowOpacity * 255).toInt(),
-                            Color.red(eyeshadowColor),
-                            Color.green(eyeshadowColor),
-                            Color.blue(eyeshadowColor)
-                        )
-                        val colorEnd = Color.argb(0, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
-                        val shader = LinearGradient(
-                            upperLid[4].x, upperLid[4].y,
-                            shiftedPoints[4].x, shiftedPoints[4].y,
-                            colorStart,
-                            colorEnd,
-                            Shader.TileMode.CLAMP
-                        )
+                        // Define colors based on shape
+                        val baseAlpha = (eyeshadowOpacity * 255).toInt()
+                        
+                        val shader = when (eyeshadowShape) {
+                            "gradient" -> {
+                                // Linear horizontal gradient: inner corner to outer corner
+                                val cStart = Color.argb((baseAlpha * 0.15f).toInt(), Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                val cEnd = Color.argb(baseAlpha, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                LinearGradient(
+                                    upperLid[0].x, upperLid[0].y,
+                                    upperLid[8].x, upperLid[8].y,
+                                    cStart, cEnd,
+                                    Shader.TileMode.CLAMP
+                                )
+                            }
+                            "cat_eye" -> {
+                                // Cat eye: linear diagonal gradient towards outer top
+                                val cStart = Color.argb(0, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                val cEnd = Color.argb(baseAlpha, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                LinearGradient(
+                                    upperLid[0].x, upperLid[0].y,
+                                    shiftedPoints[8].x, shiftedPoints[8].y,
+                                    cStart, cEnd,
+                                    Shader.TileMode.CLAMP
+                                )
+                            }
+                            "halo" -> {
+                                // Halo: outer & inner are dark, center is bright
+                                val cDark = Color.argb(baseAlpha, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                val cBright = Color.argb((baseAlpha * 0.3f).toInt(), Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                LinearGradient(
+                                    upperLid[0].x, upperLid[0].y,
+                                    upperLid[8].x, upperLid[8].y,
+                                    intArrayOf(cDark, cBright, cDark),
+                                    floatArrayOf(0.0f, 0.5f, 1.0f),
+                                    Shader.TileMode.CLAMP
+                                )
+                            }
+                            else -> {
+                                // Standard / Cut Crease: vertical gradient
+                                val colorStart = Color.argb(baseAlpha, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                val colorEnd = Color.argb(0, Color.red(eyeshadowColor), Color.green(eyeshadowColor), Color.blue(eyeshadowColor))
+                                LinearGradient(
+                                    upperLid[4].x, upperLid[4].y,
+                                    shiftedPoints[4].x, shiftedPoints[4].y,
+                                    colorStart, colorEnd,
+                                    Shader.TileMode.CLAMP
+                                )
+                            }
+                        }
+
                         pathPaint.shader = shader
-                        pathPaint.maskFilter = BlurMaskFilter(15f, BlurMaskFilter.Blur.NORMAL)
+                        val blurSize = if (eyeshadowShape == "cut_crease") 4f else 15f
+                        pathPaint.maskFilter = BlurMaskFilter(blurSize, BlurMaskFilter.Blur.NORMAL)
                         
                         val clipPath = Path()
                         clipPath.moveTo(upperLid[0].x, upperLid[0].y)
@@ -1061,25 +1133,69 @@ class MakeupOverlayView @JvmOverloads constructor(
                 pathPaint.color = lipstickColor
                 pathPaint.maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
 
-                if (lipstickFinishing == "glossy") {
-                    pathPaint.xfermode = null
-                    pathPaint.alpha = (lipstickOpacity * 240).toInt()
-                    canvas.drawPath(path, pathPaint)
+                when (lipstickFinishing) {
+                    "glossy" -> {
+                        pathPaint.xfermode = null
+                        pathPaint.alpha = (lipstickOpacity * 240).toInt()
+                        canvas.drawPath(path, pathPaint)
 
-                    // Overlay a beautiful, subtle glossy light-reflection white stroke
-                    val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                        style = Paint.Style.STROKE
-                        color = Color.WHITE
-                        alpha = (lipstickOpacity * 110).toInt()
-                        strokeWidth = 2.5f
-                        maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
+                        // Overlay a beautiful, subtle glossy light-reflection white stroke
+                        val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            style = Paint.Style.STROKE
+                            color = Color.WHITE
+                            alpha = (lipstickOpacity * 110).toInt()
+                            strokeWidth = 2.5f
+                            maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
+                        }
+                        canvas.drawPath(path, highlightPaint)
                     }
-                    canvas.drawPath(path, highlightPaint)
-                } else {
-                    // Matte finish: MULTIPLY blend mode to blend pigment into underlying lip texture details naturally
-                    pathPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
-                    pathPaint.alpha = (lipstickOpacity * 210).toInt()
-                    canvas.drawPath(path, pathPaint)
+                    "liquid_matte" -> {
+                        // Liquid Matte: high coverage and sharpness
+                        pathPaint.xfermode = null
+                        pathPaint.alpha = (lipstickOpacity * 250).toInt()
+                        pathPaint.maskFilter = BlurMaskFilter(1f, BlurMaskFilter.Blur.NORMAL)
+                        canvas.drawPath(path, pathPaint)
+                    }
+                    "blurred_matte" -> {
+                        // Blurred / Bitten Matte: soft base, inner focus (ombre)
+                        pathPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+                        pathPaint.alpha = (lipstickOpacity * 110).toInt()
+                        pathPaint.maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL)
+                        canvas.drawPath(path, pathPaint)
+
+                        val centroidRaw = getPathCentroid(top, bottom)
+                        val centroid = mapPoint(centroidRaw)
+                        val scaleFactor = 0.55f
+                        val innerPath = Path()
+                        val startPt = mapPoint(top[0])
+                        val startX = centroid.x + (startPt.x - centroid.x) * scaleFactor
+                        val startY = centroid.y + (startPt.y - centroid.y) * scaleFactor
+                        innerPath.moveTo(startX, startY)
+                        for (i in 1 until top.size) {
+                            val pt = mapPoint(top[i])
+                            val px = centroid.x + (pt.x - centroid.x) * scaleFactor
+                            val py = centroid.y + (pt.y - centroid.y) * scaleFactor
+                            innerPath.lineTo(px, py)
+                        }
+                        for (i in bottom.size - 1 downTo 0) {
+                            val pt = mapPoint(bottom[i])
+                            val px = centroid.x + (pt.x - centroid.x) * scaleFactor
+                            val py = centroid.y + (pt.y - centroid.y) * scaleFactor
+                            innerPath.lineTo(px, py)
+                        }
+                        innerPath.close()
+
+                        pathPaint.alpha = (lipstickOpacity * 240).toInt()
+                        pathPaint.maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
+                        canvas.drawPath(innerPath, pathPaint)
+                    }
+                    else -> { // velvet_matte or default matte
+                        // Velvet / Creamy Matte: soft focus blurred matte
+                        pathPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+                        pathPaint.alpha = (lipstickOpacity * 210).toInt()
+                        pathPaint.maskFilter = BlurMaskFilter(4.5f, BlurMaskFilter.Blur.NORMAL)
+                        canvas.drawPath(path, pathPaint)
+                    }
                 }
                 pathPaint.maskFilter = null
                 pathPaint.xfermode = null
@@ -1127,9 +1243,9 @@ class MakeupOverlayView @JvmOverloads constructor(
                         )
                     }
 
-                    val paintShading = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                     val paintShading = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                         style = Paint.Style.STROKE
-                        color = Color.parseColor("#7D5F52")
+                        color = Color.parseColor("#5A4D46") // Cool-toned taupe/grey-brown
                         alpha = (noseShadingOpacity * 0.75f * 255f).toInt().coerceIn(0, 255)
                         strokeWidth = faceWidth * 0.038f
                         strokeCap = Paint.Cap.ROUND
@@ -1139,6 +1255,17 @@ class MakeupOverlayView @JvmOverloads constructor(
 
                     canvas.drawPath(leftShadingPath, paintShading)
                     canvas.drawPath(rightShadingPath, paintShading)
+
+                    // Draw Nose Tip V septum shape for shortening illusion
+                    val noseTipVPath = Path().apply {
+                        val tip = mappedBridge.last()
+                        val vWidth = faceWidth * 0.040f
+                        val vHeight = faceWidth * 0.022f
+                        moveTo(tip.x - vWidth, tip.y - vHeight)
+                        lineTo(tip.x, tip.y + vHeight * 0.4f)
+                        lineTo(tip.x + vWidth, tip.y - vHeight)
+                    }
+                    canvas.drawPath(noseTipVPath, paintShading)
                 }
 
                 // 2. NOSE HIGHLIGHT

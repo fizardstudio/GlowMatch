@@ -97,6 +97,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
   bool _isSplitMode = true; // DEFAULT ON!
   bool _showGlassSkin = true;
   bool _showContourGuide = false;
+  String _eyeshadowShape = 'gradient'; // 'gradient', 'cat_eye', 'halo', 'cut_crease'
 
   // Foundation/Base fields
   Color _selectedFoundationColor = const Color(0xFFF3D3C4);
@@ -178,6 +179,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
       'foundationOpacity': _foundationOpacity,
       'eyeshadowColor': _selectedEyeshadowColor.value,
       'eyeshadowOpacity': _eyeshadowOpacity,
+      'eyeshadowShape': _eyeshadowShape,
       'hasEyeliner': _hasEyeliner,
       'eyelinerThickness': _eyelinerThickness,
       'noseHighlightOpacity': _noseHighlightOpacity,
@@ -1469,11 +1471,12 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
     }
   }
 
-  Widget _buildFinishingButton(String label, bool isSel) {
+  Widget _buildFinishingButton(String label, String value) {
+    final isSel = _lipstickFinishing == value;
     return GestureDetector(
       onTap: () {
         setState(() {
-          _lipstickFinishing = label.toLowerCase();
+          _lipstickFinishing = value;
           _activePreset = null;
         });
       },
@@ -1489,6 +1492,43 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
             fontSize: 10,
             fontWeight: FontWeight.bold,
             color: isSel ? Colors.white : textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShapeButton(String label, String shapeVal) {
+    final isSel = _eyeshadowShape == shapeVal;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _eyeshadowShape = shapeVal;
+            _activePreset = null;
+          });
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSel ? primaryColor : primaryColor.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSel ? primaryColor : cardBorderColor,
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSel ? Colors.white : textColor,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ),
@@ -2254,6 +2294,7 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                                               'foundationOpacity': _foundationOpacity,
                                               'eyeshadowColor': _selectedEyeshadowColor.value,
                                               'eyeshadowOpacity': _eyeshadowOpacity,
+                                              'eyeshadowShape': _eyeshadowShape,
                                               'hasEyeliner': _hasEyeliner,
                                               'eyelinerThickness': _eyelinerThickness,
                                               'noseHighlightOpacity': _noseHighlightOpacity,
@@ -3254,56 +3295,58 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                         ),
                       ),
                     ] else if (_activeCategoryIndex == 2) ...[
-                      // Opacity Lipstick & Finishing Toggle
+                      // Opacity Lipstick Slider
                       Row(
                         children: [
+                          Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Transparansi Bibir', style: TextStyle(color: textColor, fontSize: 11)),
                           Expanded(
-                            child: Row(
-                              children: [
-                                Icon(Icons.opacity_rounded, color: primaryColor, size: 18),
-                                const SizedBox(width: 8),
-                                Text('Transparansi Bibir', style: TextStyle(color: textColor, fontSize: 11)),
-                                Expanded(
-                                  child: Slider(
-                                    activeColor: primaryColor,
-                                    inactiveColor: cardBorderColor,
-                                    value: _lipstickOpacity,
-                                    min: 0.0,
-                                    max: 0.8,
-                                    onChanged: _showPaywall
-                                        ? null
-                                        : (val) {
-                                            setState(() {
-                                              _lipstickOpacity = val;
-                                              _activePreset = null;
-                                            });
-                                          },
-                                  ),
-                                ),
-                                Text(
-                                  '${(_lipstickOpacity * 100).round()}%',
-                                  style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
-                                ),
-                              ],
+                            child: Slider(
+                              activeColor: primaryColor,
+                              inactiveColor: cardBorderColor,
+                              value: _lipstickOpacity,
+                              min: 0.0,
+                              max: 0.8,
+                              onChanged: _showPaywall
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _lipstickOpacity = val;
+                                        _activePreset = null;
+                                      });
+                                    },
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          // Glossy vs Matte
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: cardBgColor,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: cardBorderColor.withOpacity(0.55), width: 1.5),
-                            ),
-                            child: Row(
-                              children: [
-                                _buildFinishingButton('Matte', _lipstickFinishing == 'matte'),
-                                _buildFinishingButton('Glossy', _lipstickFinishing == 'glossy'),
-                              ],
-                            ),
+                          Text(
+                            '${(_lipstickOpacity * 100).round()}%',
+                            style: TextStyle(color: textMutedColor, fontSize: 11, fontFamily: 'monospace'),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Lipstick Texture Finishing Options
+                      Text(
+                        'TEKSTUR / FINISHING:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cardBgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: cardBorderColor.withOpacity(0.55), width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(child: Center(child: _buildFinishingButton('Glossy', 'glossy'))),
+                            Expanded(child: Center(child: _buildFinishingButton('Liquid', 'liquid_matte'))),
+                            Expanded(child: Center(child: _buildFinishingButton('Velvet', 'velvet_matte'))),
+                            Expanded(child: Center(child: _buildFinishingButton('Blurred', 'blurred_matte'))),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       // Palet Warna Lipstick
@@ -3603,7 +3646,24 @@ class _ArTryOnPageState extends State<ArTryOnPage> with WidgetsBindingObserver, 
                           ],
                         ),
                       ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'BENTUK EYESHADOW:',
+                        style: TextStyle(color: textMutedColor.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      ),
                       const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildShapeButton('Gradient', 'gradient'),
+                          const SizedBox(width: 6),
+                          _buildShapeButton('Cat Eye', 'cat_eye'),
+                          const SizedBox(width: 6),
+                          _buildShapeButton('Halo', 'halo'),
+                          const SizedBox(width: 6),
+                          _buildShapeButton('Cut Crease', 'cut_crease'),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       // Palet Warna Eyeshadow
                       Text(
                         'WARNA EYESHADOW:',
