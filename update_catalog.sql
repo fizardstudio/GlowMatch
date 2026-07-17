@@ -5,6 +5,11 @@
 
 BEGIN;
 
+-- 0. SYNCHRONIZE ID SEQUENCES TO AVOID DUPLICATE KEY ERRORS
+SELECT setval(pg_get_serial_sequence('brands', 'id'), COALESCE(max(id), 1)) FROM brands;
+SELECT setval(pg_get_serial_sequence('products', 'id'), COALESCE(max(id), 1)) FROM products;
+SELECT setval(pg_get_serial_sequence('product_shades', 'id'), COALESCE(max(id), 1)) FROM product_shades;
+
 -- 1. INSERT BRANDS
 INSERT INTO brands (name) VALUES ('Barenbliss') ON CONFLICT (name) DO NOTHING;
 INSERT INTO brands (name) VALUES ('Dear Me Beauty') ON CONFLICT (name) DO NOTHING;
