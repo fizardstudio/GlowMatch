@@ -1163,16 +1163,15 @@ class MakeupOverlayView @JvmOverloads constructor(
 
                 val avgLipThicknessRatio = (upperRatio + lowerRatio) / 2f
 
-                // Normal average thickness ratio is around 0.035f. Below 0.02f means lips are sucked in/hidden.
-                val expressionScale = ((avgLipThicknessRatio - 0.016f) / 0.016f).coerceIn(0f, 1f)
+                // Normal average thickness ratio is around 0.035f. Below 0.029f it starts fading, below 0.024f fully hidden.
+                val expressionScale = ((avgLipThicknessRatio - 0.024f) / 0.005f).coerceIn(0f, 1f)
 
                 // Normal mouthRatio is around 0.10f. If mouth opens wide, mouthOpenness scales to 1.0f.
                 val mouthOpenness = ((mouthRatio - 0.11f) / 0.08f).coerceIn(0f, 1f)
 
-                // Scale down the expansion when mouth is open or lips are sucked/hidden to prevent bleeding
-                val expansionScale = expressionScale * (1f - mouthOpenness)
-                val baseExpansion = 1.05f
-                val expansionFactor = 1.0f + (baseExpansion - 1.0f) * expansionScale
+                // Decouple expansionFactor from expressionScale to keep full expansion for visible lips, and increase baseExpansion to 1.09f
+                val baseExpansion = 1.09f
+                val expansionFactor = 1.0f + (baseExpansion - 1.0f) * (1f - mouthOpenness)
 
                 fun drawLipPath(top: List<PointF>?, bottom: List<PointF>?) {
                     if (top == null || top.isEmpty() || bottom == null || bottom.isEmpty() || expressionScale <= 0f) return
